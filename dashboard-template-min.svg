@@ -86,9 +86,9 @@
 
     <svg x="350" y="180" width="400" height="300" viewBox="0 0 600 300" preserveAspectRatio="xMidYMid meet">
         <path stroke="#74838f" stroke-linejoin="round" stroke-width="4" d="M 0 0 L 0 300" fill="none" />
-        <path stroke="#1f5079" stroke-dasharray="10 6" stroke-width="0.5" d="M 0 300 L 600 300" />
+        <path stroke="#1f5079" stroke-linejoin="10 6" stroke-width="2" d="M 0 300 L 600 300" />
         <path stroke="red" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
-            d="M 0 0 {{curve_data}}"
+            d="{{curve_data}}"
             stroke-width="2.0" fill="none" />
     </svg>
 </svg>

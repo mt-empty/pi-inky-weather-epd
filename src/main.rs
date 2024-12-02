@@ -1,6 +1,6 @@
 pub mod charts;
 use anyhow::Error;
-use chrono::NaiveDateTime;
+use chrono::{NaiveDateTime, Timelike};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Error as SerdeError, Result as SerdeResult};
@@ -25,21 +25,23 @@ const MODIFIED_TEMPLATE_PATH: &str = "./modified-dashboard.svg";
 const ICON_PATH: &str = "./static/line-svg-static/";
 // const ICON_PATH: &str = "./static/fill-svg-static/";
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Wind {
     speed_kilometre: f64,
     speed_knot: f64,
     direction: String,
+    gust_speed_knot: Option<f64>,
+    gust_speed_kilometre: Option<f64>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Gust {
     speed_kilometre: f64,
     speed_knot: f64,
     time: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Temp {
     time: String,
     value: f64,
@@ -79,9 +81,9 @@ impl Icon for Temp {
         match self.value {
             0.0..=10.0 => "thermometer-celsius.svg",
             10.1..=20.0 => "thermometer-colder.svg",
-            20.1..=30.0 => "thermometer-fahrenheit.svg",
+            20.1..=30.0 => "thermometer-celsius.svg",
             30.1..=40.0 => "thermometer-glass-celsius.svg",
-            40.1..=50.0 => "thermometer-glass-fahrenheit.svg",
+            40.1..=50.0 => "thermometer-glass-celsius.svg",
             50.1..=60.0 => "thermometer-glass.svg",
             60.1..=70.0 => "thermometer-mercury-cold.svg",
             70.1..=80.0 => "thermometer-mercury.svg",
@@ -127,14 +129,14 @@ impl Icon for Gust {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Station {
     bom_id: String,
     name: String,
     distance: u32,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct ObservationData {
     temp: f64,
     temp_feels_like: f64,
@@ -148,15 +150,15 @@ struct ObservationData {
     station: Station,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Metadata {
     response_timestamp: String,
     issue_time: String,
-    observation_time: String,
+    observation_time: Option<String>,
     copyright: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct ObservationResponse {
     metadata: Metadata,
     data: ObservationData,
@@ -200,10 +202,7 @@ impl ForcastGraph {
         self.points.push(Point { x, y })
     }
     pub fn draw_graph(&self, width: usize, height: usize) -> Result<String, Error> {
-        // if self.points.len() == 0 {
-        //     todo!()
-        // }
-
+        // Calculate the minimum and maximum x values from the points
         let min_x = self.points.first().map(|val| val.x).unwrap_or(0.0);
         let max_x = self
             .points
@@ -211,6 +210,11 @@ impl ForcastGraph {
             .max_by(|a, b| a.x.partial_cmp(&b.x).unwrap())
             .unwrap()
             .x;
+
+        // print self.points
+        println!("{:?}", self.points);
+
+        // Calculate the minimum and maximum y values from the points
         let min_y = self.points.iter().map(|val| val.y).fold(f64::NAN, f64::min);
         let max_y = self
             .points
@@ -219,9 +223,17 @@ impl ForcastGraph {
             .unwrap()
             .y;
 
+        // Print the min and max values for debugging purposes
+        println!("Min x: {}, Max x: {}", min_x, max_x);
+        println!("Min y: {}, Max y: {}", min_y, max_y);
+
+        // Calculate scaling factors for x and y to fit the graph within the given width and height
         let xfactor = width as f64 / max_x;
         let yfactor = height as f64 / max_y;
 
+        println!("X factor: {}, Y factor: {}", xfactor, yfactor);
+
+        // Scale the points according to the calculated factors
         let points: Vec<Point> = self
             .points
             .iter()
@@ -231,19 +243,36 @@ impl ForcastGraph {
             })
             .collect();
 
+        // Generate the SVG path data
         let path = if self.smooth {
             catmull_bezier(points)
                 .iter()
-                .map(|val| val.to_svg())
+                .enumerate()
+                .map(|(i, val)| {
+                    if i == 0 {
+                        format!("M {:.4} {:.4}", val.c1.x, val.c1.y)
+                    } else {
+                        val.to_svg()
+                    }
+                })
                 .collect::<Vec<String>>()
                 .join("")
         } else {
             points
                 .iter()
-                .map(|val| val.to_svg())
+                .enumerate()
+                .map(|(i, val)| {
+                    if i == 0 {
+                        format!("M {:.4} {:.4}", val.x, val.y)
+                    } else {
+                        val.to_svg()
+                    }
+                })
                 .collect::<Vec<String>>()
                 .join("")
         };
+
+        // Return the generated SVG path
         Ok(path)
     }
 }
@@ -322,8 +351,30 @@ struct Metadata2 {
     copyright: String,
 }
 
-#[derive(Deserialize, Debug)]
-struct WeatherResponse {
+#[derive(Serialize, Deserialize, Debug)]
+struct Forecast {
+    rain: Rain,
+    temp: f64,
+    temp_feels_like: f64,
+    dew_point: f64,
+    wind: Wind,
+    relative_humidity: f64,
+    uv: f64,
+    icon_descriptor: String,
+    next_three_hourly_forecast_period: String,
+    time: String,
+    is_night: bool,
+    next_forecast_period: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct HourlyForcastResponse {
+    metadata: Metadata,
+    data: Vec<Forecast>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DailyForcastResponse {
     metadata: Metadata2,
     data: Vec<DailyEntry>,
 }
@@ -333,39 +384,50 @@ fn fetch_observation() -> SerdeResult<ObservationResponse> {
     // let response = client.get(&*OBSERVATION_ENDOPINT).send();
     // let body = response.unwrap().text();
     // print!("{:?}", body);
-    // serde_json::from_str(&body.unwrap())
+    // let mut file = fs::File::create("./test/observations.json");
+    // file.unwrap().write_all(body.unwrap().as_bytes());
 
-    let body = fs::read_to_string("./observation.json");
+    // // Print the current working directory
+    // let current_dir = env::current_dir().unwrap();
+
+    // // Use an absolute path
+    // let path = current_dir.join("/test/observations.json");
+    // println!("File path: {:?}", path);
+
+    // let body = fs::read_to_string(path);
+    let body = fs::read_to_string("./test/observations.json");
     serde_json::from_str(&body.unwrap())
 }
 
-fn fetch_daily_forecast() -> SerdeResult<WeatherResponse> {
+fn fetch_daily_forecast() -> SerdeResult<DailyForcastResponse> {
     // let client = reqwest::blocking::Client::new();
     // let response = client.get(&*DAILY_FORECAST_ENDPOINT).send();
     // let body = response.unwrap().text();
     // // write them to a file
-    // let mut file = fs::File::create(
-    //     "./daily_forcast.json",
-    // );
+    // let mut file = fs::File::create("./test/daily_forcast.json");
     // file.unwrap().write_all(body.unwrap().as_bytes());
 
-    let body = fs::read_to_string("./daily_forcast.json");
+    let body = fs::read_to_string("./test/daily_forcast.json");
     // print!("{:?}", body);
     serde_json::from_str(&body.unwrap())
 }
 
-// fn fetch_hourly_forecast() -> SerdeResult< WeatherData , Error> {
-//     let client = reqwest::blocking::Client::new();
-//     let response = client.get(&*HOURLY_FORECAST_ENDPOINT).send()?;
-//     let body = response.text()?;
-//     println!("{:?}", body);
-//     Ok(())
-// }day2_maxtemp
+fn fetch_hourly_forecast() -> SerdeResult<HourlyForcastResponse> {
+    // let client = reqwest::blocking::Client::new();
+    // let response = client.get(&*HOURLY_FORECAST_ENDPOINT).send();
+    // let body = response.unwrap().text();
+    // // write them to a file
+    // let file = fs::File::create("./test/hourly_forcast.json");
+    // file.unwrap().write_all(body.unwrap().as_bytes());
+
+    let body = fs::read_to_string("./test/hourly_forcast.json");
+    serde_json::from_str(&body.unwrap())
+}
 
 fn update_observation(template: String) -> Result<String, Error> {
-    let observation = fetch_observation()?;
-    let observation_data = observation.data;
-    let issue_date = observation.metadata.issue_time;
+    let observations = fetch_observation()?;
+    let observation_data = observations.data;
+    let issue_date = observations.metadata.issue_time;
     let temp: Temp = Temp {
         time: "now".to_string(),
         value: observation_data.temp,
@@ -375,6 +437,8 @@ fn update_observation(template: String) -> Result<String, Error> {
         speed_kilometre: observation_data.wind.speed_kilometre,
         speed_knot: observation_data.wind.speed_knot,
         direction: observation_data.wind.direction,
+        gust_speed_kilometre: observation_data.wind.gust_speed_kilometre,
+        gust_speed_knot: observation_data.wind.gust_speed_knot,
     };
     let gust = Gust {
         speed_kilometre: observation_data.gust.speed_kilometre,
@@ -412,23 +476,46 @@ fn update_forecast(template: String) -> Result<String, Error> {
     let daily_forecast_data = fetch_daily_forecast()?.data;
     // todo check length of daily_forecast_data
     let mut updated_template = template.to_string();
-    for i in 1..7 {
-        let min_temp_key = format!("{{{{day{}_mintemp}}}}", i + 1);
-        let max_temp_key = format!("{{{{day{}_maxtemp}}}}", i + 1);
-        let icon_key = format!("{{{{day{}_icon}}}}", i + 1);
-        let day_name_key = format!("{{{{day{}_name}}}}", i + 1);
+    let mut i = 2;
+    for day in daily_forecast_data {
+        if let Some(date_str) = &day.date {
+            if let Ok(date) = chrono::NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%SZ")
+                .map(|datetime| datetime.date())
+            {
+                // Get the current date
+                let current_date = chrono::Local::now().date_naive();
 
-        let min_temp_value = daily_forecast_data[i]
+                // If the date is today or in the past, skip it
+                if date <= current_date {
+                    continue;
+                }
+            }
+        } else if day.date
+            == Some(
+                (chrono::Local::now() + chrono::Duration::days(7))
+                    .format("%Y-%m-%d")
+                    .to_string(),
+            )
+        {
+            break;
+        }
+
+        let min_temp_key = format!("{{{{day{}_mintemp}}}}", i);
+        let max_temp_key = format!("{{{{day{}_maxtemp}}}}", i);
+        let icon_key = format!("{{{{day{}_icon}}}}", i);
+        let day_name_key = format!("{{{{day{}_name}}}}", i);
+
+        let min_temp_value = day
             .temp_min
             .map(|temp| temp.to_string())
             .unwrap_or_else(|| "NA".to_string());
 
-        let max_temp_value = daily_forecast_data[i]
+        let max_temp_value = day
             .temp_max
             .map(|temp| temp.to_string())
             .unwrap_or_else(|| "NA".to_string());
 
-        let icon_value = daily_forecast_data[i]
+        let icon_value = day
             .temp_max
             .map(|temp| {
                 Temp {
@@ -439,7 +526,7 @@ fn update_forecast(template: String) -> Result<String, Error> {
             })
             .unwrap_or_else(|| "NA".to_string());
 
-        let day_name_value = daily_forecast_data[i]
+        let day_name_value = day
             .date
             .as_ref()
             .map(|date| {
@@ -455,41 +542,95 @@ fn update_forecast(template: String) -> Result<String, Error> {
             .replace(&max_temp_key, &max_temp_value)
             .replace(&icon_key, &icon_value)
             .replace(&day_name_key, &day_name_value);
+        i += 1;
+    }
+
+    // if i < 8, this means that we have less than 7 days of forecast data
+    // so we need to NA the remaining days
+    while i < 8 {
+        let min_temp_key = format!("{{{{day{}_mintemp}}}}", i);
+        let max_temp_key = format!("{{{{day{}_maxtemp}}}}", i);
+        let icon_key = format!("{{{{day{}_icon}}}}", i);
+        let day_name_key = format!("{{{{day{}_name}}}}", i);
+
+        updated_template = updated_template
+            .replace(&min_temp_key, "NA")
+            .replace(&max_temp_key, "NA")
+            .replace(&icon_key, "NA")
+            .replace(&day_name_key, "NA");
+
+        i += 1;
     }
 
     Ok(updated_template)
 }
 
 fn update_hourly_forecast(template: String) -> Result<String, Error> {
-    // let hourly_forecast = fetch_hourly_forecast()?;
-    Ok(template)
-}
-fn main() -> io::Result<()> {
+    let mut hourly_forecast = fetch_hourly_forecast()?;
+
     let mut graph = ForcastGraph {
         name: "forcast".to_string(),
         points: vec![],
         colour: "red".to_string(),
         smooth: true,
     };
+    // add points to the graph
+    // for forecast in hourly_forecast.data {
+    //     let time = NaiveDateTime::parse_from_str(&forecast.time, "%Y-%m-%dT%H:%M:%SZ")
+    //         .map(|datetime| datetime.time())
+    //         .unwrap_or_else(|_| chrono::Local::now().time());
+    //     let temp = forecast.temp;
+    //     graph.add_point(time.num_seconds_from_midnight() as f64, temp);
+    // }
 
-    graph.add_point(1.0, 11.0);
-    graph.add_point(2.0, 13.0);
-    graph.add_point(3.0, 12.5);
-    graph.add_point(4.0, 16.0);
-    graph.add_point(5.0, 23.0);
-    graph.add_point(6.0, 21.0);
-    graph.add_point(7.0, 20.0);
-    graph.add_point(8.0, 19.0);
-    graph.add_point(9.0, 18.0);
-    graph.add_point(10.0, 17.0);
+    hourly_forecast.data.sort_by(|a, b| a.time.cmp(&b.time));
+
+    // we only want to display the next 24 hours
+    let first_date =
+        NaiveDateTime::parse_from_str(&hourly_forecast.data[0].time, "%Y-%m-%dT%H:%M:%SZ")
+            .unwrap_or_else(|_| chrono::Local::now().naive_local());
+
+    let end_date = first_date + chrono::Duration::hours(24);
+
+    println!("First date: {:?}", first_date);
+    println!("End date: {:?}", end_date);
+
+    let mut x = 0.0;
+
+    hourly_forecast
+        .data
+        .iter()
+        .filter(|forcast| {
+            match NaiveDateTime::parse_from_str(&forcast.time, "%Y-%m-%dT%H:%M:%SZ") {
+                Ok(datetime) => datetime < end_date,
+                Err(_) => false,
+            }
+        })
+        .for_each(|forcast| {
+            println!("{:?} <= {:?}", forcast.time, forcast.temp);
+            graph.add_point(
+                x,
+                // NaiveDateTime::parse_from_str(&forcast.time, "%Y-%m-%dT%H:%M:%SZ")
+                //     .map(|datetime| datetime.time())
+                //     .unwrap_or_else(|_| chrono::Local::now().time())
+                //     .hour() as f64,
+                forcast.temp,
+            );
+            x += 1.0;
+        });
 
     let svg_result = graph.draw_graph(600, 300).unwrap();
 
     println!("\n{:?}\n", svg_result);
+    let updated_template = template.replace("{{curve_data}}", &svg_result);
 
+    Ok(updated_template)
+}
+fn main() -> io::Result<()> {
     let dashboard_svg = fs::read_to_string(TEMPLATE_PATH)?;
     let mut updated_svg = update_observation(dashboard_svg);
     updated_svg = update_forecast(updated_svg.unwrap());
+    updated_svg = update_hourly_forecast(updated_svg.unwrap());
 
     let mut output = fs::File::create(MODIFIED_TEMPLATE_PATH)?;
     let unwraped_svg: String = updated_svg.unwrap();
