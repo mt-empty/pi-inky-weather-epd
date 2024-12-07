@@ -37,92 +37,102 @@ impl Point {
         format!("L {} {}", self.x, self.y)
     }
 }
-
 #[derive(Clone, Debug)]
-pub struct ForcastGraph {
-    pub name: String,
+pub struct GraphData {
     pub points: Vec<Point>,
     pub colour: String,
     pub smooth: bool,
 }
 
-impl ForcastGraph {
+pub struct DailyForcastGraph {
+    pub name: String,
+    pub data: Vec<GraphData>,
+}
+
+impl GraphData {
     pub fn add_point(&mut self, x: f64, y: f64) {
         self.points.push(Point { x, y })
     }
+}
+
+impl DailyForcastGraph {
     pub fn draw_graph(&self, width: usize, height: usize) -> Result<String, Error> {
         // Calculate the minimum and maximum x values from the points
-        let min_x = self.points.first().map(|val| val.x).unwrap_or(0.0);
-        let max_x = self
-            .points
-            .iter()
-            .max_by(|a, b| a.x.partial_cmp(&b.x).unwrap())
-            .unwrap()
-            .x;
-
-        // print self.points
-        println!("{:?}", self.points);
-
-        // Calculate the minimum and maximum y values from the points
-        let min_y = self.points.iter().map(|val| val.y).fold(f64::NAN, f64::min);
-        let max_y = self
-            .points
-            .iter()
-            .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
-            .unwrap()
-            .y;
-
-        // Print the min and max values for debugging purposes
-        println!("Min x: {}, Max x: {}", min_x, max_x);
-        println!("Min y: {}, Max y: {}", min_y, max_y);
-
-        // Calculate scaling factors for x and y to fit the graph within the given width and height
-        let xfactor = width as f64 / max_x;
-        let yfactor = height as f64 / max_y;
-
-        println!("X factor: {}, Y factor: {}", xfactor, yfactor);
-
-        // Scale the points according to the calculated factors
-        let points: Vec<Point> = self
-            .points
-            .iter()
-            .map(|val| Point {
-                x: (val.x * xfactor),
-                y: (val.y * yfactor),
-            })
-            .collect();
-
-        // Generate the SVG path data
-        let path = if self.smooth {
-            catmull_bezier(points)
+        let mut result = Err(anyhow::anyhow!("No data available"));
+        for data in &self.data {
+            let min_x = data.points.first().map(|val| val.x).unwrap_or(0.0);
+            let max_x = data
+                .points
                 .iter()
-                .enumerate()
-                .map(|(i, val)| {
-                    if i == 0 {
-                        format!("M {:.4} {:.4}", val.c1.x, val.c1.y)
-                    } else {
-                        val.to_svg()
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join("")
-        } else {
-            points
-                .iter()
-                .enumerate()
-                .map(|(i, val)| {
-                    if i == 0 {
-                        format!("M {:.4} {:.4}", val.x, val.y)
-                    } else {
-                        val.to_svg()
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join("")
-        };
+                .max_by(|a, b| a.x.partial_cmp(&b.x).unwrap())
+                .unwrap()
+                .x;
 
-        // Return the generated SVG path
-        Ok(path)
+            // print data.points
+            // println!("{:?}", data.points);
+
+            // Calculate the minimum and maximum y values from the points
+            let min_y = data.points.iter().map(|val| val.y).fold(f64::NAN, f64::min);
+            let max_y = data
+                .points
+                .iter()
+                .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
+                .unwrap()
+                .y;
+
+            // Print the min and max values for debugging purposes
+            println!("Min x: {}, Max x: {}", min_x, max_x);
+            println!("Min y: {}, Max y: {}", min_y, max_y);
+
+            // Calculate scaling factors for x and y to fit the graph within the given width and height
+            let xfactor = width as f64 / max_x;
+            let yfactor = height as f64 / max_y;
+
+            println!("X factor: {}, Y factor: {}", xfactor, yfactor);
+
+            // Scale the points according to the calculated factors
+            let points: Vec<Point> = data
+                .points
+                .iter()
+                .map(|val| Point {
+                    x: (val.x * xfactor),
+                    y: (val.y * yfactor),
+                })
+                .collect();
+
+            // Generate the SVG path data
+            let path = if data.smooth {
+                catmull_bezier(points)
+                    .iter()
+                    .enumerate()
+                    .map(|(i, val)| {
+                        if i == 0 {
+                            format!("M {:.4} {:.4}", val.c1.x, val.c1.y)
+                        } else {
+                            val.to_svg()
+                        }
+                    })
+                    .collect::<Vec<String>>()
+                    .join("")
+            } else {
+                points
+                    .iter()
+                    .enumerate()
+                    .map(|(i, val)| {
+                        if i == 0 {
+                            format!("M {:.4} {:.4}", val.x, val.y)
+                        } else {
+                            val.to_svg()
+                        }
+                    })
+                    .collect::<Vec<String>>()
+                    .join("")
+            };
+
+            // Store the generated SVG path
+            result = Ok(path);
+        }
+        result
     }
 }
 
@@ -399,30 +409,30 @@ struct DailyForcastResponse {
 }
 
 fn fetch_observation() -> SerdeResult<ObservationResponse> {
-    let client = reqwest::blocking::Client::new();
-    let response = client.get(&*OBSERVATION_ENDOPINT).send();
-    let body = response.unwrap().text();
-    // print!("{:?}", body);
-    let mut file = fs::File::create("./test/observations.json");
-    file.unwrap().write_all(body.unwrap().as_bytes());
+    // let client = reqwest::blocking::Client::new();
+    // let response = client.get(&*OBSERVATION_ENDOPINT).send();
+    // let body = response.unwrap().text();
+    // // print!("{:?}", body);
+    // let mut file = fs::File::create("./test/observations.json");
+    // file.unwrap().write_all(body.unwrap().as_bytes());
 
-    // Print the current working directory
-    let current_dir = env::current_dir().unwrap();
+    // // Print the current working directory
+    // let current_dir = env::current_dir().unwrap();
 
-    // Use an absolute path
-    // let path = current_dir.join("/test/observations.json");
+    // // Use an absolute path
+    // // let path = current_dir.join("/test/observations.json");
 
     let body = fs::read_to_string("./test/observations.json");
     serde_json::from_str(&body.unwrap())
 }
 
 fn fetch_daily_forecast() -> SerdeResult<DailyForcastResponse> {
-    let client = reqwest::blocking::Client::new();
-    let response = client.get(&*DAILY_FORECAST_ENDPOINT).send();
-    let body = response.unwrap().text();
-    // write them to a file
-    let mut file = fs::File::create("./test/daily_forcast.json");
-    file.unwrap().write_all(body.unwrap().as_bytes());
+    // let client = reqwest::blocking::Client::new();
+    // let response = client.get(&*DAILY_FORECAST_ENDPOINT).send();
+    // let body = response.unwrap().text();
+    // // write them to a file
+    // let mut file = fs::File::create("./test/daily_forcast.json");
+    // file.unwrap().write_all(body.unwrap().as_bytes());
 
     let body = fs::read_to_string("./test/daily_forcast.json");
     // print!("{:?}", body);
@@ -430,12 +440,12 @@ fn fetch_daily_forecast() -> SerdeResult<DailyForcastResponse> {
 }
 
 fn fetch_hourly_forecast() -> SerdeResult<HourlyForcastResponse> {
-    let client = reqwest::blocking::Client::new();
-    let response = client.get(&*HOURLY_FORECAST_ENDPOINT).send();
-    let body = response.unwrap().text();
-    // write them to a file
-    let file = fs::File::create("./test/hourly_forcast.json");
-    file.unwrap().write_all(body.unwrap().as_bytes());
+    // let client = reqwest::blocking::Client::new();
+    // let response = client.get(&*HOURLY_FORECAST_ENDPOINT).send();
+    // let body = response.unwrap().text();
+    // // write them to a file
+    // let file = fs::File::create("./test/hourly_forcast.json");
+    // file.unwrap().write_all(body.unwrap().as_bytes());
 
     let body = fs::read_to_string("./test/hourly_forcast.json");
     serde_json::from_str(&body.unwrap())
@@ -585,12 +595,23 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
 fn update_hourly_forecast(template: String) -> Result<String, Error> {
     let mut hourly_forecast = fetch_hourly_forecast()?;
 
-    let mut graph = ForcastGraph {
+    let mut graph = DailyForcastGraph {
         name: "forcast".to_string(),
+        data: vec![],
+    };
+
+    let mut temp_data = GraphData {
         points: vec![],
         colour: "red".to_string(),
         smooth: true,
     };
+
+    let mut rain_data = GraphData {
+        points: vec![],
+        colour: "blue".to_string(),
+        smooth: false,
+    };
+
     // add points to the graph
     // for forecast in hourly_forecast.data {
     //     let time = NaiveDateTime::parse_from_str(&forecast.time, "%Y-%m-%dT%H:%M:%SZ")
@@ -624,8 +645,8 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
             }
         })
         .for_each(|forcast| {
-            println!("{:?} <= {:?}", forcast.time, forcast.temp);
-            graph.add_point(
+            // println!("{:?} <= {:?}", forcast.time, forcast.temp);
+            temp_data.add_point(
                 x,
                 // NaiveDateTime::parse_from_str(&forcast.time, "%Y-%m-%dT%H:%M:%SZ")
                 //     .map(|datetime| datetime.time())
@@ -633,8 +654,12 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
                 //     .hour() as f64,
                 forcast.temp,
             );
+            rain_data.add_point(x, forcast.rain.chance.unwrap_or(0).into());
             x += 1.0;
         });
+
+    graph.data.push(temp_data);
+    graph.data.push(rain_data);
 
     let svg_result = graph.draw_graph(600, 300).unwrap();
 
@@ -645,7 +670,7 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
         start_time: None,
     };
 
-    println!("\n{:?}\n", svg_result);
+    // println!("\n{:?}\n", svg_result);
     let updated_template = template
         .replace("{{curve_data}}", &svg_result)
         .replace("{{uv_index}}", &hourly_forecast.data[0].uv.to_string())
@@ -657,6 +682,14 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
         .replace(
             "{{relative_humidity_icon}}",
             "./static/line-svg-static/humidity.svg",
+        )
+        .replace(
+            "{{wind_speed}}",
+            &hourly_forecast.data[0].wind.speed_kilometre.to_string(),
+        )
+        .replace(
+            "{{wind_icon}}",
+            &hourly_forecast.data[0].wind.get_icon_path(),
         );
 
     Ok(updated_template)

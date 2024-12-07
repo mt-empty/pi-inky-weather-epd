@@ -1,4 +1,4 @@
-use inky_weather_display::generateWeatherDashboard;
+use pi_inky_weather_epd::generateWeatherDashboard;
 use std::io;
 
 fn main() -> io::Result<()> {
