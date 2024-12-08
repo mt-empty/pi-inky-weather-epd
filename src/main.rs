@@ -1,6 +1,6 @@
-use pi_inky_weather_epd::generateWeatherDashboard;
+use pi_inky_weather_epd::generate_weather_dashboard;
 use std::io;
 
 fn main() -> io::Result<()> {
-    generateWeatherDashboard()
+    generate_weather_dashboard()
 }

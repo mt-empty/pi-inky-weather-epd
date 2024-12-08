@@ -2,7 +2,7 @@
     <rect width="100%" height="100%" fill="lightgrey" />
 
     <svg x="0" y="0" label="{{day1_label}}">
-        <text x="250" y="50" font-size="40" fill="black">{{day1_name}}</text>
+        <text x="250" y="50" font-size="35" fill="black">{{time}} {{day1_name}} </text>
 
         <image x="50" y="-25" width="200" height="180" href="{{day1_icon}}" />
         <text x="150" y="180" text-anchor="middle" dominant-baseline="middle" font-size="50" fill="black">{{day1_mintemp}}|{{day1_maxtemp}}</text>
@@ -47,31 +47,31 @@
     <svg x="420" y="30" label="{{day3_label}}">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day3_name}}</text>
         <image x="10" y="50" width="75" height="100" href="{{day3_icon}}" />
-        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day3_mintemp}}|{{day2_maxtemp}}</text>
+        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day3_mintemp}}|{{day3_maxtemp}}</text>
     </svg>
 
     <svg x="490" y="30" label="{{day4_label}}">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day4_name}}</text>
         <image x="10" y="50" width="75" height="100" href="{{day4_icon}}" />
-        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day4_mintemp}}|{{day2_maxtemp}}</text>
+        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day4_mintemp}}|{{day4_maxtemp}}</text>
     </svg>
 
     <svg x="560" y="30" label="{{day5_label}}">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day5_name}}</text>
         <image x="10" y="50" width="75" height="100" href="{{day5_icon}}" />
-        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day5_mintemp}}|{{day2_maxtemp}}</text>
+        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day5_mintemp}}|{{day5_maxtemp}}</text>
     </svg>
 
     <svg x="630" y="30" label="{{day6_label}}">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day6_name}}</text>
         <image x="10" y="50" width="75" height="100" href="{{day6_icon}}" />
-        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day6_mintemp}}|{{day2_maxtemp}}</text>
+        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day6_mintemp}}|{{day6_maxtemp}}</text>
     </svg>
 
     <svg x="700" y="30" label="{{day7_label}}">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day7_name}}</text>
         <image x="10" y="50" width="75" height="100" href="{{day7_icon}}" />
-        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day7_mintemp}}|{{day2_maxtemp}}</text>
+        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">{{day7_mintemp}}|{{day7_maxtemp}}</text>
     </svg>
 
     <!-- <svg label="forecast">
@@ -89,7 +89,10 @@
         <path stroke="#74838f" stroke-linejoin="round" stroke-width="4" d="M 0 0 L 0 300" fill="none" />
         <path stroke="#1f5079" stroke-linejoin="10 6" stroke-width="2" d="M 0 300 L 600 300" />
         <path stroke="red" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
-            d="{{curve_data}}"
+            d="{{temp_curve_data}}"
+            stroke-width="2.0" fill="none" />
+        <path stroke="red" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
+            d="{{rain_curve_data}}"
             stroke-width="2.0" fill="none" />
     </svg>
 </svg>

@@ -24,6 +24,8 @@ const UNIT: &str = "°C";
 const TEMPLATE_PATH: &str = "./dashboard-template-min.svg";
 const MODIFIED_TEMPLATE_PATH: &str = "./modified-dashboard.svg";
 const ICON_PATH: &str = "./static/line-svg-static/";
+const USE_ONLINE_DATA: bool = false;
+const NOT_AVAILABLE_ICON: &str = "not-available.svg";
 // const ICON_PATH: &str = "./static/fill-svg-static/";
 
 #[derive(Serialize, Deserialize, Clone, Debug, Copy)]
@@ -37,8 +39,16 @@ impl Point {
         format!("L {} {}", self.x, self.y)
     }
 }
+
+#[derive(Clone, Debug)]
+pub enum DataType {
+    Temp,
+    Rain,
+}
+
 #[derive(Clone, Debug)]
 pub struct GraphData {
+    pub graph_type: DataType,
     pub points: Vec<Point>,
     pub colour: String,
     pub smooth: bool,
@@ -55,10 +65,15 @@ impl GraphData {
     }
 }
 
+pub enum GraphDataPath {
+    Temp(String),
+    Rain(String),
+}
+
 impl DailyForcastGraph {
-    pub fn draw_graph(&self, width: usize, height: usize) -> Result<String, Error> {
+    pub fn draw_graph(&self, width: usize, height: usize) -> Result<Vec<GraphDataPath>, Error> {
         // Calculate the minimum and maximum x values from the points
-        let mut result = Err(anyhow::anyhow!("No data available"));
+        let mut data_path = vec![];
         for data in &self.data {
             let min_x = data.points.first().map(|val| val.x).unwrap_or(0.0);
             let max_x = data
@@ -73,12 +88,16 @@ impl DailyForcastGraph {
 
             // Calculate the minimum and maximum y values from the points
             let min_y = data.points.iter().map(|val| val.y).fold(f64::NAN, f64::min);
-            let max_y = data
-                .points
-                .iter()
-                .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
-                .unwrap()
-                .y;
+            let max_y = match data.graph_type {
+                DataType::Rain => 100.0,
+                DataType::Temp => {
+                    data.points
+                        .iter()
+                        .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
+                        .unwrap()
+                        .y
+                }
+            };
 
             // Print the min and max values for debugging purposes
             println!("Min x: {}, Max x: {}", min_x, max_x);
@@ -129,10 +148,16 @@ impl DailyForcastGraph {
                     .join("")
             };
 
-            // Store the generated SVG path
-            result = Ok(path);
+            match data.graph_type {
+                DataType::Temp => {
+                    data_path.push(GraphDataPath::Temp(path));
+                }
+                DataType::Rain => {
+                    data_path.push(GraphDataPath::Rain(path));
+                }
+            }
         }
-        result
+        Ok(data_path)
     }
 }
 
@@ -196,7 +221,7 @@ impl Icon for Temp {
             30.1..=40.0 => "overcast-night.svg",
             40.1..=50.0 => "rain.svg",
             50.1.. => "thermometer-mercury-cold.svg",
-            _ => "not-available.svg",
+            _ => NOT_AVAILABLE_ICON,
         }
     }
 }
@@ -217,7 +242,7 @@ impl Icon for Wind {
             100.1..=110.0 => "wind-beaufort-10.svg",
             110.1..=120.0 => "wind-beaufort-11.svg",
             120.1..=130.0 => "wind-beaufort-12.svg",
-            _ => "not-available.svg",
+            _ => NOT_AVAILABLE_ICON,
         }
     }
 }
@@ -231,7 +256,7 @@ impl Icon for Gust {
             30.1..=40.0 => "wind-offshore.svg",
             40.1..=50.0 => "wind-snow.svg",
             50.1..=60.0 => "wind-alert.svg",
-            _ => "not-available.svg",
+            _ => NOT_AVAILABLE_ICON,
         }
     }
 }
@@ -281,7 +306,7 @@ struct ObservationResponse {
 //             return icon;
 //         }
 //     }
-//     "not-available.svg"
+//     NOT_AVAILABLE_ICON
 // }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -325,9 +350,9 @@ impl Icon for UV {
                 9 => "uv-index-9.svg",
                 10 => "uv-index-10.svg",
                 11 => "uv-index-11.svg",
-                _ => "not-available.svg",
+                _ => "uv-index.svg",
             },
-            None => "not-available.svg",
+            None => NOT_AVAILABLE_ICON,
         }
     }
 }
@@ -409,30 +434,34 @@ struct DailyForcastResponse {
 }
 
 fn fetch_observation() -> SerdeResult<ObservationResponse> {
-    // let client = reqwest::blocking::Client::new();
-    // let response = client.get(&*OBSERVATION_ENDOPINT).send();
-    // let body = response.unwrap().text();
-    // // print!("{:?}", body);
-    // let mut file = fs::File::create("./test/observations.json");
-    // file.unwrap().write_all(body.unwrap().as_bytes());
+    if USE_ONLINE_DATA {
+        let client = reqwest::blocking::Client::new();
+        let response = client.get(&*OBSERVATION_ENDOPINT).send();
+        let body = response.unwrap().text();
+        // print!("{:?}", body);
+        let mut file = fs::File::create("./test/observations.json");
+        file.unwrap().write_all(body.unwrap().as_bytes());
 
-    // // Print the current working directory
-    // let current_dir = env::current_dir().unwrap();
+        // Print the current working directory
+        let current_dir = env::current_dir().unwrap();
 
-    // // Use an absolute path
-    // // let path = current_dir.join("/test/observations.json");
+        // Use an absolute path
+        // let path = current_dir.join("/test/observations.json");
+    }
 
     let body = fs::read_to_string("./test/observations.json");
     serde_json::from_str(&body.unwrap())
 }
 
 fn fetch_daily_forecast() -> SerdeResult<DailyForcastResponse> {
-    // let client = reqwest::blocking::Client::new();
-    // let response = client.get(&*DAILY_FORECAST_ENDPOINT).send();
-    // let body = response.unwrap().text();
-    // // write them to a file
-    // let mut file = fs::File::create("./test/daily_forcast.json");
-    // file.unwrap().write_all(body.unwrap().as_bytes());
+    if USE_ONLINE_DATA {
+        let client = reqwest::blocking::Client::new();
+        let response = client.get(&*DAILY_FORECAST_ENDPOINT).send();
+        let body = response.unwrap().text();
+        // write them to a file
+        let mut file = fs::File::create("./test/daily_forcast.json");
+        file.unwrap().write_all(body.unwrap().as_bytes());
+    }
 
     let body = fs::read_to_string("./test/daily_forcast.json");
     // print!("{:?}", body);
@@ -440,12 +469,14 @@ fn fetch_daily_forecast() -> SerdeResult<DailyForcastResponse> {
 }
 
 fn fetch_hourly_forecast() -> SerdeResult<HourlyForcastResponse> {
-    // let client = reqwest::blocking::Client::new();
-    // let response = client.get(&*HOURLY_FORECAST_ENDPOINT).send();
-    // let body = response.unwrap().text();
-    // // write them to a file
-    // let file = fs::File::create("./test/hourly_forcast.json");
-    // file.unwrap().write_all(body.unwrap().as_bytes());
+    if USE_ONLINE_DATA {
+        let client = reqwest::blocking::Client::new();
+        let response = client.get(&*HOURLY_FORECAST_ENDPOINT).send();
+        let body = response.unwrap().text();
+        // write them to a file
+        let file = fs::File::create("./test/hourly_forcast.json");
+        file.unwrap().write_all(body.unwrap().as_bytes());
+    }
 
     let body = fs::read_to_string("./test/hourly_forcast.json");
     serde_json::from_str(&body.unwrap())
@@ -495,6 +526,10 @@ fn update_observation(template: String) -> Result<String, Error> {
         .replace(
             "{{day1_name}}",
             &chrono::Local::now().format("%A, %d %b").to_string(),
+        )
+        .replace(
+            "{{time}}",
+            &chrono::Local::now().format("%I:%M%p").to_string(),
         );
 
     Ok(updated_template)
@@ -509,7 +544,6 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
             if let Ok(date) = chrono::NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%SZ")
                 .map(|datetime| datetime.date())
             {
-                // Get the current date
                 let current_date = chrono::Local::now().date_naive();
 
                 // If the date is today or in the past, skip it
@@ -524,6 +558,7 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
                     .to_string(),
             )
         {
+            // If the date is more than 7 days in the future, skip it
             break;
         }
 
@@ -531,6 +566,8 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
         let max_temp_key = format!("{{{{day{}_maxtemp}}}}", i);
         let icon_key = format!("{{{{day{}_icon}}}}", i);
         let day_name_key = format!("{{{{day{}_name}}}}", i);
+
+        // println!("Day: {:?}", day);
 
         let min_temp_value = day
             .temp_min
@@ -552,6 +589,8 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
                 .get_icon_path()
             })
             .unwrap_or_else(|| "NA".to_string());
+
+        println!("min {} max {} temp", min_temp_value, max_temp_value);
 
         let day_name_value = day
             .date
@@ -583,7 +622,7 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
         updated_template = updated_template
             .replace(&min_temp_key, "NA")
             .replace(&max_temp_key, "NA")
-            .replace(&icon_key, "NA")
+            .replace(&icon_key, &format!("{}{}", ICON_PATH, NOT_AVAILABLE_ICON))
             .replace(&day_name_key, "NA");
 
         i += 1;
@@ -601,12 +640,14 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
     };
 
     let mut temp_data = GraphData {
+        graph_type: DataType::Temp,
         points: vec![],
         colour: "red".to_string(),
         smooth: true,
     };
 
     let mut rain_data = GraphData {
+        graph_type: DataType::Rain,
         points: vec![],
         colour: "blue".to_string(),
         smooth: false,
@@ -671,8 +712,20 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
     };
 
     // println!("\n{:?}\n", svg_result);
+    let (temp_curve_data, rain_curve_data): (String, String) = svg_result.iter().fold(
+        (String::new(), String::new()),
+        |(mut temp_acc, mut rain_acc), path| {
+            match path {
+                GraphDataPath::Temp(data) => temp_acc.push_str(data),
+                GraphDataPath::Rain(data) => rain_acc.push_str(data),
+            }
+            (temp_acc, rain_acc)
+        },
+    );
+
     let updated_template = template
-        .replace("{{curve_data}}", &svg_result)
+        .replace("{{temp_curve_data}}", &temp_curve_data)
+        .replace("{{rain_curve_data}}", &rain_curve_data)
         .replace("{{uv_index}}", &hourly_forecast.data[0].uv.to_string())
         .replace("{{uv_index_icon}}", &current_uv.get_icon_path().to_string())
         .replace(
@@ -694,7 +747,7 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
 
     Ok(updated_template)
 }
-pub fn generateWeatherDashboard() -> io::Result<()> {
+pub fn generate_weather_dashboard() -> io::Result<()> {
     let dashboard_svg = fs::read_to_string(TEMPLATE_PATH)?;
     let mut updated_svg = update_observation(dashboard_svg);
     updated_svg = update_daily_forecast(updated_svg.unwrap());
@@ -709,34 +762,6 @@ pub fn generateWeatherDashboard() -> io::Result<()> {
         MODIFIED_TEMPLATE_PATH
     );
     Ok(())
-}
-// <?xml version="1.0" encoding="UTF-8"?>
-fn strip_xml_tag(svg_icon: &str) -> String {
-    let re = Regex::new(r"<\?xml.*?>").unwrap();
-    re.replace_all(svg_icon, "").to_string()
-}
-
-// this function takes a sring stripped of new lines representing an svg template, an svg element, and
-// a label inside the element. it embed the svg element under the label element
-fn embed_svg_element<'a>(svg_template: &'a str, svg_element: &'a str, label: &'a str) -> String {
-    // find element that contain the label
-    println!("Label: {}", label);
-    println!("SVG element: {}", svg_element);
-    let mut new_svg = String::new();
-    match svg_template.find(format!("label=\"{}\" />", label).as_str()) {
-        Some(mut index) => {
-            index += (format!("label=\"{}\" />", label).as_str()).len();
-            println!("Label found in the SVG template. {} ", index);
-            new_svg.push_str(&svg_template[..index]);
-            new_svg.push_str(svg_element);
-            new_svg.push_str(&svg_template[index..]);
-        }
-        None => {
-            eprintln!("Label not found in the SVG template.");
-        }
-    }
-    // println!("{}", new_svg);
-    new_svg
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
