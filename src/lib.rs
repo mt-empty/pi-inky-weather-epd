@@ -1,9 +1,12 @@
+#![allow(unused_imports)]
+#![allow(dead_code)]
 pub mod charts;
-pub mod condition_codes;
 use anyhow::Error;
 use chrono::{NaiveDateTime, Timelike};
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
+use serde::Deserialize;
+
 use serde_json::{Error as SerdeError, Result as SerdeResult};
 use std::io::{self, Write};
 use std::{env, fs};
@@ -14,22 +17,21 @@ const LOCATION: &str = "r283sf";
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref OBSERVATION_ENDOPINT: String =
-        format!("{}/{}/observations", WEATHER_PROVIDER, LOCATION);
     static ref DAILY_FORECAST_ENDPOINT: String =
         format!("{}/{}/forecasts/daily", WEATHER_PROVIDER, LOCATION);
     static ref HOURLY_FORECAST_ENDPOINT: String =
         format!("{}/{}/forecasts/hourly", WEATHER_PROVIDER, LOCATION);
 }
+
 const UNIT: &str = "°C";
 const TEMPLATE_PATH: &str = "./dashboard-template-min.svg";
 const MODIFIED_TEMPLATE_PATH: &str = "./modified-dashboard.svg";
 const ICON_PATH: &str = "./static/line-svg-static/";
-const USE_ONLINE_DATA: bool = true;
+const USE_ONLINE_DATA: bool = false;
 const NOT_AVAILABLE_ICON: &str = "not-available.svg";
 // const ICON_PATH: &str = "./static/fill-svg-static/";
 
-#[derive(Serialize, Deserialize, Clone, Debug, Copy)]
+#[derive(Deserialize, Clone, Debug, Copy)]
 pub struct Point {
     pub x: f64,
     pub y: f64,
@@ -84,7 +86,6 @@ impl DailyForcastGraph {
                 .unwrap()
                 .x;
 
-            // print data.points
             // println!("{:?}", data.points);
 
             // Calculate the minimum and maximum y values from the points
@@ -100,7 +101,6 @@ impl DailyForcastGraph {
                 }
             };
 
-            // Print the min and max values for debugging purposes
             println!("Min x: {}, Max x: {}", min_x, max_x);
             println!("Min y: {}, Max y: {}", min_y, max_y);
 
@@ -162,7 +162,7 @@ impl DailyForcastGraph {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct Wind {
     speed_kilometre: f64,
     speed_knot: f64,
@@ -171,42 +171,20 @@ struct Wind {
     gust_speed_kilometre: Option<f64>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct Gust {
     speed_kilometre: f64,
     speed_knot: f64,
     time: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct Temp {
     time: String,
     value: f64,
 }
 
-trait Value {
-    fn to_string(&self) -> f64;
-}
-
-impl Value for Temp {
-    fn to_string(&self) -> f64 {
-        self.value
-    }
-}
-
-impl Value for Wind {
-    fn to_string(&self) -> f64 {
-        self.speed_kilometre
-    }
-}
-
-impl Value for Gust {
-    fn to_string(&self) -> f64 {
-        self.speed_kilometre
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Display)]
+#[derive(Deserialize, Debug, Display)]
 enum RainChanceName {
     #[strum(to_string = "clear")]
     Clear,
@@ -218,7 +196,7 @@ enum RainChanceName {
     Extreme,
 }
 
-#[derive(Serialize, Deserialize, Debug, Display)]
+#[derive(Deserialize, Debug, Display)]
 enum RainAmountName {
     #[strum(to_string = "-drizzle")]
     Drizzle,
@@ -226,7 +204,7 @@ enum RainAmountName {
     Rain,
 }
 
-#[derive(Serialize, Deserialize, Debug, Display)]
+#[derive(Deserialize, Debug, Display)]
 enum DayNight {
     #[strum(to_string = "-day")]
     Day,
@@ -257,78 +235,19 @@ trait Icon {
     }
 }
 
-// impl Icon for Temp {
-//     fn get_icon_name(&self) -> &str {
-//         match self.value {
-//             0.0..=10.0 => "partly-cloudy-night-hail.svg",
-//             10.1..=20.0 => "extreme-day-haze.svg",
-//             20.1..=30.0 => "extreme-night-rain.svg",
-//             30.1..=40.0 => "overcast-night.svg",
-//             40.1..=50.0 => "rain.svg",
-//             50.1.. => "thermometer-mercury-cold.svg",
-//             _ => NOT_AVAILABLE_ICON,
-//         }
-//     }
-// }
-
 impl Icon for Wind {
     fn get_icon_name(&self) -> String {
         let icon = match self.speed_kilometre {
-            0.0..=10.0 => "wind-beaufort-0.svg",
-            10.1..=20.0 => "wind-beaufort-1.svg",
-            20.1..=30.0 => "wind-beaufort-2.svg",
-            30.1..=40.0 => "wind-beaufort-3.svg",
-            40.1..=50.0 => "wind-beaufort-4.svg",
-            50.1..=60.0 => "wind-beaufort-5.svg",
-            60.1..=70.0 => "wind-beaufort-6.svg",
-            70.1..=80.0 => "wind-beaufort-7.svg",
-            80.1..=90.0 => "wind-beaufort-8.svg",
-            90.1..=100.0 => "wind-beaufort-9.svg",
-            100.1..=110.0 => "wind-beaufort-10.svg",
-            110.1..=120.0 => "wind-beaufort-11.svg",
-            120.1..=130.0 => "wind-beaufort-12.svg",
+            0.0..=20.0 => "wind-beaufort-0.svg",
+            20.1..=40.0 => "umbrella-wind.svg",
+            40.1.. => "umbrella-wind-alt.svg",
             _ => NOT_AVAILABLE_ICON,
         };
         icon.to_string()
     }
 }
 
-// impl Icon for Gust {
-//     fn get_icon_name(&self) -> &str {
-//         match self.speed_kilometre {
-//             0.0..=10.0 => "windsock-weak.svg",
-//             10.1..=20.0 => "windsock.svg",
-//             20.1..=30.0 => "wind-onshore.svg",
-//             30.1..=40.0 => "wind-offshore.svg",
-//             40.1..=50.0 => "wind-snow.svg",
-//             50.1..=60.0 => "wind-alert.svg",
-//             _ => NOT_AVAILABLE_ICON,
-//         }
-//     }
-// }
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Station {
-    bom_id: String,
-    name: String,
-    distance: u32,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ObservationData {
-    temp: f64,
-    temp_feels_like: f64,
-    wind: Wind,
-    gust: Gust,
-    max_gust: Gust,
-    max_temp: Temp,
-    min_temp: Temp,
-    rain_since_9am: f64,
-    humidity: u32,
-    station: Station,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct Metadata {
     response_timestamp: String,
     issue_time: String,
@@ -336,26 +255,7 @@ struct Metadata {
     copyright: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct ObservationResponse {
-    metadata: Metadata,
-    data: ObservationData,
-}
-
-// fn get_icon_for_element<T>(
-//     element: T,
-//     value_range_to_icon: Vec<(f64, f64, &str)>,
-//     compare_fn: fn(T) -> bool,
-// ) -> &str {
-//     for (min, max, icon) in value_range_to_icon {
-//         if compare_fn(element) {
-//             return icon;
-//         }
-//     }
-//     NOT_AVAILABLE_ICON
-// }
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct RainAmount {
     min: Option<f64>,
     max: Option<f64>,
@@ -364,7 +264,7 @@ struct RainAmount {
     units: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct Rain {
     amount: RainAmount,
     chance: Option<u32>,
@@ -373,7 +273,7 @@ struct Rain {
     precipitation_amount_50_percent_chance: Option<f64>,
     precipitation_amount_75_percent_chance: Option<f64>,
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct UV {
     category: Option<String>,
     end_time: Option<String>,
@@ -394,19 +294,19 @@ impl Icon for UV {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct Astronomical {
     sunrise_time: Option<String>,
     sunset_time: Option<String>,
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct FireDangerCategory {
     text: Option<String>,
     default_colour: Option<String>,
     dark_mode_colour: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct Now {
     is_night: Option<bool>,
     now_label: Option<String>,
@@ -415,7 +315,7 @@ struct Now {
     temp_later: Option<f64>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct DailyEntry {
     rain: Option<Rain>,
     uv: Option<UV>,
@@ -453,7 +353,7 @@ impl Icon for DailyEntry {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct HourlyMetadata {
     response_timestamp: String,
     issue_time: String,
@@ -463,7 +363,7 @@ struct HourlyMetadata {
     copyright: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct HourlyForecast {
     rain: Rain,
     temp: f64,
@@ -496,45 +396,40 @@ impl Icon for HourlyForecast {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct HourlyForcastResponse {
     metadata: Metadata,
     data: Vec<HourlyForecast>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct DailyForcastResponse {
     metadata: HourlyMetadata,
     data: Vec<DailyEntry>,
 }
 
-fn fetch_daily_forecast() -> SerdeResult<DailyForcastResponse> {
+fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &str) -> SerdeResult<T> {
     if USE_ONLINE_DATA {
         let client = reqwest::blocking::Client::new();
-        let response = client.get(&*DAILY_FORECAST_ENDPOINT).send();
+        let response = client.get(endpoint).send();
         let body = response.unwrap().text();
         // write them to a file
-        let file = fs::File::create("./test/daily_forcast.json");
-        file.unwrap().write_all(body.unwrap().as_bytes());
+        let file = fs::File::create(file_path);
+        if let Err(e) = file.unwrap().write_all(body.unwrap().as_bytes()) {
+            eprintln!("Failed to write to file: {}", e);
+        }
     }
 
-    let body = fs::read_to_string("./test/daily_forcast.json");
-    // print!("{:?}", body);
+    let body = fs::read_to_string(file_path);
     serde_json::from_str(&body.unwrap())
 }
 
-fn fetch_hourly_forecast() -> SerdeResult<HourlyForcastResponse> {
-    if USE_ONLINE_DATA {
-        let client = reqwest::blocking::Client::new();
-        let response = client.get(&*HOURLY_FORECAST_ENDPOINT).send();
-        let body = response.unwrap().text();
-        // write them to a file
-        let file = fs::File::create("./test/hourly_forcast.json");
-        file.unwrap().write_all(body.unwrap().as_bytes());
-    }
+fn fetch_daily_forecast() -> SerdeResult<DailyForcastResponse> {
+    fetch(&DAILY_FORECAST_ENDPOINT, "./test/daily_forcast.json")
+}
 
-    let body = fs::read_to_string("./test/hourly_forcast.json");
-    serde_json::from_str(&body.unwrap())
+fn fetch_hourly_forecast() -> SerdeResult<HourlyForcastResponse> {
+    fetch(&HOURLY_FORECAST_ENDPOINT, "./test/hourly_forcast.json")
 }
 
 fn update_current_hour(current_hour: &HourlyForecast, template: String) -> String {
@@ -568,6 +463,7 @@ fn update_current_hour(current_hour: &HourlyForecast, template: String) -> Strin
             &chrono::Local::now().format("%I:%M%p").to_string(),
         )
 }
+
 fn update_daily_forecast(template: String) -> Result<String, Error> {
     let daily_forecast_data = fetch_daily_forecast()?.data;
     // todo check length of daily_forecast_data
@@ -790,7 +686,7 @@ pub fn generate_weather_dashboard() -> io::Result<()> {
     Ok(())
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 struct Curve {
     c1: Point,
     c2: Point,
