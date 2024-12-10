@@ -7,9 +7,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Error as SerdeError, Result as SerdeResult};
 use std::io::{self, Write};
 use std::{env, fs};
+use strum_macros::Display;
 
 const WEATHER_PROVIDER: &str = "https://api.weather.bom.gov.au/v1/locations/";
-const LOCATION: &str = "r1r0z4";
+const LOCATION: &str = "r283sf";
 use lazy_static::lazy_static;
 
 lazy_static! {
@@ -24,7 +25,7 @@ const UNIT: &str = "°C";
 const TEMPLATE_PATH: &str = "./dashboard-template-min.svg";
 const MODIFIED_TEMPLATE_PATH: &str = "./modified-dashboard.svg";
 const ICON_PATH: &str = "./static/line-svg-static/";
-const USE_ONLINE_DATA: bool = false;
+const USE_ONLINE_DATA: bool = true;
 const NOT_AVAILABLE_ICON: &str = "not-available.svg";
 // const ICON_PATH: &str = "./static/fill-svg-static/";
 
@@ -205,30 +206,74 @@ impl Value for Gust {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Display)]
+enum RainChanceName {
+    #[strum(to_string = "clear")]
+    Clear,
+    #[strum(to_string = "partly-cloudy")]
+    PartlyCloudy,
+    #[strum(to_string = "overcast")]
+    Overcast,
+    #[strum(to_string = "extreme")]
+    Extreme,
+}
+
+#[derive(Serialize, Deserialize, Debug, Display)]
+enum RainAmountName {
+    #[strum(to_string = "-drizzle")]
+    Drizzle,
+    #[strum(to_string = "-rain")]
+    Rain,
+}
+
+#[derive(Serialize, Deserialize, Debug, Display)]
+enum DayNight {
+    #[strum(to_string = "-day")]
+    Day,
+    #[strum(to_string = "-night")]
+    Night,
+}
+
 trait Icon {
-    fn get_icon_name(&self) -> &str;
+    fn get_icon_name(&self) -> String;
     fn get_icon_path(&self) -> String {
         format!("{}{}", ICON_PATH, self.get_icon_name())
     }
-}
+    fn rain_amount_to_name(amount: u32) -> String {
+        match amount {
+            0..=2 => "".to_string(),
+            3..=20 => RainAmountName::Drizzle.to_string(),
+            21.. => RainAmountName::Rain.to_string(),
+        }
+    }
 
-impl Icon for Temp {
-    fn get_icon_name(&self) -> &str {
-        match self.value {
-            0.0..=10.0 => "partly-cloudy-night-hail.svg",
-            10.1..=20.0 => "extreme-day-haze.svg",
-            20.1..=30.0 => "extreme-night-rain.svg",
-            30.1..=40.0 => "overcast-night.svg",
-            40.1..=50.0 => "rain.svg",
-            50.1.. => "thermometer-mercury-cold.svg",
-            _ => NOT_AVAILABLE_ICON,
+    fn rain_chance_to_name(chance: u32) -> String {
+        match chance {
+            0..=25 => RainChanceName::Clear.to_string(),
+            26..=50 => RainChanceName::PartlyCloudy.to_string(),
+            51..=75 => RainChanceName::Overcast.to_string(),
+            76.. => RainChanceName::Extreme.to_string(),
         }
     }
 }
 
+// impl Icon for Temp {
+//     fn get_icon_name(&self) -> &str {
+//         match self.value {
+//             0.0..=10.0 => "partly-cloudy-night-hail.svg",
+//             10.1..=20.0 => "extreme-day-haze.svg",
+//             20.1..=30.0 => "extreme-night-rain.svg",
+//             30.1..=40.0 => "overcast-night.svg",
+//             40.1..=50.0 => "rain.svg",
+//             50.1.. => "thermometer-mercury-cold.svg",
+//             _ => NOT_AVAILABLE_ICON,
+//         }
+//     }
+// }
+
 impl Icon for Wind {
-    fn get_icon_name(&self) -> &str {
-        match self.speed_kilometre {
+    fn get_icon_name(&self) -> String {
+        let icon = match self.speed_kilometre {
             0.0..=10.0 => "wind-beaufort-0.svg",
             10.1..=20.0 => "wind-beaufort-1.svg",
             20.1..=30.0 => "wind-beaufort-2.svg",
@@ -243,23 +288,24 @@ impl Icon for Wind {
             110.1..=120.0 => "wind-beaufort-11.svg",
             120.1..=130.0 => "wind-beaufort-12.svg",
             _ => NOT_AVAILABLE_ICON,
-        }
+        };
+        icon.to_string()
     }
 }
 
-impl Icon for Gust {
-    fn get_icon_name(&self) -> &str {
-        match self.speed_kilometre {
-            0.0..=10.0 => "windsock-weak.svg",
-            10.1..=20.0 => "windsock.svg",
-            20.1..=30.0 => "wind-onshore.svg",
-            30.1..=40.0 => "wind-offshore.svg",
-            40.1..=50.0 => "wind-snow.svg",
-            50.1..=60.0 => "wind-alert.svg",
-            _ => NOT_AVAILABLE_ICON,
-        }
-    }
-}
+// impl Icon for Gust {
+//     fn get_icon_name(&self) -> &str {
+//         match self.speed_kilometre {
+//             0.0..=10.0 => "windsock-weak.svg",
+//             10.1..=20.0 => "windsock.svg",
+//             20.1..=30.0 => "wind-onshore.svg",
+//             30.1..=40.0 => "wind-offshore.svg",
+//             40.1..=50.0 => "wind-snow.svg",
+//             50.1..=60.0 => "wind-alert.svg",
+//             _ => NOT_AVAILABLE_ICON,
+//         }
+//     }
+// }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Station {
@@ -336,23 +382,14 @@ struct UV {
 }
 
 impl Icon for UV {
-    fn get_icon_name(&self) -> &str {
+    fn get_icon_name(&self) -> String {
         match self.max_index {
             Some(index) => match index {
-                0..=1 => "uv-index-1.svg",
-                2 => "uv-index-2.svg",
-                3 => "uv-index-3.svg",
-                4 => "uv-index-4.svg",
-                5 => "uv-index-5.svg",
-                6 => "uv-index-6.svg",
-                7 => "uv-index-7.svg",
-                8 => "uv-index-8.svg",
-                9 => "uv-index-9.svg",
-                10 => "uv-index-10.svg",
-                11 => "uv-index-11.svg",
-                _ => "uv-index.svg",
+                0 => "uv-index.svg".to_string(),
+                1..=11 => format!("uv-index-{}.svg", index),
+                _ => NOT_AVAILABLE_ICON.to_string(),
             },
-            None => NOT_AVAILABLE_ICON,
+            None => NOT_AVAILABLE_ICON.to_string(),
         }
     }
 }
@@ -395,8 +432,29 @@ struct DailyEntry {
     now: Option<Now>,
 }
 
+impl Icon for DailyEntry {
+    fn get_icon_name(&self) -> String {
+        let temp = format!(
+            "{}{}{}.svg",
+            DailyEntry::rain_chance_to_name(self.rain.as_ref().unwrap().chance.unwrap_or(0)),
+            DayNight::Day,
+            DailyEntry::rain_amount_to_name(
+                self.rain
+                    .as_ref()
+                    .unwrap()
+                    .amount
+                    .min
+                    .unwrap_or(0.0)
+                    .round() as u32
+            )
+        );
+        println!("Temp: {:?}", temp);
+        temp
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
-struct Metadata2 {
+struct HourlyMetadata {
     response_timestamp: String,
     issue_time: String,
     next_issue_time: String,
@@ -421,6 +479,23 @@ struct HourlyForecast {
     next_forecast_period: String,
 }
 
+impl Icon for HourlyForecast {
+    fn get_icon_name(&self) -> String {
+        let temp = format!(
+            "{}{}{}.svg",
+            HourlyForecast::rain_chance_to_name(self.rain.chance.unwrap_or(0)),
+            if self.is_night {
+                DayNight::Night.to_string()
+            } else {
+                DayNight::Day.to_string()
+            },
+            HourlyForecast::rain_amount_to_name(self.rain.amount.min.unwrap_or(0.0).round() as u32)
+        );
+        println!("Temp: {:?}", temp);
+        temp
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct HourlyForcastResponse {
     metadata: Metadata,
@@ -429,28 +504,8 @@ struct HourlyForcastResponse {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DailyForcastResponse {
-    metadata: Metadata2,
+    metadata: HourlyMetadata,
     data: Vec<DailyEntry>,
-}
-
-fn fetch_observation() -> SerdeResult<ObservationResponse> {
-    if USE_ONLINE_DATA {
-        let client = reqwest::blocking::Client::new();
-        let response = client.get(&*OBSERVATION_ENDOPINT).send();
-        let body = response.unwrap().text();
-        // print!("{:?}", body);
-        let mut file = fs::File::create("./test/observations.json");
-        file.unwrap().write_all(body.unwrap().as_bytes());
-
-        // Print the current working directory
-        let current_dir = env::current_dir().unwrap();
-
-        // Use an absolute path
-        // let path = current_dir.join("/test/observations.json");
-    }
-
-    let body = fs::read_to_string("./test/observations.json");
-    serde_json::from_str(&body.unwrap())
 }
 
 fn fetch_daily_forecast() -> SerdeResult<DailyForcastResponse> {
@@ -459,7 +514,7 @@ fn fetch_daily_forecast() -> SerdeResult<DailyForcastResponse> {
         let response = client.get(&*DAILY_FORECAST_ENDPOINT).send();
         let body = response.unwrap().text();
         // write them to a file
-        let mut file = fs::File::create("./test/daily_forcast.json");
+        let file = fs::File::create("./test/daily_forcast.json");
         file.unwrap().write_all(body.unwrap().as_bytes());
     }
 
@@ -482,47 +537,28 @@ fn fetch_hourly_forecast() -> SerdeResult<HourlyForcastResponse> {
     serde_json::from_str(&body.unwrap())
 }
 
-fn update_observation(template: String) -> Result<String, Error> {
-    let observations = fetch_observation()?;
-    let observation_data = observations.data;
-    let issue_date = observations.metadata.issue_time;
-    let temp: Temp = Temp {
-        time: "now".to_string(),
-        value: observation_data.temp,
-    };
-    let feels_like = observation_data.temp_feels_like;
-    let wind = Wind {
-        speed_kilometre: observation_data.wind.speed_kilometre,
-        speed_knot: observation_data.wind.speed_knot,
-        direction: observation_data.wind.direction,
-        gust_speed_kilometre: observation_data.wind.gust_speed_kilometre,
-        gust_speed_knot: observation_data.wind.gust_speed_knot,
-    };
-    let gust = Gust {
-        speed_kilometre: observation_data.gust.speed_kilometre,
-        speed_knot: observation_data.gust.speed_knot,
-        time: observation_data.gust.time,
-    };
-
-    // find and replace {{keyword}} with the value
-    let updated_template = template
-        .replace("{{day1_temp}}", &temp.value.to_string())
-        .replace("{{day1_icon}}", &temp.get_icon_path())
-        .replace("{{day1_feels_like}}", &feels_like.to_string())
+fn update_current_hour(current_hour: &HourlyForecast, template: String) -> String {
+    template
+        .replace("{{current_temp}}", &current_hour.temp.to_string())
+        .replace("{{current_icon}}", &current_hour.get_icon_path())
         .replace(
-            "{{day1_maxtemp}}",
-            &observation_data.max_temp.value.to_string(),
+            "{{current_feels_like}}",
+            &current_hour.temp_feels_like.to_string(),
         )
         .replace(
-            "{{day1_mintemp}}",
-            &observation_data.min_temp.value.to_string(),
+            "{{current_wind_speed}}",
+            &current_hour.wind.speed_kilometre.to_string(),
         )
-        .replace("{{wind_speed}}", &wind.speed_kilometre.to_string())
-        .replace("{{wind_icon}}", &wind.get_icon_path())
-        .replace("{{gust_speed}}", &gust.speed_kilometre.to_string())
-        .replace("{{gust_icon}}", &gust.get_icon_path())
-        .replace("{{max_temp}}", &observation_data.max_temp.value.to_string())
-        .replace("{{min_temp}}", &observation_data.min_temp.value.to_string())
+        .replace("{{current_wind_icon}}", &current_hour.wind.get_icon_path())
+        .replace("{{current_uv_index}}", &current_hour.uv.to_string())
+        .replace(
+            "{{current_relative_humidity}}",
+            &current_hour.relative_humidity.to_string(),
+        )
+        .replace(
+            "{{current_relative_humidity_icon}}",
+            "./static/line-svg-static/humidity.svg",
+        )
         .replace(
             "{{day1_name}}",
             &chrono::Local::now().format("%A, %d %b").to_string(),
@@ -530,9 +566,7 @@ fn update_observation(template: String) -> Result<String, Error> {
         .replace(
             "{{time}}",
             &chrono::Local::now().format("%I:%M%p").to_string(),
-        );
-
-    Ok(updated_template)
+        )
 }
 fn update_daily_forecast(template: String) -> Result<String, Error> {
     let daily_forecast_data = fetch_daily_forecast()?.data;
@@ -579,16 +613,7 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
             .map(|temp| temp.to_string())
             .unwrap_or_else(|| "NA".to_string());
 
-        let icon_value = day
-            .temp_max
-            .map(|temp| {
-                Temp {
-                    value: temp,
-                    time: "Now".to_string(),
-                }
-                .get_icon_path()
-            })
-            .unwrap_or_else(|| "NA".to_string());
+        let icon_value = day.get_icon_path();
 
         println!("min {} max {} temp", min_temp_value, max_temp_value);
 
@@ -663,6 +688,8 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
     // }
 
     hourly_forecast.data.sort_by(|a, b| a.time.cmp(&b.time));
+
+    let template = update_current_hour(&hourly_forecast.data[0], template);
 
     // we only want to display the next 24 hours
     let first_date =
@@ -749,8 +776,7 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
 }
 pub fn generate_weather_dashboard() -> io::Result<()> {
     let dashboard_svg = fs::read_to_string(TEMPLATE_PATH)?;
-    let mut updated_svg = update_observation(dashboard_svg);
-    updated_svg = update_daily_forecast(updated_svg.unwrap());
+    let mut updated_svg = update_daily_forecast(dashboard_svg);
     updated_svg = update_hourly_forecast(updated_svg.unwrap());
 
     let mut output = fs::File::create(MODIFIED_TEMPLATE_PATH)?;

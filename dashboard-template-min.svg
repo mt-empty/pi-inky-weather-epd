@@ -4,19 +4,20 @@
     <svg x="0" y="0" label="{{day1_label}}">
         <text x="250" y="50" font-size="35" fill="black">{{time}} {{day1_name}} </text>
 
-        <image x="50" y="-25" width="200" height="180" href="{{day1_icon}}" />
-        <text x="150" y="180" text-anchor="middle" dominant-baseline="middle" font-size="50" fill="black">{{day1_mintemp}}|{{day1_maxtemp}}</text>
-        <text x="150" y="230" text-anchor="middle" dominant-baseline="middle" font-size="25" fill="black">feels like {{day1_feels_like}}</text>
+        <image x="50" y="-25" width="200" height="180" href="{{current_icon}}" />
+        <!-- <text x="150" y="180" text-anchor="middle" dominant-baseline="middle" font-size="50" fill="black">{{day1_mintemp}}|{{day1_maxtemp}}</text> -->
+        <text x="150" y="180" text-anchor="middle" dominant-baseline="middle" font-size="50" fill="black">{{current_temp}}</text>
+        <text x="150" y="230" text-anchor="middle" dominant-baseline="middle" font-size="25" fill="black">feels like {{current_feels_like}}</text>
     </svg>
 
     <svg x="20" y="260" label="UV-index">
         <image width="75" height="75" href="{{uv_index_icon}}" />
-        <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30" fill="black">{{uv_index}}</text>
+        <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30" fill="black">{{current_uv_index}}</text>
     </svg>
 
     <svg x="20" y="330" label="wind">
-        <image width="75" height="75" href="{{wind_icon}}" />
-        <text  x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30" fill="black">{{wind_speed}}km/h</text>
+        <image width="75" height="75" href="{{current_wind_icon}}" />
+        <text  x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30" fill="black">{{current_wind_speed}}km/h</text>
     </svg>
 
     <svg x="20" y="400" label="relative_humidity">
