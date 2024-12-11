@@ -46,6 +46,7 @@ impl Point {
 #[derive(Clone, Debug)]
 pub enum DataType {
     Temp,
+    TempFeelLike,
     Rain,
 }
 
@@ -60,6 +61,24 @@ pub struct GraphData {
 pub struct DailyForcastGraph {
     pub name: String,
     pub data: Vec<GraphData>,
+    pub height: usize,
+    pub width: usize,
+}
+
+impl DailyForcastGraph {
+    const HEIGHT: usize = 300;
+    const WIDTH: usize = 600;
+    // const HEIGHT: usize = 400;
+    // const WIDTH: usize = 800;
+
+    fn default() -> Self {
+        Self {
+            name: "Hourly Forcast".to_string(),
+            data: vec![],
+            height: Self::HEIGHT,
+            width: Self::WIDTH,
+        }
+    }
 }
 
 impl GraphData {
@@ -70,11 +89,12 @@ impl GraphData {
 
 pub enum GraphDataPath {
     Temp(String),
+    TempFeelLike(String),
     Rain(String),
 }
 
 impl DailyForcastGraph {
-    pub fn draw_graph(&self, width: usize, height: usize) -> Result<Vec<GraphDataPath>, Error> {
+    pub fn draw_graph(&self) -> Result<Vec<GraphDataPath>, Error> {
         // Calculate the minimum and maximum x values from the points
         let mut data_path = vec![];
         for data in &self.data {
@@ -92,7 +112,7 @@ impl DailyForcastGraph {
             let min_y = data.points.iter().map(|val| val.y).fold(f64::NAN, f64::min);
             let max_y = match data.graph_type {
                 DataType::Rain => 100.0,
-                DataType::Temp => {
+                DataType::TempFeelLike | DataType::Temp => {
                     data.points
                         .iter()
                         .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
@@ -105,8 +125,8 @@ impl DailyForcastGraph {
             println!("Min y: {}, Max y: {}", min_y, max_y);
 
             // Calculate scaling factors for x and y to fit the graph within the given width and height
-            let xfactor = width as f64 / max_x;
-            let yfactor = height as f64 / max_y;
+            let xfactor = self.width as f64 / max_x;
+            let yfactor = self.height as f64 / max_y;
 
             println!("X factor: {}, Y factor: {}", xfactor, yfactor);
 
@@ -152,6 +172,9 @@ impl DailyForcastGraph {
             match data.graph_type {
                 DataType::Temp => {
                     data_path.push(GraphDataPath::Temp(path));
+                }
+                DataType::TempFeelLike => {
+                    data_path.push(GraphDataPath::TempFeelLike(path));
                 }
                 DataType::Rain => {
                     data_path.push(GraphDataPath::Rain(path));
@@ -555,37 +578,37 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
 fn update_hourly_forecast(template: String) -> Result<String, Error> {
     let mut hourly_forecast = fetch_hourly_forecast()?;
 
-    let mut graph = DailyForcastGraph {
-        name: "forcast".to_string(),
-        data: vec![],
-    };
+    let mut graph = DailyForcastGraph::default();
 
     let mut temp_data = GraphData {
         graph_type: DataType::Temp,
         points: vec![],
-        colour: "red".to_string(),
+        colour: "blue".to_string(),
+        smooth: true,
+    };
+
+    let mut feels_like_data = GraphData {
+        graph_type: DataType::TempFeelLike,
+        points: vec![],
+        colour: "green".to_string(),
         smooth: true,
     };
 
     let mut rain_data = GraphData {
         graph_type: DataType::Rain,
         points: vec![],
-        colour: "blue".to_string(),
+        colour: "red".to_string(),
         smooth: false,
     };
 
-    // add points to the graph
-    // for forecast in hourly_forecast.data {
-    //     let time = NaiveDateTime::parse_from_str(&forecast.time, "%Y-%m-%dT%H:%M:%SZ")
-    //         .map(|datetime| datetime.time())
-    //         .unwrap_or_else(|_| chrono::Local::now().time());
-    //     let temp = forecast.temp;
-    //     graph.add_point(time.num_seconds_from_midnight() as f64, temp);
-    // }
+    let mut updated_template = template
+        .replace("{{temp_colour}}", &temp_data.colour)
+        .replace("{{feels_like_colour}}", &feels_like_data.colour)
+        .replace("{{rain_colour}}", &rain_data.colour);
 
     hourly_forecast.data.sort_by(|a, b| a.time.cmp(&b.time));
 
-    let template = update_current_hour(&hourly_forecast.data[0], template);
+    updated_template = update_current_hour(&hourly_forecast.data[0], updated_template);
 
     // we only want to display the next 24 hours
     let first_date =
@@ -610,22 +633,17 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
         })
         .for_each(|forcast| {
             // println!("{:?} <= {:?}", forcast.time, forcast.temp);
-            temp_data.add_point(
-                x,
-                // NaiveDateTime::parse_from_str(&forcast.time, "%Y-%m-%dT%H:%M:%SZ")
-                //     .map(|datetime| datetime.time())
-                //     .unwrap_or_else(|_| chrono::Local::now().time())
-                //     .hour() as f64,
-                forcast.temp,
-            );
+            temp_data.add_point(x, forcast.temp);
+            feels_like_data.add_point(x, forcast.temp_feels_like);
             rain_data.add_point(x, forcast.rain.chance.unwrap_or(0).into());
             x += 1.0;
         });
 
-    graph.data.push(temp_data);
-    graph.data.push(rain_data);
+    graph
+        .data
+        .extend(vec![temp_data, rain_data, feels_like_data]);
 
-    let svg_result = graph.draw_graph(600, 300).unwrap();
+    let svg_result = graph.draw_graph().unwrap();
 
     let current_uv = UV {
         category: None,
@@ -635,19 +653,24 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
     };
 
     // println!("\n{:?}\n", svg_result);
-    let (temp_curve_data, rain_curve_data): (String, String) = svg_result.iter().fold(
-        (String::new(), String::new()),
-        |(mut temp_acc, mut rain_acc), path| {
-            match path {
-                GraphDataPath::Temp(data) => temp_acc.push_str(data),
-                GraphDataPath::Rain(data) => rain_acc.push_str(data),
-            }
-            (temp_acc, rain_acc)
-        },
-    );
+    let (temp_curve_data, feel_like_curve_data, rain_curve_data): (String, String, String) =
+        svg_result.iter().fold(
+            (String::new(), String::new(), String::new()),
+            |(mut temp_acc, mut feel_like_acc, mut rain_acc), path| {
+                match path {
+                    GraphDataPath::Temp(data) => temp_acc.push_str(data),
+                    GraphDataPath::TempFeelLike(data) => feel_like_acc.push_str(data),
+                    GraphDataPath::Rain(data) => rain_acc.push_str(data),
+                }
+                (temp_acc, feel_like_acc, rain_acc)
+            },
+        );
 
-    let updated_template = template
+    updated_template = updated_template
+        .replace("{{graph_hieght}}", &graph.height.to_string())
+        .replace("{{graph_width}}", &graph.width.to_string())
         .replace("{{temp_curve_data}}", &temp_curve_data)
+        .replace("{{feel_like_curve_data}}", &feel_like_curve_data)
         .replace("{{rain_curve_data}}", &rain_curve_data)
         .replace("{{uv_index}}", &hourly_forecast.data[0].uv.to_string())
         .replace("{{uv_index_icon}}", &current_uv.get_icon_path().to_string())
