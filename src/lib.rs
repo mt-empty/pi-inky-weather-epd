@@ -1,6 +1,5 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
-pub mod charts;
 use anyhow::Error;
 use chrono::{NaiveDateTime, Timelike};
 use regex::Regex;
@@ -63,6 +62,10 @@ pub struct DailyForcastGraph {
     pub data: Vec<GraphData>,
     pub height: usize,
     pub width: usize,
+    pub starting_x: f64,
+    pub ending_x: f64,
+    pub min_y: f64,
+    pub max_y: f64,
 }
 
 impl DailyForcastGraph {
@@ -77,6 +80,10 @@ impl DailyForcastGraph {
             data: vec![],
             height: Self::HEIGHT,
             width: Self::WIDTH,
+            starting_x: 0.0,
+            ending_x: 24.0,
+            min_y: f64::INFINITY,
+            max_y: -f64::INFINITY,
         }
     }
 }
@@ -94,39 +101,162 @@ pub enum GraphDataPath {
 }
 
 impl DailyForcastGraph {
-    pub fn draw_graph(&self) -> Result<Vec<GraphDataPath>, Error> {
+    fn create_axis_with_labels(&self) -> (String, String, String, String) {
+        let width = self.width as f64;
+        let height = self.height as f64;
+
+        println!(
+            "starting x: {}, ending x: {}",
+            self.starting_x, self.ending_x
+        );
+        println!("Min y: {}, Max y: {}", self.min_y, self.max_y);
+
+        let range_x = self.ending_x - self.starting_x;
+        let range_y = self.max_y - self.min_y;
+
+        // Mapping functions from data space to SVG space
+        // x data domain maps to [0, width]
+        // y data domain maps to [height, 0] (SVG y goes down)
+        let map_x = |x: f64| (x - self.starting_x) * (width / range_x);
+        let map_y = |y: f64| height - ((y - self.min_y) * (height / range_y));
+
+        // Determine where to place the x-axis
+        // If 0 is within the y range, place x-axis at y=0.
+        // Otherwise, place it at the min or max y boundary.
+        let x_axis_y = if self.min_y <= 0.0 && self.max_y >= 0.0 {
+            map_y(0.0)
+        } else if self.min_y > 0.0 {
+            map_y(self.min_y)
+        } else {
+            map_y(self.max_y)
+        };
+
+        // Determine where to place the y-axis
+        // If 0 is within the x range, place y-axis at x=0.
+        // Otherwise, place it at the starting_x or ending_x boundary.
+        let y_axis_x = if self.starting_x <= 0.0 && self.ending_x >= 0.0 {
+            map_x(0.0)
+        } else if self.starting_x > 0.0 {
+            map_x(self.starting_x)
+        } else {
+            map_x(self.ending_x)
+        };
+
+        // Axis paths
+        let mut x_axis_path = format!("M 0 {} L {} {}", x_axis_y, width, x_axis_y);
+        let mut y_axis_path = format!("M {} 0 L {} {}", y_axis_x, y_axis_x, height);
+
+        // Number of ticks
+        let x_ticks = 10;
+        let y_ticks = 10;
+        let x_step = range_x / x_ticks as f64;
+        let y_step = range_y / y_ticks as f64;
+
+        // Labels storage
+        let mut x_labels = String::new();
+        let mut y_labels = String::new();
+
+        // X-axis ticks and labels
+        for i in 0..=x_ticks {
+            let x_val = self.starting_x + i as f64 * x_step;
+            if x_val > self.ending_x {
+                break;
+            }
+            let xs = map_x(x_val);
+            // A small tick mark around the axis line
+            x_axis_path.push_str(&format!(
+                " M {} {} L {} {}",
+                xs,
+                x_axis_y - 5.0,
+                xs,
+                x_axis_y + 5.0
+            ));
+
+            // Label: placed below the x-axis line
+            let label_y = x_axis_y + 20.0;
+            let label_str = format!("{:.1}", x_val);
+            x_labels.push_str(&format!(
+                r#"<text x="{x}" y="{y}" font-size="12" text-anchor="middle">{text}</text>"#,
+                x = xs,
+                y = label_y,
+                text = label_str
+            ));
+        }
+        // Y-axis ticks and labels
+        for j in 0..=y_ticks {
+            let y_val = self.min_y + j as f64 * y_step;
+            if y_val > self.max_y {
+                break;
+            }
+            let ys = map_y(y_val);
+            // A small tick mark around the axis line
+            y_axis_path.push_str(&format!(
+                " M {} {} L {} {}",
+                y_axis_x - 5.0,
+                ys,
+                y_axis_x + 5.0,
+                ys
+            ));
+
+            // Label: placed to the left of the y-axis
+            let label_x = y_axis_x - 10.0;
+            let label_str = format!("{:.1}", y_val);
+            y_labels.push_str(&format!(
+                r#"<text x="{x}" y="{y}" font-size="12" text-anchor="end" dy="4">{text}</text>"#,
+                x = label_x,
+                y = ys,
+                text = label_str
+            ));
+        }
+
+        (x_axis_path, y_axis_path, x_labels, y_labels)
+    }
+
+    fn set_xand_y_range(&mut self) {
+        for data in &self.data {
+            let min_y_data = data.points.iter().map(|val| val.y).fold(f64::NAN, f64::min);
+            let max_y_data = data.points.iter().map(|val| val.y).fold(f64::NAN, f64::max);
+
+            let starting_x_data = data.points.first().map(|val| val.x).unwrap_or(0.0);
+            let ending_x_data = data.points.last().map(|val| val.x).unwrap_or(0.0);
+
+            match data.graph_type {
+                DataType::Rain => {}
+                DataType::TempFeelLike | DataType::Temp => {
+                    self.min_y = self.min_y.min(min_y_data);
+                    self.max_y = self.max_y.max(max_y_data);
+                }
+            }
+            self.starting_x = starting_x_data;
+            self.ending_x = ending_x_data;
+        }
+
+        println!(
+            "starting x: {}, ending x: {}",
+            self.starting_x, self.ending_x
+        );
+        println!("Min y: {}, Max y: {}", self.min_y, self.max_y);
+    }
+
+    pub fn draw_graph(&mut self) -> Result<Vec<GraphDataPath>, Error> {
         // Calculate the minimum and maximum x values from the points
         let mut data_path = vec![];
+
+        self.set_xand_y_range();
+
         for data in &self.data {
-            let min_x = data.points.first().map(|val| val.x).unwrap_or(0.0);
-            let max_x = data
-                .points
-                .iter()
-                .max_by(|a, b| a.x.partial_cmp(&b.x).unwrap())
-                .unwrap()
-                .x;
-
-            // println!("{:?}", data.points);
-
-            // Calculate the minimum and maximum y values from the points
-            let min_y = data.points.iter().map(|val| val.y).fold(f64::NAN, f64::min);
-            let max_y = match data.graph_type {
-                DataType::Rain => 100.0,
-                DataType::TempFeelLike | DataType::Temp => {
-                    data.points
-                        .iter()
-                        .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap())
-                        .unwrap()
-                        .y
+            // Calculate scaling factors for x and y to fit the graph within the given width and height
+            let xfactor = self.width as f64 / self.ending_x;
+            let yfactor = match data.graph_type {
+                DataType::Rain => self.height as f64 / 100.0, // Rain data is in percentage
+                DataType::Temp | DataType::TempFeelLike => {
+                    if self.min_y < 0.0 {
+                        self.height as f64 / self.max_y + self.min_y.abs()
+                    } else {
+                        self.height as f64 / self.max_y
+                    }
                 }
             };
-
-            println!("Min x: {}, Max x: {}", min_x, max_x);
-            println!("Min y: {}, Max y: {}", min_y, max_y);
-
-            // Calculate scaling factors for x and y to fit the graph within the given width and height
-            let xfactor = self.width as f64 / max_x;
-            let yfactor = self.height as f64 / max_y;
 
             println!("X factor: {}, Y factor: {}", xfactor, yfactor);
 
@@ -371,7 +501,6 @@ impl Icon for DailyEntry {
                     .round() as u32
             )
         );
-        println!("Temp: {:?}", temp);
         temp
     }
 }
@@ -414,7 +543,6 @@ impl Icon for HourlyForecast {
             },
             HourlyForecast::rain_amount_to_name(self.rain.amount.min.unwrap_or(0.0).round() as u32)
         );
-        println!("Temp: {:?}", temp);
         temp
     }
 }
@@ -483,10 +611,11 @@ fn update_current_hour(current_hour: &HourlyForecast, template: String) -> Strin
         )
         .replace(
             "{{time}}",
-            &chrono::Local::now().format("%I:%M%p").to_string(),
+            &chrono::Local::now().format("%I:%M%P").to_string(),
         )
 }
 
+// Extrusion Pattern—force everything through one function until it resembles spaghetti
 fn update_daily_forecast(template: String) -> Result<String, Error> {
     let daily_forecast_data = fetch_daily_forecast()?.data;
     // todo check length of daily_forecast_data
@@ -576,14 +705,14 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
 }
 
 fn update_hourly_forecast(template: String) -> Result<String, Error> {
-    let mut hourly_forecast = fetch_hourly_forecast()?;
+    let hourly_forecast = fetch_hourly_forecast()?;
 
     let mut graph = DailyForcastGraph::default();
 
     let mut temp_data = GraphData {
         graph_type: DataType::Temp,
         points: vec![],
-        colour: "blue".to_string(),
+        colour: "red".to_string(),
         smooth: true,
     };
 
@@ -597,8 +726,15 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
     let mut rain_data = GraphData {
         graph_type: DataType::Rain,
         points: vec![],
-        colour: "red".to_string(),
+        colour: "blue".to_string(),
         smooth: false,
+    };
+
+    let current_uv = UV {
+        category: None,
+        end_time: None,
+        max_index: Some(hourly_forecast.data[0].uv as u32),
+        start_time: None,
     };
 
     let mut updated_template = template
@@ -606,7 +742,7 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
         .replace("{{feels_like_colour}}", &feels_like_data.colour)
         .replace("{{rain_colour}}", &rain_data.colour);
 
-    hourly_forecast.data.sort_by(|a, b| a.time.cmp(&b.time));
+    // hourly_forecast.data.sort_by(|a, b| a.time.cmp(&b.time));
 
     updated_template = update_current_hour(&hourly_forecast.data[0], updated_template);
 
@@ -641,18 +777,10 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
 
     graph
         .data
-        .extend(vec![temp_data, rain_data, feels_like_data]);
+        .extend(vec![feels_like_data, temp_data, rain_data]);
 
     let svg_result = graph.draw_graph().unwrap();
 
-    let current_uv = UV {
-        category: None,
-        end_time: None,
-        max_index: Some(hourly_forecast.data[0].uv as u32),
-        start_time: None,
-    };
-
-    // println!("\n{:?}\n", svg_result);
     let (temp_curve_data, feel_like_curve_data, rain_curve_data): (String, String, String) =
         svg_result.iter().fold(
             (String::new(), String::new(), String::new()),
@@ -690,6 +818,14 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
             "{{wind_icon}}",
             &hourly_forecast.data[0].wind.get_icon_path(),
         );
+
+    let axis_data_path = graph.create_axis_with_labels();
+
+    updated_template = updated_template
+        .replace("{{x_axis_path}}", &axis_data_path.0)
+        .replace("{{y_axis_path}}", &axis_data_path.1)
+        .replace("{{x_labels}}", &axis_data_path.2)
+        .replace("{{y_labels}}", &axis_data_path.3);
 
     Ok(updated_template)
 }
