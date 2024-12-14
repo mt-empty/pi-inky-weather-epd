@@ -81,7 +81,7 @@ impl DailyForcastGraph {
             height: Self::HEIGHT,
             width: Self::WIDTH,
             starting_x: 0.0,
-            ending_x: 24.0,
+            ending_x: 23.0,
             min_y: f64::INFINITY,
             max_y: -f64::INFINITY,
         }
@@ -101,15 +101,9 @@ pub enum GraphDataPath {
 }
 
 impl DailyForcastGraph {
-    fn create_axis_with_labels(&self) -> (String, String, String, String) {
+    fn create_axis_with_labels(&self, current_hour: f64) -> (String, String, String, String) {
         let width = self.width as f64;
         let height = self.height as f64;
-
-        println!(
-            "starting x: {}, ending x: {}",
-            self.starting_x, self.ending_x
-        );
-        println!("Min y: {}, Max y: {}", self.min_y, self.max_y);
 
         let range_x = self.ending_x - self.starting_x;
         let range_y = self.max_y - self.min_y;
@@ -174,7 +168,16 @@ impl DailyForcastGraph {
 
             // Label: placed below the x-axis line
             let label_y = x_axis_y + 20.0;
-            let label_str = format!("{:.1}", x_val);
+            let hour = (current_hour + x_val) % 24.0;
+            let period = if hour < 12.0 { "am" } else { "pm" };
+            let display_hour = if hour == 0.0 {
+                12.0
+            } else if hour > 12.0 {
+                hour - 12.0
+            } else {
+                hour
+            };
+            let label_str = format!("{:.0}{}", display_hour, period);
             x_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}" font-size="12" text-anchor="middle">{text}</text>"#,
                 x = xs,
@@ -258,7 +261,7 @@ impl DailyForcastGraph {
                 }
             };
 
-            println!("X factor: {}, Y factor: {}", xfactor, yfactor);
+            // println!("X factor: {}, Y factor: {}", xfactor, yfactor);
 
             // Scale the points according to the calculated factors
             let points: Vec<Point> = data
@@ -745,13 +748,36 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
     // hourly_forecast.data.sort_by(|a, b| a.time.cmp(&b.time));
 
     updated_template = update_current_hour(&hourly_forecast.data[0], updated_template);
+    let current_date = chrono::Local::now()
+        .naive_local()
+        .with_minute(0)
+        .unwrap()
+        .with_second(0)
+        .unwrap()
+        .with_nanosecond(0)
+        .unwrap();
 
+    println!("Current time: {:?}", current_date);
     // we only want to display the next 24 hours
-    let first_date =
-        NaiveDateTime::parse_from_str(&hourly_forecast.data[0].time, "%Y-%m-%dT%H:%M:%SZ")
-            .unwrap_or_else(|_| chrono::Local::now().naive_local());
+    let first_date = &hourly_forecast
+        .data
+        .iter()
+        .find_map(
+            // find a the first time
+            |forcast| match NaiveDateTime::parse_from_str(&forcast.time, "%Y-%m-%dT%H:%M:%SZ") {
+                Ok(datetime) => {
+                    if datetime >= current_date {
+                        Some(datetime)
+                    } else {
+                        None
+                    }
+                }
+                Err(_) => None,
+            },
+        )
+        .unwrap_or_else(|| chrono::Local::now().naive_local());
 
-    let end_date = first_date + chrono::Duration::hours(24);
+    let end_date = *first_date + chrono::Duration::hours(24);
 
     println!("First date: {:?}", first_date);
     println!("End date: {:?}", end_date);
@@ -763,12 +789,14 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
         .iter()
         .filter(|forcast| {
             match NaiveDateTime::parse_from_str(&forcast.time, "%Y-%m-%dT%H:%M:%SZ") {
-                Ok(datetime) => datetime < end_date,
+                Ok(datetime) => datetime >= *first_date && datetime < end_date,
                 Err(_) => false,
             }
         })
         .for_each(|forcast| {
-            // println!("{:?} <= {:?}", forcast.time, forcast.temp);
+            // we won't push the actual hour right now
+            // we can calculate it later
+            // we push this index to make scaling graph easier
             temp_data.add_point(x, forcast.temp);
             feels_like_data.add_point(x, forcast.temp_feels_like);
             rain_data.add_point(x, forcast.rain.chance.unwrap_or(0).into());
@@ -819,7 +847,7 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
             &hourly_forecast.data[0].wind.get_icon_path(),
         );
 
-    let axis_data_path = graph.create_axis_with_labels();
+    let axis_data_path = graph.create_axis_with_labels(first_date.hour() as f64);
 
     updated_template = updated_template
         .replace("{{x_axis_path}}", &axis_data_path.0)
