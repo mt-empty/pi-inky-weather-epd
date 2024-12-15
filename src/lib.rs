@@ -26,7 +26,7 @@ const UNIT: &str = "°C";
 const TEMPLATE_PATH: &str = "./dashboard-template-min.svg";
 const MODIFIED_TEMPLATE_PATH: &str = "./modified-dashboard.svg";
 const ICON_PATH: &str = "./static/line-svg-static/";
-const USE_ONLINE_DATA: bool = false;
+const USE_ONLINE_DATA: bool = true;
 const NOT_AVAILABLE_ICON: &str = "not-available.svg";
 // const ICON_PATH: &str = "./static/fill-svg-static/";
 
@@ -101,28 +101,34 @@ pub enum GraphDataPath {
 }
 
 impl DailyForcastGraph {
-    fn create_axis_with_labels(&self, current_hour: f64) -> (String, String, String, String) {
+    fn create_axis_with_labels(
+        &self,
+        current_hour: f64,
+    ) -> (String, String, String, String, String, String) {
         let width = self.width as f64;
         let height = self.height as f64;
 
-        let range_x = self.ending_x - self.starting_x;
-        let range_y = self.max_y - self.min_y;
+        let range_x = self.ending_x - self.starting_x + 1.0; // +1 because last hour is 23
+        let range_y_left = self.max_y - self.min_y;
+        let range_y_right = 100.0; // Rain data is in percentage
 
         // Mapping functions from data space to SVG space
         // x data domain maps to [0, width]
         // y data domain maps to [height, 0] (SVG y goes down)
         let map_x = |x: f64| (x - self.starting_x) * (width / range_x);
-        let map_y = |y: f64| height - ((y - self.min_y) * (height / range_y));
+        let map_y_left = |y: f64| height - ((y - self.min_y) * (height / range_y_left));
+        // For the right axis, we assume 0 to 100% maps directly onto the height.
+        let map_y_right = |y: f64| height - (y * (height / range_y_right));
 
-        // Determine where to place the x-axis
+        // Determine where to place the x-axis (shared between both left and right data)
         // If 0 is within the y range, place x-axis at y=0.
         // Otherwise, place it at the min or max y boundary.
         let x_axis_y = if self.min_y <= 0.0 && self.max_y >= 0.0 {
-            map_y(0.0)
+            map_y_left(0.0)
         } else if self.min_y > 0.0 {
-            map_y(self.min_y)
+            map_y_left(self.min_y)
         } else {
-            map_y(self.max_y)
+            map_y_left(self.max_y)
         };
 
         // Determine where to place the y-axis
@@ -136,19 +142,34 @@ impl DailyForcastGraph {
             map_x(self.ending_x)
         };
 
+        // Right axis will be placed at the right side of the chart
+        let y_right_axis_x = width;
+
         // Axis paths
         let mut x_axis_path = format!("M 0 {} L {} {}", x_axis_y, width, x_axis_y);
-        let mut y_axis_path = format!("M {} 0 L {} {}", y_axis_x, y_axis_x, height);
+        let mut y_left_axis_path = format!("M {} 0 L {} {}", y_axis_x, y_axis_x, height);
+        let mut y_right_axis_path =
+            format!("M {} 0 L {} {}", y_right_axis_x, y_right_axis_x, height);
 
         // Number of ticks
-        let x_ticks = 10;
-        let y_ticks = 10;
+        let x_ticks = 6;
+        let y_left_ticks = 10;
+        // For the right axis (percentage), let's also use 10 ticks (0%,10%,...,100%)
+        let y_right_ticks = 10;
+
         let x_step = range_x / x_ticks as f64;
-        let y_step = range_y / y_ticks as f64;
+        let y_left_step = range_y_left / y_left_ticks as f64;
+        let y_right_step = range_y_right / y_right_ticks as f64;
+
+        println!(
+            "X step: {}, Y step (left): {}, Y step (right): {}",
+            x_step, y_left_step, y_right_step
+        );
 
         // Labels storage
         let mut x_labels = String::new();
-        let mut y_labels = String::new();
+        let mut y_left_labels = String::new();
+        let mut y_right_labels = String::new();
 
         // X-axis ticks and labels
         for i in 0..=x_ticks {
@@ -157,7 +178,7 @@ impl DailyForcastGraph {
                 break;
             }
             let xs = map_x(x_val);
-            // A small tick mark around the axis line
+            // Tick mark
             x_axis_path.push_str(&format!(
                 " M {} {} L {} {}",
                 xs,
@@ -170,7 +191,7 @@ impl DailyForcastGraph {
             let label_y = x_axis_y + 20.0;
             let hour = (current_hour + x_val) % 24.0;
             let period = if hour < 12.0 { "am" } else { "pm" };
-            let display_hour = if hour == 0.0 {
+            let display_hour = if hour == 0.0 && period == "am" {
                 12.0
             } else if hour > 12.0 {
                 hour - 12.0
@@ -185,15 +206,16 @@ impl DailyForcastGraph {
                 text = label_str
             ));
         }
-        // Y-axis ticks and labels
-        for j in 0..=y_ticks {
-            let y_val = self.min_y + j as f64 * y_step;
+
+        // Y-axis ticks and labels (left)
+        for j in 0..=y_left_ticks {
+            let y_val = self.min_y + j as f64 * y_left_step;
             if y_val > self.max_y {
                 break;
             }
-            let ys = map_y(y_val);
-            // A small tick mark around the axis line
-            y_axis_path.push_str(&format!(
+            let ys = map_y_left(y_val);
+            // Tick mark
+            y_left_axis_path.push_str(&format!(
                 " M {} {} L {} {}",
                 y_axis_x - 5.0,
                 ys,
@@ -204,7 +226,7 @@ impl DailyForcastGraph {
             // Label: placed to the left of the y-axis
             let label_x = y_axis_x - 10.0;
             let label_str = format!("{:.1}", y_val);
-            y_labels.push_str(&format!(
+            y_left_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}" font-size="12" text-anchor="end" dy="4">{text}</text>"#,
                 x = label_x,
                 y = ys,
@@ -212,10 +234,45 @@ impl DailyForcastGraph {
             ));
         }
 
-        (x_axis_path, y_axis_path, x_labels, y_labels)
+        // Y-axis ticks and labels (right - 0 to 100%)
+        for k in 0..=y_right_ticks {
+            let y_val = k as f64 * y_right_step; // percentage step
+            if y_val > 100.0 {
+                break;
+            }
+            let ys = map_y_right(y_val);
+            // Tick mark on the right axis
+            y_right_axis_path.push_str(&format!(
+                " M {} {} L {} {}",
+                y_right_axis_x - 5.0,
+                ys,
+                y_right_axis_x + 5.0,
+                ys
+            ));
+
+            // Label (align to the start since it's on the right side)
+            let label_x = y_right_axis_x + 10.0;
+            let label_str = format!("{:.0}%", y_val);
+            y_right_labels.push_str(&format!(
+                r#"<text x="{x}" y="{y}" font-size="12" text-anchor="start" dy="4">{text}</text>"#,
+                x = label_x,
+                y = ys,
+                text = label_str
+            ));
+        }
+
+        // Return all axis paths and labels, now including the right axis
+        (
+            x_axis_path,
+            y_left_axis_path,
+            x_labels,
+            y_left_labels,
+            y_right_axis_path,
+            y_right_labels,
+        )
     }
 
-    fn set_xand_y_range(&mut self) {
+    fn set_x_and_y_range(&mut self) {
         for data in &self.data {
             let min_y_data = data.points.iter().map(|val| val.y).fold(f64::NAN, f64::min);
             let max_y_data = data.points.iter().map(|val| val.y).fold(f64::NAN, f64::max);
@@ -245,7 +302,7 @@ impl DailyForcastGraph {
         // Calculate the minimum and maximum x values from the points
         let mut data_path = vec![];
 
-        self.set_xand_y_range();
+        self.set_x_and_y_range();
 
         for data in &self.data {
             // Calculate scaling factors for x and y to fit the graph within the given width and height
@@ -440,11 +497,12 @@ struct UV {
 impl Icon for UV {
     fn get_icon_name(&self) -> String {
         match self.max_index {
-            Some(index) => match index {
-                0 => "uv-index.svg".to_string(),
-                1..=11 => format!("uv-index-{}.svg", index),
-                _ => NOT_AVAILABLE_ICON.to_string(),
-            },
+            Some(_index) => "uv-index.svg".to_string(),
+            // Some(index) => match index {
+            //     0.. => "uv-index.svg".to_string(),
+            //     // 1..=11 => format!("uv-index-{}.svg", index),
+            //     _ => NOT_AVAILABLE_ICON.to_string(),
+            // },
             None => NOT_AVAILABLE_ICON.to_string(),
         }
     }
@@ -716,14 +774,14 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
         graph_type: DataType::Temp,
         points: vec![],
         colour: "red".to_string(),
-        smooth: true,
+        smooth: false,
     };
 
     let mut feels_like_data = GraphData {
         graph_type: DataType::TempFeelLike,
         points: vec![],
         colour: "green".to_string(),
-        smooth: true,
+        smooth: false,
     };
 
     let mut rain_data = GraphData {
@@ -851,9 +909,11 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
 
     updated_template = updated_template
         .replace("{{x_axis_path}}", &axis_data_path.0)
-        .replace("{{y_axis_path}}", &axis_data_path.1)
+        .replace("{{y_left_axis_path}}", &axis_data_path.1)
         .replace("{{x_labels}}", &axis_data_path.2)
-        .replace("{{y_labels}}", &axis_data_path.3);
+        .replace("{{y_left_labels}}", &axis_data_path.3)
+        .replace("{{y_right_axis_path}}", &axis_data_path.4)
+        .replace("{{y_right_labels}}", &axis_data_path.5);
 
     Ok(updated_template)
 }

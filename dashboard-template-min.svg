@@ -114,11 +114,14 @@
         <path stroke="#1f5079" stroke-linejoin="10 6" stroke-width="2" d="M 0 300 L 600 300" /> -->
 
         <path stroke="#74838f" stroke-linejoin="round" stroke-width="4" d="{{x_axis_path}}" fill="none" />
-        <path stroke="#1f5079" stroke-linejoin="10 6" stroke-width="2" d="{{y_axis_path}}" />
+        <path stroke="#1f5079" stroke-linejoin="10 6" stroke-width="2" d="{{y_left_axis_path}}" />
+        <path stroke="#1b69a8" stroke-linejoin="round" stroke-width="2" d="{{y_right_axis_path}}" fill="none" />
         <!-- X Labels -->
         {{x_labels}}
         <!-- Y Labels -->
-        {{y_labels}}
+        {{y_left_labels}}
+        <!-- Y right Labels -->
+        {{y_right_labels}}
         <path stroke="{{temp_colour}}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
             d="{{temp_curve_data}}" stroke-width="2.0" fill="none" />
         <path stroke="{{feels_like_colour}}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
