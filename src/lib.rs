@@ -26,7 +26,7 @@ const UNIT: &str = "°C";
 const TEMPLATE_PATH: &str = "./dashboard-template-min.svg";
 const MODIFIED_TEMPLATE_PATH: &str = "./modified-dashboard.svg";
 const ICON_PATH: &str = "./static/line-svg-static/";
-const USE_ONLINE_DATA: bool = true;
+const USE_ONLINE_DATA: bool = false;
 const NOT_AVAILABLE_ICON: &str = "not-available.svg";
 // const ICON_PATH: &str = "./static/fill-svg-static/";
 
@@ -71,8 +71,6 @@ pub struct DailyForcastGraph {
 impl DailyForcastGraph {
     const HEIGHT: usize = 300;
     const WIDTH: usize = 600;
-    // const HEIGHT: usize = 400;
-    // const WIDTH: usize = 800;
 
     fn default() -> Self {
         Self {
@@ -199,9 +197,15 @@ impl DailyForcastGraph {
                 hour
             };
             let label_str = format!("{:.0}{}", display_hour, period);
+            // slight offset for the first label if the min_y is negative
+            let label_x = if self.min_y < 0.0 && i == 0 {
+                xs + 20.0
+            } else {
+                xs
+            };
             x_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}" font-size="12" text-anchor="middle">{text}</text>"#,
-                x = xs,
+                x = label_x,
                 y = label_y,
                 text = label_str
             ));
@@ -295,7 +299,7 @@ impl DailyForcastGraph {
             "starting x: {}, ending x: {}",
             self.starting_x, self.ending_x
         );
-        println!("Min y: {}, Max y: {}", self.min_y, self.max_y);
+        println!("Global Min y: {}, Max y: {}", self.min_y, self.max_y);
     }
 
     pub fn draw_graph(&mut self) -> Result<Vec<GraphDataPath>, Error> {
@@ -303,22 +307,23 @@ impl DailyForcastGraph {
         let mut data_path = vec![];
 
         self.set_x_and_y_range();
-
         for data in &self.data {
+            // println!("Data: {:?}", data);
             // Calculate scaling factors for x and y to fit the graph within the given width and height
             let xfactor = self.width as f64 / self.ending_x;
             let yfactor = match data.graph_type {
                 DataType::Rain => self.height as f64 / 100.0, // Rain data is in percentage
                 DataType::Temp | DataType::TempFeelLike => {
                     if self.min_y < 0.0 {
-                        self.height as f64 / self.max_y + self.min_y.abs()
+                        // it's possible for both to be negative
+                        self.height as f64 / (self.max_y.abs() + self.min_y.abs())
                     } else {
                         self.height as f64 / self.max_y
                     }
                 }
             };
 
-            // println!("X factor: {}, Y factor: {}", xfactor, yfactor);
+            println!("X factor: {}, Y factor: {}", xfactor, yfactor);
 
             // Scale the points according to the calculated factors
             let points: Vec<Point> = data
@@ -326,7 +331,11 @@ impl DailyForcastGraph {
                 .iter()
                 .map(|val| Point {
                     x: (val.x * xfactor),
-                    y: (val.y * yfactor),
+                    y: if self.min_y < 0.0 {
+                        (val.y + self.min_y.abs()) * yfactor
+                    } else {
+                        val.y * yfactor
+                    },
                 })
                 .collect();
 
@@ -724,8 +733,6 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
 
         let icon_value = day.get_icon_path();
 
-        println!("min {} max {} temp", min_temp_value, max_temp_value);
-
         let day_name_value = day
             .date
             .as_ref()
@@ -737,6 +744,10 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
             })
             .unwrap_or_else(|| "NA".to_string());
 
+        println!(
+            "{} - min {} max {} temp",
+            day_name_value, min_temp_value, max_temp_value
+        );
         updated_template = updated_template
             .replace(&min_temp_key, &min_temp_value)
             .replace(&max_temp_key, &max_temp_value)

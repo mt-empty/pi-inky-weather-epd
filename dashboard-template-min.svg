@@ -2,7 +2,7 @@
     <rect width="100%" height="100%" fill="lightgrey" />
 
     <svg x="0" y="0" label="{{day1_label}}">
-        <text x="250" y="50" font-size="35" fill="black">{{time}} {{day1_name}} </text>
+        <text x="250" y="50" font-size="35" fill="black">{{day1_name}} </text>
 
         <image x="0" y="0" width="200" height="180" href="{{current_icon}}" />
         <!-- <text x="150" y="180" text-anchor="middle" dominant-baseline="middle" font-size="50" fill="black">{{day1_mintemp}}|{{day1_maxtemp}}</text> -->
@@ -109,11 +109,11 @@
         </svg>
     </svg> -->
 
-    <svg x="350" y="180" width="400" height="300" viewBox="-40 0 600 300" preserveAspectRatio="xMidYMid meet">
+    <svg x="230" y="160" width="560" height="350" viewBox="-50 0 690 300" preserveAspectRatio="xMidYMid meet">
         <!-- <path stroke="#74838f" stroke-linejoin="round" stroke-width="4" d="M 0 0 L 0 300" fill="none" />
         <path stroke="#1f5079" stroke-linejoin="10 6" stroke-width="2" d="M 0 300 L 600 300" /> -->
 
-        <path stroke="#74838f" stroke-linejoin="round" stroke-width="4" d="{{x_axis_path}}" fill="none" />
+        <path stroke="#74838f" stroke-linejoin="round" stroke-width="2" d="{{x_axis_path}}" fill="none" stroke-dasharray="5,5" />
         <path stroke="#1f5079" stroke-linejoin="10 6" stroke-width="2" d="{{y_left_axis_path}}" />
         <path stroke="#1b69a8" stroke-linejoin="round" stroke-width="2" d="{{y_right_axis_path}}" fill="none" />
         <!-- X Labels -->
