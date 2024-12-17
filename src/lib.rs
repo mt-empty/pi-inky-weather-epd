@@ -1,14 +1,11 @@
-#![allow(unused_imports)]
 #![allow(dead_code)]
 use anyhow::Error;
 use chrono::{NaiveDateTime, Timelike};
-use regex::Regex;
-use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
-use serde_json::{Error as SerdeError, Result as SerdeResult};
+use serde_json::Result as SerdeResult;
+use std::fs;
 use std::io::{self, Write};
-use std::{env, fs};
 use strum_macros::Display;
 
 const WEATHER_PROVIDER: &str = "https://api.weather.bom.gov.au/v1/locations/";
@@ -24,11 +21,11 @@ lazy_static! {
 
 const UNIT: &str = "°C";
 const TEMPLATE_PATH: &str = "./dashboard-template-min.svg";
-const MODIFIED_TEMPLATE_PATH: &str = "./modified-dashboard.svg";
+pub const MODIFIED_TEMPLATE_PATH: &str = "./modified-dashboard.svg";
 const ICON_PATH: &str = "./static/line-svg-static/";
+// const ICON_PATH: &str = "./static/fill-svg-static/";
 const USE_ONLINE_DATA: bool = false;
 const NOT_AVAILABLE_ICON: &str = "not-available.svg";
-// const ICON_PATH: &str = "./static/fill-svg-static/";
 
 #[derive(Deserialize, Clone, Debug, Copy)]
 pub struct Point {
@@ -149,10 +146,9 @@ impl DailyForcastGraph {
         let mut y_right_axis_path =
             format!("M {} 0 L {} {}", y_right_axis_x, y_right_axis_x, height);
 
-        // Number of ticks
+        // Number of ticks, +1 because fencepost problem
         let x_ticks = 6;
         let y_left_ticks = 10;
-        // For the right axis (percentage), let's also use 10 ticks (0%,10%,...,100%)
         let y_right_ticks = 10;
 
         let x_step = range_x / x_ticks as f64;
@@ -276,7 +272,7 @@ impl DailyForcastGraph {
         )
     }
 
-    fn set_x_and_y_range(&mut self) {
+    fn initialize_x_y_bounds(&mut self) {
         for data in &self.data {
             let min_y_data = data.points.iter().map(|val| val.y).fold(f64::NAN, f64::min);
             let max_y_data = data.points.iter().map(|val| val.y).fold(f64::NAN, f64::max);
@@ -306,7 +302,7 @@ impl DailyForcastGraph {
         // Calculate the minimum and maximum x values from the points
         let mut data_path = vec![];
 
-        self.set_x_and_y_range();
+        self.initialize_x_y_bounds();
         for data in &self.data {
             // println!("Data: {:?}", data);
             // Calculate scaling factors for x and y to fit the graph within the given width and height
@@ -314,9 +310,11 @@ impl DailyForcastGraph {
             let yfactor = match data.graph_type {
                 DataType::Rain => self.height as f64 / 100.0, // Rain data is in percentage
                 DataType::Temp | DataType::TempFeelLike => {
-                    if self.min_y < 0.0 {
+                    if self.max_y >= 0.0 && self.min_y < 0.0 {
+                        self.height as f64 / (self.max_y + self.min_y.abs())
+                    } else if self.min_y < 0.0 {
                         // it's possible for both to be negative
-                        self.height as f64 / (self.max_y.abs() + self.min_y.abs())
+                        self.height as f64 / (self.max_y.abs() - self.min_y.abs())
                     } else {
                         self.height as f64 / self.max_y
                     }
@@ -331,10 +329,17 @@ impl DailyForcastGraph {
                 .iter()
                 .map(|val| Point {
                     x: (val.x * xfactor),
-                    y: if self.min_y < 0.0 {
-                        (val.y + self.min_y.abs()) * yfactor
-                    } else {
-                        val.y * yfactor
+                    y: match data.graph_type {
+                        DataType::Rain => val.y * yfactor,
+                        DataType::Temp | DataType::TempFeelLike => {
+                            // If the minimum y value is negative, we need to adjust the y value
+                            // to ensure it's correctly placed on the graph
+                            if self.min_y < 0.0 {
+                                (val.y + self.min_y.abs()) * yfactor
+                            } else {
+                                val.y * yfactor
+                            }
+                        }
                     },
                 })
                 .collect();
@@ -646,11 +651,17 @@ fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &str) -> Serde
 }
 
 fn fetch_daily_forecast() -> SerdeResult<DailyForcastResponse> {
-    fetch(&DAILY_FORECAST_ENDPOINT, "./test/daily_forcast.json")
+    fetch(
+        &DAILY_FORECAST_ENDPOINT,
+        "./src/apis/bom/samples/daily_forcast.json",
+    )
 }
 
 fn fetch_hourly_forecast() -> SerdeResult<HourlyForcastResponse> {
-    fetch(&HOURLY_FORECAST_ENDPOINT, "./test/hourly_forcast.json")
+    fetch(
+        &HOURLY_FORECAST_ENDPOINT,
+        "./src/apis/bom/samples/hourly_forcast.json",
+    )
 }
 
 fn update_current_hour(current_hour: &HourlyForecast, template: String) -> String {
@@ -680,12 +691,16 @@ fn update_current_hour(current_hour: &HourlyForecast, template: String) -> Strin
             &chrono::Local::now().format("%A, %d %b").to_string(),
         )
         .replace(
-            "{{time}}",
-            &chrono::Local::now().format("%I:%M%P").to_string(),
+            "{{current_rain_amount}}",
+            &current_hour.rain.amount.min.unwrap_or(0.0).to_string(),
+        )
+        .replace(
+            "{{rain_measure_icon}}",
+            "./static/line-svg-static/raindrop-measure.svg",
         )
 }
 
-// Extrusion Pattern—force everything through one function until it resembles spaghetti
+// Extrusion Pattern: force everything through one function until it resembles spaghetti
 fn update_daily_forecast(template: String) -> Result<String, Error> {
     let daily_forecast_data = fetch_daily_forecast()?.data;
     // todo check length of daily_forecast_data
@@ -785,14 +800,14 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
         graph_type: DataType::Temp,
         points: vec![],
         colour: "red".to_string(),
-        smooth: false,
+        smooth: true,
     };
 
     let mut feels_like_data = GraphData {
         graph_type: DataType::TempFeelLike,
         points: vec![],
         colour: "green".to_string(),
-        smooth: false,
+        smooth: true,
     };
 
     let mut rain_data = GraphData {

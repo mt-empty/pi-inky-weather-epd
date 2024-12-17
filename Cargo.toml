@@ -20,3 +20,7 @@ lazy_static = "1.5"
 strum = "0.26"
 strum_macros = "0.26"
 config = "0.14"
+
+# dev dependencies
+[dev-dependencies]
+usvg = "0.44"
