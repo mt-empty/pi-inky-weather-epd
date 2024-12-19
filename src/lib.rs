@@ -3,7 +3,6 @@ use anyhow::Error;
 use chrono::{NaiveDateTime, Timelike};
 use serde::Deserialize;
 
-use serde_json::Result as SerdeResult;
 use std::fs;
 use std::io::{self, Write};
 use strum_macros::Display;
@@ -21,9 +20,10 @@ lazy_static! {
 
 const UNIT: &str = "°C";
 const TEMPLATE_PATH: &str = "./dashboard-template-min.svg";
-pub const MODIFIED_TEMPLATE_PATH: &str = "./modified-dashboard.svg";
-const ICON_PATH: &str = "./static/line-svg-static/";
-// const ICON_PATH: &str = "./static/fill-svg-static/";
+pub const MODIFIED_TEMPLATE_DIR_PATH: &str = "./";
+pub const MODIFIED_TEMPLATE_NAME: &str = "dashboard.svg";
+// const ICON_PATH: &str = "./static/line-svg-static/";
+const ICON_PATH: &str = "./static/fill-svg-static/";
 const USE_ONLINE_DATA: bool = false;
 const NOT_AVAILABLE_ICON: &str = "not-available.svg";
 
@@ -200,7 +200,7 @@ impl DailyForcastGraph {
                 xs
             };
             x_labels.push_str(&format!(
-                r#"<text x="{x}" y="{y}" font-size="12" text-anchor="middle">{text}</text>"#,
+                r#"<text x="{x}" y="{y}" font-size="15" text-anchor="middle">{text}</text>"#,
                 x = label_x,
                 y = label_y,
                 text = label_str
@@ -633,31 +633,26 @@ struct DailyForcastResponse {
     metadata: HourlyMetadata,
     data: Vec<DailyEntry>,
 }
-
-fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &str) -> SerdeResult<T> {
+fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &str) -> Result<T, Error> {
     if USE_ONLINE_DATA {
         let client = reqwest::blocking::Client::new();
-        let response = client.get(endpoint).send();
-        let body = response.unwrap().text();
-        // write them to a file
-        let file = fs::File::create(file_path);
-        if let Err(e) = file.unwrap().write_all(body.unwrap().as_bytes()) {
-            eprintln!("Failed to write to file: {}", e);
-        }
+        let response = client.get(endpoint).send()?;
+        let body = response.text().map_err(Error::msg)?;
+        fs::write(file_path, &body)?;
     }
 
-    let body = fs::read_to_string(file_path);
-    serde_json::from_str(&body.unwrap())
+    let body = fs::read_to_string(file_path)?;
+    serde_json::from_str(&body).map_err(Error::msg)
 }
 
-fn fetch_daily_forecast() -> SerdeResult<DailyForcastResponse> {
+fn fetch_daily_forecast() -> Result<DailyForcastResponse, Error> {
     fetch(
         &DAILY_FORECAST_ENDPOINT,
         "./src/apis/bom/samples/daily_forcast.json",
     )
 }
 
-fn fetch_hourly_forecast() -> SerdeResult<HourlyForcastResponse> {
+fn fetch_hourly_forecast() -> Result<HourlyForcastResponse, Error> {
     fetch(
         &HOURLY_FORECAST_ENDPOINT,
         "./src/apis/bom/samples/hourly_forcast.json",
@@ -684,7 +679,7 @@ fn update_current_hour(current_hour: &HourlyForecast, template: String) -> Strin
         )
         .replace(
             "{{current_relative_humidity_icon}}",
-            "./static/line-svg-static/humidity.svg",
+            &(ICON_PATH.to_string() + "humidity.svg"),
         )
         .replace(
             "{{day1_name}}",
@@ -696,7 +691,7 @@ fn update_current_hour(current_hour: &HourlyForecast, template: String) -> Strin
         )
         .replace(
             "{{rain_measure_icon}}",
-            "./static/line-svg-static/raindrop-measure.svg",
+            &(ICON_PATH.to_string() + "raindrop-measure.svg"),
         )
 }
 
@@ -706,6 +701,7 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
     // todo check length of daily_forecast_data
     let mut updated_template = template.to_string();
     let mut i = 2;
+
     for day in daily_forecast_data {
         if let Some(date_str) = &day.date {
             if let Ok(date) = chrono::NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%SZ")
@@ -738,26 +734,17 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
 
         let min_temp_value = day
             .temp_min
-            .map(|temp| temp.to_string())
-            .unwrap_or_else(|| "NA".to_string());
-
+            .map_or("NA".to_string(), |temp| temp.to_string());
         let max_temp_value = day
             .temp_max
-            .map(|temp| temp.to_string())
-            .unwrap_or_else(|| "NA".to_string());
-
+            .map_or("NA".to_string(), |temp| temp.to_string());
         let icon_value = day.get_icon_path();
-
-        let day_name_value = day
-            .date
-            .as_ref()
-            .map(|date| {
-                chrono::NaiveDate::parse_from_str(date, "%Y-%m-%dT%H:%M:%SZ")
-                    .map(|parsed_date| parsed_date.format("%A").to_string())
-                    .map(|day_name| day_name.chars().take(3).collect::<String>())
-                    .unwrap_or_else(|_| "NA".to_string())
-            })
-            .unwrap_or_else(|| "NA".to_string());
+        let day_name_value = day.date.as_ref().map_or("NA".to_string(), |date| {
+            chrono::NaiveDate::parse_from_str(date, "%Y-%m-%dT%H:%M:%SZ")
+                .map(|parsed_date| parsed_date.format("%A").to_string())
+                .map(|day_name| day_name.chars().take(3).collect::<String>())
+                .unwrap_or_else(|_| "NA".to_string())
+        });
 
         println!(
             "{} - min {} max {} temp",
@@ -920,7 +907,7 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
         )
         .replace(
             "{{relative_humidity_icon}}",
-            "./static/line-svg-static/humidity.svg",
+            &(ICON_PATH.to_string() + "humidity.svg"),
         )
         .replace(
             "{{wind_speed}}",
@@ -948,13 +935,13 @@ pub fn generate_weather_dashboard() -> io::Result<()> {
     let mut updated_svg = update_daily_forecast(dashboard_svg);
     updated_svg = update_hourly_forecast(updated_svg.unwrap());
 
-    let mut output = fs::File::create(MODIFIED_TEMPLATE_PATH)?;
+    let mut output = fs::File::create(MODIFIED_TEMPLATE_NAME)?;
     let unwraped_svg: String = updated_svg.unwrap();
     output.write_all(unwraped_svg.as_bytes())?;
 
     println!(
         "SVG has been modified and saved successfully at {}",
-        MODIFIED_TEMPLATE_PATH
+        MODIFIED_TEMPLATE_NAME
     );
     Ok(())
 }
@@ -994,7 +981,7 @@ fn catmull_bezier(points: Vec<Point>) -> Vec<Curve> {
         };
 
         let c1 = Point {
-            x: ((-p0.x + 6.0 * p1.x + p2.x) / 6.0),
+            x: ((-p0.x + 6.0 * p1.x + p2.x) / 6.0), // TODO: fix for the first point
             y: ((-p0.y + 6.0 * p1.y + p2.y) / 6.0),
         };
 
