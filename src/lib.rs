@@ -491,6 +491,12 @@ struct RainAmount {
     units: Option<String>,
 }
 
+impl Icon for RainAmount {
+    fn get_icon_name(&self) -> String {
+        "raindrop-measure.svg".to_string()
+    }
+}
+
 #[derive(Deserialize, Debug)]
 struct Rain {
     amount: RainAmount,
@@ -597,13 +603,21 @@ struct HourlyForecast {
     temp_feels_like: f64,
     dew_point: f64,
     wind: Wind,
-    relative_humidity: f64,
+    relative_humidity: RelativeHumidity,
     uv: f64,
     icon_descriptor: String,
     next_three_hourly_forecast_period: String,
     time: String,
     is_night: bool,
     next_forecast_period: String,
+}
+
+type RelativeHumidity = f64;
+
+impl Icon for RelativeHumidity {
+    fn get_icon_name(&self) -> String {
+        "humidity.svg".to_string()
+    }
 }
 
 impl Icon for HourlyForecast {
@@ -679,7 +693,7 @@ fn update_current_hour(current_hour: &HourlyForecast, template: String) -> Strin
         )
         .replace(
             "{{current_relative_humidity_icon}}",
-            &(ICON_PATH.to_string() + "humidity.svg"),
+            &current_hour.relative_humidity.get_icon_path(),
         )
         .replace(
             "{{day1_name}}",
@@ -687,18 +701,19 @@ fn update_current_hour(current_hour: &HourlyForecast, template: String) -> Strin
         )
         .replace(
             "{{current_rain_amount}}",
-            &current_hour.rain.amount.min.unwrap_or(0.0).to_string(),
+            &(current_hour.rain.amount.min.unwrap_or(0.0)
+                + current_hour.rain.amount.min.unwrap_or(0.0))
+            .to_string(),
         )
         .replace(
             "{{rain_measure_icon}}",
-            &(ICON_PATH.to_string() + "raindrop-measure.svg"),
+            &current_hour.rain.amount.get_icon_path(),
         )
 }
 
 // Extrusion Pattern: force everything through one function until it resembles spaghetti
 fn update_daily_forecast(template: String) -> Result<String, Error> {
     let daily_forecast_data = fetch_daily_forecast()?.data;
-    // todo check length of daily_forecast_data
     let mut updated_template = template.to_string();
     let mut i = 2;
 
@@ -901,14 +916,6 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
         .replace("{{rain_curve_data}}", &rain_curve_data)
         .replace("{{uv_index}}", &hourly_forecast.data[0].uv.to_string())
         .replace("{{uv_index_icon}}", &current_uv.get_icon_path().to_string())
-        .replace(
-            "{{relative_humidity}}",
-            &hourly_forecast.data[0].relative_humidity.to_string(),
-        )
-        .replace(
-            "{{relative_humidity_icon}}",
-            &(ICON_PATH.to_string() + "humidity.svg"),
-        )
         .replace(
             "{{wind_speed}}",
             &hourly_forecast.data[0].wind.speed_kilometre.to_string(),
