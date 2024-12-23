@@ -25,3 +25,4 @@ modified_template_name = "dashboard.svg"
 modified_template_dir_path = "../"
 icon_path = "static/fill-svg-static/"
 unit = "°C"
+use_moon_phase_instead_of_clear_night = true

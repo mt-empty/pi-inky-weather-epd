@@ -1,27 +1,26 @@
 // mod apis;
+mod bom;
 #[allow(dead_code)]
 mod chart;
 mod config;
 
 use ::config::{Config, File};
 use anyhow::Error;
+use bom::{
+    DailyEntry, DailyForcastResponse, HourlyForcastResponse, HourlyForecast, RainAmount, Wind,
+    DAILY_FORECAST_ENDPOINT, HOURLY_FORECAST_ENDPOINT, UV,
+};
 use chart::{catmull_bezier, Point};
-use chrono::{NaiveDateTime, Timelike};
+use chrono::{Datelike, NaiveDateTime, Timelike};
 use config::DashboardConfig;
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{self, Write};
 use strum_macros::Display;
 use tinytemplate::TinyTemplate;
-const WEATHER_PROVIDER: &str = "https://api.weather.bom.gov.au/v1/locations/";
-const LOCATION: &str = "r283sf";
-use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref DAILY_FORECAST_ENDPOINT: String =
-        format!("{}/{}/forecasts/daily", WEATHER_PROVIDER, LOCATION);
-    static ref HOURLY_FORECAST_ENDPOINT: String =
-        format!("{}/{}/forecasts/hourly", WEATHER_PROVIDER, LOCATION);
     pub static ref CONFIG: DashboardConfig = load_config().expect("Failed to load config");
 }
 
@@ -45,6 +44,10 @@ struct Context {
     temp_colour: String,
     feels_like_colour: String,
     rain_colour: String,
+    uv_max_today: String,
+    max_wind_gust_today: String,
+    max_relative_humidity_today: String,
+    total_rain_today: String,
 }
 
 #[derive(Clone, Debug)]
@@ -397,28 +400,6 @@ impl DailyForcastGraph {
     }
 }
 
-#[derive(Deserialize, Debug)]
-struct Wind {
-    speed_kilometre: f64,
-    speed_knot: f64,
-    direction: String,
-    gust_speed_knot: Option<f64>,
-    gust_speed_kilometre: Option<f64>,
-}
-
-#[derive(Deserialize, Debug)]
-struct Gust {
-    speed_kilometre: f64,
-    speed_knot: f64,
-    time: Option<String>,
-}
-
-#[derive(Deserialize, Debug)]
-struct Temp {
-    time: String,
-    value: f64,
-}
-
 #[derive(Deserialize, Debug, Display)]
 enum RainChanceName {
     #[strum(to_string = "clear")]
@@ -473,7 +454,7 @@ trait Icon {
 impl Icon for Wind {
     fn get_icon_name(&self) -> String {
         let icon = match self.speed_kilometre {
-            0.0..=20.0 => "wind-beaufort-0.svg",
+            0.0..=20.0 => "wind.svg",
             20.1..=40.0 => "umbrella-wind.svg",
             40.1.. => "umbrella-wind-alt.svg",
             _ => NOT_AVAILABLE_ICON,
@@ -482,44 +463,10 @@ impl Icon for Wind {
     }
 }
 
-#[derive(Deserialize, Debug)]
-struct Metadata {
-    response_timestamp: String,
-    issue_time: String,
-    observation_time: Option<String>,
-    copyright: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct RainAmount {
-    min: Option<f64>,
-    max: Option<f64>,
-    lower_range: Option<f64>,
-    upper_range: Option<f64>,
-    units: Option<String>,
-}
-
 impl Icon for RainAmount {
     fn get_icon_name(&self) -> String {
         "raindrop-measure.svg".to_string()
     }
-}
-
-#[derive(Deserialize, Debug)]
-struct Rain {
-    amount: RainAmount,
-    chance: Option<u32>,
-    chance_of_no_rain_category: Option<String>,
-    precipitation_amount_25_percent_chance: Option<f64>,
-    precipitation_amount_50_percent_chance: Option<f64>,
-    precipitation_amount_75_percent_chance: Option<f64>,
-}
-#[derive(Deserialize, Debug)]
-struct UV {
-    category: Option<String>,
-    end_time: Option<String>,
-    max_index: Option<u32>,
-    start_time: Option<String>,
 }
 
 impl Icon for UV {
@@ -534,44 +481,6 @@ impl Icon for UV {
             None => NOT_AVAILABLE_ICON.to_string(),
         }
     }
-}
-
-#[derive(Deserialize, Debug)]
-struct Astronomical {
-    sunrise_time: Option<String>,
-    sunset_time: Option<String>,
-}
-#[derive(Deserialize, Debug)]
-struct FireDangerCategory {
-    text: Option<String>,
-    default_colour: Option<String>,
-    dark_mode_colour: Option<String>,
-}
-
-#[derive(Deserialize, Debug)]
-struct Now {
-    is_night: Option<bool>,
-    now_label: Option<String>,
-    later_label: Option<String>,
-    temp_now: Option<f64>,
-    temp_later: Option<f64>,
-}
-
-#[derive(Deserialize, Debug)]
-struct DailyEntry {
-    rain: Option<Rain>,
-    uv: Option<UV>,
-    astronomical: Option<Astronomical>,
-    date: Option<String>,
-    temp_max: Option<f64>,
-    temp_min: Option<f64>,
-    extended_text: Option<String>,
-    icon_descriptor: Option<String>,
-    short_text: Option<String>,
-    surf_danger: Option<String>,
-    fire_danger: Option<String>,
-    fire_danger_category: Option<FireDangerCategory>,
-    now: Option<Now>,
 }
 
 impl Icon for DailyEntry {
@@ -592,32 +501,6 @@ impl Icon for DailyEntry {
         );
         temp
     }
-}
-
-#[derive(Deserialize, Debug)]
-struct HourlyMetadata {
-    response_timestamp: String,
-    issue_time: String,
-    next_issue_time: String,
-    forecast_region: String,
-    forecast_type: String,
-    copyright: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct HourlyForecast {
-    rain: Rain,
-    temp: f64,
-    temp_feels_like: f64,
-    dew_point: f64,
-    wind: Wind,
-    relative_humidity: RelativeHumidity,
-    uv: f64,
-    icon_descriptor: String,
-    next_three_hourly_forecast_period: String,
-    time: String,
-    is_night: bool,
-    next_forecast_period: String,
 }
 
 type RelativeHumidity = f64;
@@ -644,17 +527,6 @@ impl Icon for HourlyForecast {
     }
 }
 
-#[derive(Deserialize, Debug)]
-struct HourlyForcastResponse {
-    metadata: Metadata,
-    data: Vec<HourlyForecast>,
-}
-
-#[derive(Deserialize, Debug)]
-struct DailyForcastResponse {
-    metadata: HourlyMetadata,
-    data: Vec<DailyEntry>,
-}
 fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &str) -> Result<T, Error> {
     if USE_ONLINE_DATA {
         let client = reqwest::blocking::Client::new();
@@ -682,9 +554,16 @@ fn fetch_hourly_forecast() -> Result<HourlyForcastResponse, Error> {
 }
 
 fn update_current_hour(current_hour: &HourlyForecast, template: String) -> String {
+    let mut curret_icon = current_hour.get_icon_path();
+    if CONFIG.misc.use_moon_phase_instead_of_clear_night
+        && curret_icon == format!("{}{}", RainChanceName::Clear, DayNight::Night)
+    {
+        println!("Using moon phase icon instead of clear night");
+        curret_icon = get_moon_phase_icon().to_string();
+    }
     template
         .replace("{current_temp}", &current_hour.temp.to_string())
-        .replace("{current_icon}", &current_hour.get_icon_path())
+        .replace("{current_icon}", &curret_icon)
         .replace(
             "{current_feels_like}",
             &current_hour.temp_feels_like.to_string(),
@@ -945,6 +824,36 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
 
     Ok(updated_template)
 }
+
+fn get_moon_phase_icon() -> String {
+    let now = chrono::Local::now();
+    let year = now.year();
+    let month = now.month();
+    let day = now.day();
+
+    // Calculate the approximate age of the moon in days since the last new moon
+    let mut moon_age_days = ((year as f64 - 2000.0) * 365.25 + month as f64 * 30.6 + day as f64
+        - 2451550.1)
+        % 29.530588;
+    if moon_age_days < 0.0 {
+        moon_age_days += 29.530588; // Ensure positive values
+    }
+
+    // Determine the moon phase icon based on the moon age
+    let icon_name = match moon_age_days {
+        age if age < 1.84566 => "moon-new.svg",
+        age if age < 5.53699 => "moon-waxing-crescent.svg",
+        age if age < 9.22831 => "moon-first-quarter.svg",
+        age if age < 12.91963 => "moon-waxing-gibbous.svg",
+        age if age < 16.61096 => "moon-full.svg",
+        age if age < 20.30228 => "moon-waning-gibbous.svg",
+        age if age < 23.99361 => "moon-last-quarter.svg",
+        _ => "moon-waning-crescent.svg",
+    };
+
+    format!("{}{}", CONFIG.misc.icon_path, icon_name)
+}
+
 pub fn generate_weather_dashboard() -> io::Result<()> {
     // print current directory
     let current_dir = std::env::current_dir()?;
@@ -996,8 +905,6 @@ fn render_template(dashboard_svg: String) -> Result<String, Error> {
         return Err(e.into());
     }
 
-    println!("{}", dashboard_svg);
-
     let context = Context {
         background_colour: "#f0f0f0".to_string(),
         text_colour: "#000000".to_string(),
@@ -1007,14 +914,15 @@ fn render_template(dashboard_svg: String) -> Result<String, Error> {
         temp_colour: "#ff0000".to_string(),
         feels_like_colour: "#00ff00".to_string(),
         rain_colour: "#0000ff".to_string(),
+        uv_max_today: "10".to_string(),
+        max_wind_gust_today: "50".to_string(),
+        max_relative_humidity_today: "100".to_string(),
+        total_rain_today: "10".to_string(),
     };
 
     // Attempt to render the template
     match tt.render("dashboard", &context) {
-        Ok(rendered) => {
-            println!("Rendered template: {}", rendered);
-            Ok(rendered)
-        }
+        Ok(rendered) => Ok(rendered),
         Err(e) => {
             println!("Failed to render template: {}", e);
             Err(e.into())

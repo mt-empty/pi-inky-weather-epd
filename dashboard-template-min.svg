@@ -16,13 +16,17 @@
         <image width="75" height="75" href="{uv_index_icon}" />
         <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
             fill="{text_colour}">{current_uv_index}</text>
+        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+            fill="{text_colour}">{uv_max_today}</text>
     </svg>
 
     <!-- Wind Information -->
     <svg x="20" y="260" label="wind">
         <image width="75" height="75" href="{current_wind_icon}" />
         <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{current_wind_speed}km/h</text>
+            fill="{text_colour}">{current_wind_speed}</text>
+        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+            fill="{text_colour}">{max_wind_gust_today}</text>
     </svg>
 
     <!-- Relative Humidity -->
@@ -30,13 +34,17 @@
         <image width="75" height="75" href="{current_relative_humidity_icon}" />
         <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
             fill="{text_colour}">{current_relative_humidity}</text>
+        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+            fill="{text_colour}">{max_relative_humidity_today}</text>
     </svg>
 
     <!-- Rain Information -->
     <svg x="20" y="400" label="rain">
         <image width="75" height="75" href="{rain_measure_icon}" />
         <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{current_rain_amount}mm</text>
+            fill="{text_colour}">{current_rain_amount}</text>
+        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+            fill="{text_colour}">{total_rain_today}</text>
     </svg>
 
     <!-- Forecast for the next 5 days -->

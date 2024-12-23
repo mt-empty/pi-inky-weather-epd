@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"svg.preview.background": "editor"
+	},
+	"extensions": {
+		"recommendations": [
+			"rust-lang.rust-analyzer",
+			"jock.svg",
+			"tamasfe.even-better-toml",
+		]
+	}
+}

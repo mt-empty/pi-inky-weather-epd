@@ -17,7 +17,6 @@ pub struct Release {
 #[derive(Debug, Deserialize)]
 pub struct Api {
     pub update_interval_mins: u32,
-    pub weather_provider: String,
     pub location: String,
     pub use_online_data: bool,
 }
@@ -43,4 +42,5 @@ pub struct Misc {
     pub modified_template_dir_path: String,
     pub icon_path: String,
     pub unit: String,
+    pub use_moon_phase_instead_of_clear_night: bool,
 }
