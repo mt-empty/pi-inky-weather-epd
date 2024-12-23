@@ -1,12 +1,18 @@
-#![allow(dead_code)]
-use anyhow::Error;
-use chrono::{NaiveDateTime, Timelike};
-use serde::Deserialize;
+// mod apis;
+#[allow(dead_code)]
+mod chart;
+mod config;
 
+use ::config::{Config, File};
+use anyhow::Error;
+use chart::{catmull_bezier, Point};
+use chrono::{NaiveDateTime, Timelike};
+use config::DashboardConfig;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{self, Write};
 use strum_macros::Display;
-
+use tinytemplate::TinyTemplate;
 const WEATHER_PROVIDER: &str = "https://api.weather.bom.gov.au/v1/locations/";
 const LOCATION: &str = "r283sf";
 use lazy_static::lazy_static;
@@ -16,27 +22,29 @@ lazy_static! {
         format!("{}/{}/forecasts/daily", WEATHER_PROVIDER, LOCATION);
     static ref HOURLY_FORECAST_ENDPOINT: String =
         format!("{}/{}/forecasts/hourly", WEATHER_PROVIDER, LOCATION);
+    pub static ref CONFIG: DashboardConfig = load_config().expect("Failed to load config");
 }
 
-const UNIT: &str = "°C";
-const TEMPLATE_PATH: &str = "./dashboard-template-min.svg";
-pub const MODIFIED_TEMPLATE_DIR_PATH: &str = "./";
-pub const MODIFIED_TEMPLATE_NAME: &str = "dashboard.svg";
-// const ICON_PATH: &str = "./static/line-svg-static/";
-const ICON_PATH: &str = "./static/fill-svg-static/";
+// const UNIT: &str = "°C";
+// const CONFIG.dashboard_misc.template_path: &str = "./dashboard-template-min.svg";
+// pub const MODIFIED_TEMPLATE_DIR_PATH: &str = "./";
+// pub const CONFIG.dashboard_misc.modified_template_name: &str = "dashboard.svg";
+// // const ICON_PATH: &str = "./static/line-svg-static/";
+// const ICON_PATH: &str = "./static/fill-svg-static/";
 const USE_ONLINE_DATA: bool = false;
 const NOT_AVAILABLE_ICON: &str = "not-available.svg";
+const CONFIG_NAME: &str = "config.toml";
 
-#[derive(Deserialize, Clone, Debug, Copy)]
-pub struct Point {
-    pub x: f64,
-    pub y: f64,
-}
-
-impl Point {
-    pub fn to_svg(&self) -> String {
-        format!("L {} {}", self.x, self.y)
-    }
+#[derive(Debug, Deserialize, Serialize)]
+struct Context {
+    background_colour: String,
+    text_colour: String,
+    x_axis_colour: String,
+    y_left_axis_colour: String,
+    y_right_axis_colour: String,
+    temp_colour: String,
+    feels_like_colour: String,
+    rain_colour: String,
 }
 
 #[derive(Clone, Debug)]
@@ -442,7 +450,7 @@ enum DayNight {
 trait Icon {
     fn get_icon_name(&self) -> String;
     fn get_icon_path(&self) -> String {
-        format!("{}{}", ICON_PATH, self.get_icon_name())
+        format!("{}{}", CONFIG.misc.icon_path, self.get_icon_name())
     }
     fn rain_amount_to_name(amount: u32) -> String {
         match amount {
@@ -675,38 +683,38 @@ fn fetch_hourly_forecast() -> Result<HourlyForcastResponse, Error> {
 
 fn update_current_hour(current_hour: &HourlyForecast, template: String) -> String {
     template
-        .replace("{{current_temp}}", &current_hour.temp.to_string())
-        .replace("{{current_icon}}", &current_hour.get_icon_path())
+        .replace("{current_temp}", &current_hour.temp.to_string())
+        .replace("{current_icon}", &current_hour.get_icon_path())
         .replace(
-            "{{current_feels_like}}",
+            "{current_feels_like}",
             &current_hour.temp_feels_like.to_string(),
         )
         .replace(
-            "{{current_wind_speed}}",
+            "{current_wind_speed}",
             &current_hour.wind.speed_kilometre.to_string(),
         )
-        .replace("{{current_wind_icon}}", &current_hour.wind.get_icon_path())
-        .replace("{{current_uv_index}}", &current_hour.uv.to_string())
+        .replace("{current_wind_icon}", &current_hour.wind.get_icon_path())
+        .replace("{current_uv_index}", &current_hour.uv.to_string())
         .replace(
-            "{{current_relative_humidity}}",
+            "{current_relative_humidity}",
             &current_hour.relative_humidity.to_string(),
         )
         .replace(
-            "{{current_relative_humidity_icon}}",
+            "{current_relative_humidity_icon}",
             &current_hour.relative_humidity.get_icon_path(),
         )
         .replace(
-            "{{day1_name}}",
+            "{day1_name}",
             &chrono::Local::now().format("%A, %d %b").to_string(),
         )
         .replace(
-            "{{current_rain_amount}}",
+            "{current_rain_amount}",
             &(current_hour.rain.amount.min.unwrap_or(0.0)
                 + current_hour.rain.amount.min.unwrap_or(0.0))
             .to_string(),
         )
         .replace(
-            "{{rain_measure_icon}}",
+            "{rain_measure_icon}",
             &current_hour.rain.amount.get_icon_path(),
         )
 }
@@ -740,10 +748,10 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
             break;
         }
 
-        let min_temp_key = format!("{{{{day{}_mintemp}}}}", i);
-        let max_temp_key = format!("{{{{day{}_maxtemp}}}}", i);
-        let icon_key = format!("{{{{day{}_icon}}}}", i);
-        let day_name_key = format!("{{{{day{}_name}}}}", i);
+        let min_temp_key = format!("{{day{}_mintemp}}", i);
+        let max_temp_key = format!("{{day{}_maxtemp}}", i);
+        let icon_key = format!("{{day{}_icon}}", i);
+        let day_name_key = format!("{{day{}_name}}", i);
 
         // println!("Day: {:?}", day);
 
@@ -776,15 +784,18 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
     // if i < 8, this means that we have less than 7 days of forecast data
     // so we need to NA the remaining days
     while i < 8 {
-        let min_temp_key = format!("{{{{day{}_mintemp}}}}", i);
-        let max_temp_key = format!("{{{{day{}_maxtemp}}}}", i);
-        let icon_key = format!("{{{{day{}_icon}}}}", i);
-        let day_name_key = format!("{{{{day{}_name}}}}", i);
+        let min_temp_key = format!("{{day{}_mintemp}}", i);
+        let max_temp_key = format!("{{day{}_maxtemp}}", i);
+        let icon_key = format!("{{day{}_icon}}", i);
+        let day_name_key = format!("{{day{}_name}}", i);
 
         updated_template = updated_template
             .replace(&min_temp_key, "NA")
             .replace(&max_temp_key, "NA")
-            .replace(&icon_key, &format!("{}{}", ICON_PATH, NOT_AVAILABLE_ICON))
+            .replace(
+                &icon_key,
+                &format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
+            )
             .replace(&day_name_key, "NA");
 
         i += 1;
@@ -827,9 +838,9 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
     };
 
     let mut updated_template = template
-        .replace("{{temp_colour}}", &temp_data.colour)
-        .replace("{{feels_like_colour}}", &feels_like_data.colour)
-        .replace("{{rain_colour}}", &rain_data.colour);
+        .replace("{temp_colour}", &temp_data.colour)
+        .replace("{feels_like_colour}", &feels_like_data.colour)
+        .replace("{rain_colour}", &rain_data.colour);
 
     // hourly_forecast.data.sort_by(|a, b| a.time.cmp(&b.time));
 
@@ -909,98 +920,104 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
         );
 
     updated_template = updated_template
-        .replace("{{graph_hieght}}", &graph.height.to_string())
-        .replace("{{graph_width}}", &graph.width.to_string())
-        .replace("{{temp_curve_data}}", &temp_curve_data)
-        .replace("{{feel_like_curve_data}}", &feel_like_curve_data)
-        .replace("{{rain_curve_data}}", &rain_curve_data)
-        .replace("{{uv_index}}", &hourly_forecast.data[0].uv.to_string())
-        .replace("{{uv_index_icon}}", &current_uv.get_icon_path().to_string())
+        .replace("{graph_hieght}", &graph.height.to_string())
+        .replace("{graph_width}", &graph.width.to_string())
+        .replace("{temp_curve_data}", &temp_curve_data)
+        .replace("{feel_like_curve_data}", &feel_like_curve_data)
+        .replace("{rain_curve_data}", &rain_curve_data)
+        .replace("{uv_index}", &hourly_forecast.data[0].uv.to_string())
+        .replace("{uv_index_icon}", &current_uv.get_icon_path().to_string())
         .replace(
-            "{{wind_speed}}",
+            "{wind_speed}",
             &hourly_forecast.data[0].wind.speed_kilometre.to_string(),
         )
-        .replace(
-            "{{wind_icon}}",
-            &hourly_forecast.data[0].wind.get_icon_path(),
-        );
+        .replace("{wind_icon}", &hourly_forecast.data[0].wind.get_icon_path());
 
     let axis_data_path = graph.create_axis_with_labels(first_date.hour() as f64);
 
     updated_template = updated_template
-        .replace("{{x_axis_path}}", &axis_data_path.0)
-        .replace("{{y_left_axis_path}}", &axis_data_path.1)
-        .replace("{{x_labels}}", &axis_data_path.2)
-        .replace("{{y_left_labels}}", &axis_data_path.3)
-        .replace("{{y_right_axis_path}}", &axis_data_path.4)
-        .replace("{{y_right_labels}}", &axis_data_path.5);
+        .replace("{x_axis_path}", &axis_data_path.0)
+        .replace("{y_left_axis_path}", &axis_data_path.1)
+        .replace("{x_labels}", &axis_data_path.2)
+        .replace("{y_left_labels}", &axis_data_path.3)
+        .replace("{y_right_axis_path}", &axis_data_path.4)
+        .replace("{y_right_labels}", &axis_data_path.5);
 
     Ok(updated_template)
 }
 pub fn generate_weather_dashboard() -> io::Result<()> {
-    let dashboard_svg = fs::read_to_string(TEMPLATE_PATH)?;
-    let mut updated_svg = update_daily_forecast(dashboard_svg);
+    // print current directory
+    let current_dir = std::env::current_dir()?;
+    println!("Current directory: {:?}", current_dir);
+
+    //print current dir + template path
+    let template_path = current_dir.join(&CONFIG.misc.template_path);
+    println!("Template path: {:?}", template_path);
+
+    let template_svg = match fs::read_to_string(template_path) {
+        Ok(svg) => svg,
+        Err(e) => {
+            println!("Failed to read template file: {}", e);
+            return Err(e);
+        }
+    };
+
+    let mut updated_svg = update_daily_forecast(template_svg);
     updated_svg = update_hourly_forecast(updated_svg.unwrap());
 
-    let mut output = fs::File::create(MODIFIED_TEMPLATE_NAME)?;
+    updated_svg = render_template(updated_svg.unwrap());
+
+    let mut output = fs::File::create(CONFIG.misc.modified_template_name.clone())?;
     let unwraped_svg: String = updated_svg.unwrap();
     output.write_all(unwraped_svg.as_bytes())?;
 
     println!(
         "SVG has been modified and saved successfully at {}",
-        MODIFIED_TEMPLATE_NAME
+        CONFIG.misc.modified_template_name
     );
     Ok(())
 }
 
-#[derive(Deserialize, Clone, Debug)]
-struct Curve {
-    c1: Point,
-    c2: Point,
-    end: Point,
+fn load_config() -> Result<DashboardConfig, Error> {
+    let root = std::env::current_dir()?;
+    let config_path = root.join(CONFIG_NAME);
+    let settings = Config::builder()
+        .add_source(File::with_name(config_path.to_str().unwrap()))
+        .build()?;
+
+    settings.try_deserialize().map_err(Error::msg)
 }
 
-impl Curve {
-    fn to_svg(&self) -> String {
-        format!(
-            "C {:.4} {:.4}, {:.4} {:.4}, {:.4} {:.4}",
-            self.c1.x, self.c1.y, self.c2.x, self.c2.y, self.end.x, self.end.y
-        )
-    }
-}
+fn render_template(dashboard_svg: String) -> Result<String, Error> {
+    let mut tt = TinyTemplate::new();
 
-fn catmull_bezier(points: Vec<Point>) -> Vec<Curve> {
-    let mut res = Vec::new();
-
-    let last = points.len() - 1;
-
-    for i in 0..last {
-        let p0 = if i == 0 { points[0] } else { points[i - 1] };
-
-        let p1 = points[i];
-
-        let p2 = points[i + 1];
-
-        let p3 = if i + 2 > last {
-            points[i + 1]
-        } else {
-            points[i + 2]
-        };
-
-        let c1 = Point {
-            x: ((-p0.x + 6.0 * p1.x + p2.x) / 6.0), // TODO: fix for the first point
-            y: ((-p0.y + 6.0 * p1.y + p2.y) / 6.0),
-        };
-
-        let c2 = Point {
-            x: ((p1.x + 6.0 * p2.x - p3.x) / 6.0),
-            y: ((p1.y + 6.0 * p2.y - p3.y) / 6.0),
-        };
-
-        let end = p2;
-
-        res.push(Curve { c1, c2, end });
+    if let Err(e) = tt.add_template("dashboard", &dashboard_svg) {
+        println!("Failed to add template: {}", e);
+        return Err(e.into());
     }
 
-    res
+    println!("{}", dashboard_svg);
+
+    let context = Context {
+        background_colour: "#f0f0f0".to_string(),
+        text_colour: "#000000".to_string(),
+        x_axis_colour: "#000000".to_string(),
+        y_left_axis_colour: "#000000".to_string(),
+        y_right_axis_colour: "#000000".to_string(),
+        temp_colour: "#ff0000".to_string(),
+        feels_like_colour: "#00ff00".to_string(),
+        rain_colour: "#0000ff".to_string(),
+    };
+
+    // Attempt to render the template
+    match tt.render("dashboard", &context) {
+        Ok(rendered) => {
+            println!("Rendered template: {}", rendered);
+            Ok(rendered)
+        }
+        Err(e) => {
+            println!("Failed to render template: {}", e);
+            Err(e.into())
+        }
+    }
 }

@@ -1,138 +1,110 @@
 <svg width="800" height="480" xmlns="http://www.w3.org/2000/svg">
-    <rect width="100%" height="100%" fill="lightgrey" />
+    <rect width="100%" height="100%" fill="{background_colour}" />
 
-    <svg x="0" y="0" label="{{day1_label}}">
-        <text x="250" y="50" font-size="35" fill="black">{{day1_name}} </text>
-
-        <image x="0" y="0" width="200" height="180" href="{{current_icon}}" />
-        <!-- <text x="150" y="180" text-anchor="middle" dominant-baseline="middle" font-size="50" fill="black">{{day1_mintemp}}|{{day1_maxtemp}}</text> -->
+    <!-- Current Day Information -->
+    <svg x="0" y="0">
+        <text x="250" y="50" font-size="35" fill="{text_colour}">{day1_name} </text>
+        <image x="0" y="0" width="200" height="180" href="{current_icon}" />
         <text x="255" y="110" text-anchor="middle" dominant-baseline="middle" font-size="70"
-            fill="black">{{current_temp}}</text>
-        <text x="155" y="170" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="black">feels like</text>
-        <text x="255" y="170" text-anchor="middle" dominant-baseline="middle" font-size="50" fill="black">{{current_feels_like}}</text>
-        <!-- <text x="220" y="140" text-anchor="middle" dominant-baseline="middle" font-size="100"
-            fill="black">{{current_chance_of_rain}}</text> -->
-        <!-- <text text-anchor="middle" font-size="20" fill="black">
-            <tspan x="220" y="230" dy="-0.6em" dominant-baseline="middle">Feels</tspan>
-            <tspan x="220" y="230" dy="0.5em" dx="-0.26em" dominant-baseline="middle">Like</tspan>
-            <tspan x="250" y="230" dominant-baseline="middle" font-size="40" text-anchor="start">-2</tspan>
-        </text> -->
+            fill="{text_colour}">{current_temp}</text>
+        <text x="155" y="170" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="{text_colour}">feels like</text>
+        <text x="255" y="170" text-anchor="middle" dominant-baseline="middle" font-size="50" fill="{text_colour}">{current_feels_like}</text>
     </svg>
 
+    <!-- UV Index -->
     <svg x="20" y="190" label="UV-index">
-        <image width="75" height="75" href="{{uv_index_icon}}" />
+        <image width="75" height="75" href="{uv_index_icon}" />
         <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="black">{{current_uv_index}}</text>
+            fill="{text_colour}">{current_uv_index}</text>
     </svg>
 
+    <!-- Wind Information -->
     <svg x="20" y="260" label="wind">
-        <image width="75" height="75" href="{{current_wind_icon}}" />
+        <image width="75" height="75" href="{current_wind_icon}" />
         <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="black">{{current_wind_speed}}km/h</text>
+            fill="{text_colour}">{current_wind_speed}km/h</text>
     </svg>
 
+    <!-- Relative Humidity -->
     <svg x="20" y="330" label="relative_humidity">
-        <image width="75" height="75" href="{{relative_humidity_icon}}" />
+        <image width="75" height="75" href="{current_relative_humidity_icon}" />
         <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="black">{{relative_humidity}}%</text>
+            fill="{text_colour}">{current_relative_humidity}</text>
     </svg>
+
+    <!-- Rain Information -->
     <svg x="20" y="400" label="rain">
-        <image width="75" height="75" href="{{rain_measure_icon}}" />
+        <image width="75" height="75" href="{rain_measure_icon}" />
         <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="black">{{current_rain_amount}}mm</text>
-    </svg>
-    <!-- 
-    <svg x="20" y="320" label="air-quality">
-        <image width="75" height="75" href="{{air_quality_icon}}" />
-        <text text-anchor="middle" dominant-baseline="middle" font-size="50" fill="black">{{air_quality}}</text>
+            fill="{text_colour}">{current_rain_amount}mm</text>
     </svg>
 
-    <svg x="20" y="380" label="moon-phase">
-        <image width="75" height="75" href="{{moon_phase_icon}}" />
-        <text text-anchor="middle" dominant-baseline="middle" font-size="50" fill="black">{{moon_phase}}</text>
-    </svg>
-
-    <svg x="160" y="320" label="visibility">
-        <image width="75" height="75" href="{{visibility_icon}}" />
-    </svg> -->
-
-    <svg x="350" y="30" label="{{day2_label}}">
+    <!-- Forecast for the next 5 days -->
+    <svg x="350" y="30">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="black">{{day2_name}}</text>
-        <image x="10" y="50" width="75" height="100" href="{{day2_icon}}" />
+            fill="{text_colour}">{day2_name}</text>
+        <image x="10" y="50" width="75" height="100" href="{day2_icon}" />
         <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="black">{{day2_mintemp}}|{{day2_maxtemp}}</text>
+            fill="{text_colour}">{day2_mintemp}|{day2_maxtemp}</text>
     </svg>
 
-    <svg x="420" y="30" label="{{day3_label}}">
+    <svg x="420" y="30">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="black">{{day3_name}}</text>
-        <image x="10" y="50" width="75" height="100" href="{{day3_icon}}" />
+            fill="{text_colour}">{day3_name}</text>
+        <image x="10" y="50" width="75" height="100" href="{day3_icon}" />
         <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="black">{{day3_mintemp}}|{{day3_maxtemp}}</text>
+            fill="{text_colour}">{day3_mintemp}|{day3_maxtemp}</text>
     </svg>
 
-    <svg x="490" y="30" label="{{day4_label}}">
+    <svg x="490" y="30">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="black">{{day4_name}}</text>
-        <image x="10" y="50" width="75" height="100" href="{{day4_icon}}" />
+            fill="{text_colour}">{day4_name}</text>
+        <image x="10" y="50" width="75" height="100" href="{day4_icon}" />
         <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="black">{{day4_mintemp}}|{{day4_maxtemp}}</text>
+            fill="{text_colour}">{day4_mintemp}|{day4_maxtemp}</text>
     </svg>
 
-    <svg x="560" y="30" label="{{day5_label}}">
+    <svg x="560" y="30">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="black">{{day5_name}}</text>
-        <image x="10" y="50" width="75" height="100" href="{{day5_icon}}" />
+            fill="{text_colour}">{day5_name}</text>
+        <image x="10" y="50" width="75" height="100" href="{day5_icon}" />
         <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="black">{{day5_mintemp}}|{{day5_maxtemp}}</text>
+            fill="{text_colour}">{day5_mintemp}|{day5_maxtemp}</text>
     </svg>
 
-    <svg x="630" y="30" label="{{day6_label}}">
+    <svg x="630" y="30">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="black">{{day6_name}}</text>
-        <image x="10" y="50" width="75" height="100" href="{{day6_icon}}" />
+            fill="{text_colour}">{day6_name}</text>
+        <image x="10" y="50" width="75" height="100" href="{day6_icon}" />
         <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="black">{{day6_mintemp}}|{{day6_maxtemp}}</text>
+            fill="{text_colour}">{day6_mintemp}|{day6_maxtemp}</text>
     </svg>
 
-    <svg x="700" y="30" label="{{day7_label}}">
+    <svg x="700" y="30">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="black">{{day7_name}}</text>
-        <image x="10" y="50" width="75" height="100" href="{{day7_icon}}" />
+            fill="{text_colour}">{day7_name}</text>
+        <image x="10" y="50" width="75" height="100" href="{day7_icon}" />
         <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="black">{{day7_mintemp}}|{{day7_maxtemp}}</text>
+            fill="{text_colour}">{day7_mintemp}|{day7_maxtemp}</text>
     </svg>
 
-    <!-- <svg label="forecast">
-        <svg width="100%" height="100%" viewBox="0 0 {{height + padding * 2}} {{width + padding * 2}}"
-            preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-            <text x="{{width/2 + padding}}" y="{{padding / 2}}"
-                font-family="-apple-system, system-ui, BlinkMacSystemFont, Roboto" dominant-baseline="middle"
-                text-anchor="middle" font-size="18" fill="#74838f" font-weight="700">
-                {{forecast_name}}
-            </text>
-        </svg>
-    </svg> -->
-
+    <!-- Graph for hourly forecast -->
     <svg x="230" y="160" width="560" height="350" viewBox="-50 0 690 300" preserveAspectRatio="xMidYMid meet">
-        <!-- <path stroke="#74838f" stroke-linejoin="round" stroke-width="4" d="M 0 0 L 0 300" fill="none" />
-        <path stroke="#1f5079" stroke-linejoin="10 6" stroke-width="2" d="M 0 300 L 600 300" /> -->
-
-        <path stroke="#74838f" stroke-linejoin="round" stroke-width="2" d="{{x_axis_path}}" fill="none" stroke-dasharray="5,5" />
-        <path stroke="#1f5079" stroke-linejoin="10 6" stroke-width="2" d="{{y_left_axis_path}}" />
-        <path stroke="#1b69a8" stroke-linejoin="round" stroke-width="2" d="{{y_right_axis_path}}" fill="none" />
+        <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{x_axis_path}" fill="none"
+            stroke-dasharray="5,5" />
+        <path stroke="{y_left_axis_colour}" stroke-linejoin="10 6" stroke-width="2" d="{y_left_axis_path}" />
+        <path stroke="{y_right_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{y_right_axis_path}" fill="none" />
         <!-- X Labels -->
-        {{x_labels}}
+        {x_labels}
         <!-- Y Labels -->
-        {{y_left_labels}}
+        {y_left_labels}
         <!-- Y right Labels -->
-        {{y_right_labels}}
-        <path stroke="{{temp_colour}}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
-            d="{{temp_curve_data}}" stroke-width="2.0" fill="none" />
-        <path stroke="{{feels_like_colour}}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
-            d="{{feel_like_curve_data}}" stroke-width="2.0" fill="none" />
-        <path stroke="{{rain_colour}}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
-            d="{{rain_curve_data}}" stroke-width="2.0" fill="none" />
+        {y_right_labels}
+        <path stroke="{temp_colour}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
+            d="{temp_curve_data}" stroke-width="2.0" fill="none" />
+        <path stroke="{feels_like_colour}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
+            d="{feel_like_curve_data}" stroke-width="2.0" fill="none" />
+        <path stroke="{rain_colour}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
+            d="{rain_curve_data}" stroke-width="2.0" fill="none" />
     </svg>
 </svg>
