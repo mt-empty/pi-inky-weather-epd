@@ -3,19 +3,18 @@ download_release_url = ""
 
 [api]
 update_interval_mins = 60
-weather_provider = "https://api.weather.bom.gov.au/v1/locations/"
 location = "r283sf"
 use_online_data = false
 
-[dashboard]
-background_color = "grey"
-text_color = "black"
-x_axis_color = "#74838f"
-y_left_axis_color = "#1f5079"
-y_right_axis_color = "#1b69a8"
-temp_color = "#ff0000"
-feels_like_color = "#00ff00"
-rain_color = "#0000ff"
+[colours]
+background_colour = "grey"
+text_colour = "black"
+x_axis_colour = "#74838f"
+y_left_axis_colour = "#1f5079"
+y_right_axis_colour = "#1b69a8"
+temp_colour = "#ff0000"
+feels_like_colour = "#00ff00"
+rain_colour = "#0000ff"
 
 [misc]
 store_local = true

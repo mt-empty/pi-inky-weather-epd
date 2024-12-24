@@ -6,30 +6,21 @@ mod config;
 
 use ::config::{Config, File};
 use anyhow::Error;
-use bom::{
-    DailyEntry, DailyForcastResponse, HourlyForcastResponse, HourlyForecast, RainAmount, Wind,
-    DAILY_FORECAST_ENDPOINT, HOURLY_FORECAST_ENDPOINT, UV,
-};
+use bom::*;
 use chart::{catmull_bezier, Point};
 use chrono::{Datelike, NaiveDateTime, Timelike};
 use config::DashboardConfig;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io::{self, Write};
+use std::io::Write;
 use strum_macros::Display;
-use tinytemplate::TinyTemplate;
+use tinytemplate::{format_unescaped, TinyTemplate};
 
 lazy_static! {
     pub static ref CONFIG: DashboardConfig = load_config().expect("Failed to load config");
 }
 
-// const UNIT: &str = "°C";
-// const CONFIG.dashboard_misc.template_path: &str = "./dashboard-template-min.svg";
-// pub const MODIFIED_TEMPLATE_DIR_PATH: &str = "./";
-// pub const CONFIG.dashboard_misc.modified_template_name: &str = "dashboard.svg";
-// // const ICON_PATH: &str = "./static/line-svg-static/";
-// const ICON_PATH: &str = "./static/fill-svg-static/";
 const USE_ONLINE_DATA: bool = false;
 const NOT_AVAILABLE_ICON: &str = "not-available.svg";
 const CONFIG_NAME: &str = "config.toml";
@@ -48,6 +39,129 @@ struct Context {
     max_wind_gust_today: String,
     max_relative_humidity_today: String,
     total_rain_today: String,
+    current_temp: String,
+    current_icon: String,
+    current_feels_like: String,
+    current_wind_speed: String,
+    current_wind_icon: String,
+    current_uv_index: String,
+    current_relative_humidity: String,
+    current_relative_humidity_icon: String,
+    day1_name: String,
+    current_rain_amount: String,
+    rain_measure_icon: String,
+    graph_height: String,
+    graph_width: String,
+    temp_curve_data: String,
+    feel_like_curve_data: String,
+    rain_curve_data: String,
+    uv_index: String,
+    uv_index_icon: String,
+    wind_speed: String,
+    wind_icon: String,
+    x_axis_path: String,
+    y_left_axis_path: String,
+    x_labels: String,
+    y_left_labels: String,
+    y_right_axis_path: String,
+    y_right_labels: String,
+    // daily forecast
+    day2_mintemp: String,
+    day2_maxtemp: String,
+    day2_icon: String,
+    day2_name: String,
+    day3_mintemp: String,
+    day3_maxtemp: String,
+    day3_icon: String,
+    day3_name: String,
+    day4_mintemp: String,
+    day4_maxtemp: String,
+    day4_icon: String,
+    day4_name: String,
+    day5_mintemp: String,
+    day5_maxtemp: String,
+    day5_icon: String,
+    day5_name: String,
+    day6_mintemp: String,
+    day6_maxtemp: String,
+    day6_icon: String,
+    day6_name: String,
+    day7_mintemp: String,
+    day7_maxtemp: String,
+    day7_icon: String,
+    day7_name: String,
+}
+
+impl Default for Context {
+    fn default() -> Self {
+        Self {
+            background_colour: CONFIG.colours.background_colour.clone(),
+            text_colour: CONFIG.colours.text_colour.clone(),
+            x_axis_colour: CONFIG.colours.x_axis_colour.clone(),
+            y_left_axis_colour: CONFIG.colours.y_left_axis_colour.clone(),
+            y_right_axis_colour: CONFIG.colours.y_right_axis_colour.clone(),
+            temp_colour: CONFIG.colours.temp_colour.clone(),
+            feels_like_colour: CONFIG.colours.feels_like_colour.clone(),
+            rain_colour: CONFIG.colours.rain_colour.clone(),
+            uv_max_today: "NA".to_string(),
+            max_wind_gust_today: "NA".to_string(),
+            max_relative_humidity_today: "NA".to_string(),
+            total_rain_today: "NA".to_string(),
+            current_temp: "NA".to_string(),
+            current_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
+            current_feels_like: "NA".to_string(),
+            current_wind_speed: "NA".to_string(),
+            current_wind_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
+            current_uv_index: "NA".to_string(),
+            current_relative_humidity: "NA".to_string(),
+            current_relative_humidity_icon: format!(
+                "{}{}",
+                CONFIG.misc.icon_path, NOT_AVAILABLE_ICON
+            ),
+            day1_name: "NA".to_string(),
+            current_rain_amount: "NA".to_string(),
+            rain_measure_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
+            graph_height: "300".to_string(),
+            graph_width: "600".to_string(),
+            temp_curve_data: "".to_string(),
+            feel_like_curve_data: "".to_string(),
+            rain_curve_data: "".to_string(),
+            uv_index: "NA".to_string(),
+            uv_index_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
+            wind_speed: "NA".to_string(),
+            wind_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
+            x_axis_path: "".to_string(),
+            y_left_axis_path: "".to_string(),
+            x_labels: "".to_string(),
+            y_left_labels: "".to_string(),
+            y_right_axis_path: "".to_string(),
+            y_right_labels: "".to_string(),
+            day2_mintemp: "NA".to_string(),
+            day2_maxtemp: "NA".to_string(),
+            day2_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
+            day2_name: "NA".to_string(),
+            day3_mintemp: "NA".to_string(),
+            day3_maxtemp: "NA".to_string(),
+            day3_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
+            day3_name: "NA".to_string(),
+            day4_mintemp: "NA".to_string(),
+            day4_maxtemp: "NA".to_string(),
+            day4_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
+            day4_name: "NA".to_string(),
+            day5_mintemp: "NA".to_string(),
+            day5_maxtemp: "NA".to_string(),
+            day5_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
+            day5_name: "NA".to_string(),
+            day6_mintemp: "NA".to_string(),
+            day6_maxtemp: "NA".to_string(),
+            day6_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
+            day6_name: "NA".to_string(),
+            day7_mintemp: "NA".to_string(),
+            day7_maxtemp: "NA".to_string(),
+            day7_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
+            day7_name: "NA".to_string(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -65,6 +179,11 @@ pub struct GraphData {
     pub smooth: bool,
 }
 
+impl GraphData {
+    pub fn add_point(&mut self, x: f64, y: f64) {
+        self.points.push(Point { x, y })
+    }
+}
 pub struct DailyForcastGraph {
     pub name: String,
     pub data: Vec<GraphData>,
@@ -91,12 +210,6 @@ impl DailyForcastGraph {
             min_y: f64::INFINITY,
             max_y: -f64::INFINITY,
         }
-    }
-}
-
-impl GraphData {
-    pub fn add_point(&mut self, x: f64, y: f64) {
-        self.points.push(Point { x, y })
     }
 }
 
@@ -553,7 +666,7 @@ fn fetch_hourly_forecast() -> Result<HourlyForcastResponse, Error> {
     )
 }
 
-fn update_current_hour(current_hour: &HourlyForecast, template: String) -> String {
+fn update_current_hour(current_hour: &HourlyForecast, mut context: Context) -> Context {
     let mut curret_icon = current_hour.get_icon_path();
     if CONFIG.misc.use_moon_phase_instead_of_clear_night
         && curret_icon == format!("{}{}", RainChanceName::Clear, DayNight::Night)
@@ -561,47 +674,25 @@ fn update_current_hour(current_hour: &HourlyForecast, template: String) -> Strin
         println!("Using moon phase icon instead of clear night");
         curret_icon = get_moon_phase_icon().to_string();
     }
-    template
-        .replace("{current_temp}", &current_hour.temp.to_string())
-        .replace("{current_icon}", &curret_icon)
-        .replace(
-            "{current_feels_like}",
-            &current_hour.temp_feels_like.to_string(),
-        )
-        .replace(
-            "{current_wind_speed}",
-            &current_hour.wind.speed_kilometre.to_string(),
-        )
-        .replace("{current_wind_icon}", &current_hour.wind.get_icon_path())
-        .replace("{current_uv_index}", &current_hour.uv.to_string())
-        .replace(
-            "{current_relative_humidity}",
-            &current_hour.relative_humidity.to_string(),
-        )
-        .replace(
-            "{current_relative_humidity_icon}",
-            &current_hour.relative_humidity.get_icon_path(),
-        )
-        .replace(
-            "{day1_name}",
-            &chrono::Local::now().format("%A, %d %b").to_string(),
-        )
-        .replace(
-            "{current_rain_amount}",
-            &(current_hour.rain.amount.min.unwrap_or(0.0)
-                + current_hour.rain.amount.min.unwrap_or(0.0))
-            .to_string(),
-        )
-        .replace(
-            "{rain_measure_icon}",
-            &current_hour.rain.amount.get_icon_path(),
-        )
+    context.current_temp = current_hour.temp.to_string();
+    context.current_icon = curret_icon;
+    context.current_feels_like = current_hour.temp_feels_like.to_string();
+    context.current_wind_speed = current_hour.wind.speed_kilometre.to_string();
+    context.current_wind_icon = current_hour.wind.get_icon_path();
+    context.current_uv_index = current_hour.uv.to_string();
+    context.current_relative_humidity = current_hour.relative_humidity.to_string();
+    context.current_relative_humidity_icon = current_hour.relative_humidity.get_icon_path();
+    context.day1_name = chrono::Local::now().format("%A, %d %b").to_string();
+    context.current_rain_amount = (current_hour.rain.amount.min.unwrap_or(0.0)
+        + current_hour.rain.amount.min.unwrap_or(0.0))
+    .to_string();
+    context.rain_measure_icon = current_hour.rain.amount.get_icon_path();
+    context
 }
 
 // Extrusion Pattern: force everything through one function until it resembles spaghetti
-fn update_daily_forecast(template: String) -> Result<String, Error> {
+fn update_daily_forecast(mut context: Context) -> Result<Context, Error> {
     let daily_forecast_data = fetch_daily_forecast()?.data;
-    let mut updated_template = template.to_string();
     let mut i = 2;
 
     for day in daily_forecast_data {
@@ -627,13 +718,6 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
             break;
         }
 
-        let min_temp_key = format!("{{day{}_mintemp}}", i);
-        let max_temp_key = format!("{{day{}_maxtemp}}", i);
-        let icon_key = format!("{{day{}_icon}}", i);
-        let day_name_key = format!("{{day{}_name}}", i);
-
-        // println!("Day: {:?}", day);
-
         let min_temp_value = day
             .temp_min
             .map_or("NA".to_string(), |temp| temp.to_string());
@@ -652,38 +736,57 @@ fn update_daily_forecast(template: String) -> Result<String, Error> {
             "{} - min {} max {} temp",
             day_name_value, min_temp_value, max_temp_value
         );
-        updated_template = updated_template
-            .replace(&min_temp_key, &min_temp_value)
-            .replace(&max_temp_key, &max_temp_value)
-            .replace(&icon_key, &icon_value)
-            .replace(&day_name_key, &day_name_value);
+        match i {
+            2 => {
+                context.day2_mintemp = min_temp_value;
+                context.day2_maxtemp = max_temp_value;
+                context.day2_icon = icon_value;
+                context.day2_name = day_name_value;
+            }
+            3 => {
+                context.day3_mintemp = min_temp_value;
+                context.day3_maxtemp = max_temp_value;
+                context.day3_icon = icon_value;
+                context.day3_name = day_name_value;
+            }
+            4 => {
+                context.day4_mintemp = min_temp_value;
+                context.day4_maxtemp = max_temp_value;
+                context.day4_icon = icon_value;
+                context.day4_name = day_name_value;
+            }
+            5 => {
+                context.day5_mintemp = min_temp_value;
+                context.day5_maxtemp = max_temp_value;
+                context.day5_icon = icon_value;
+                context.day5_name = day_name_value;
+            }
+            6 => {
+                context.day6_mintemp = min_temp_value;
+                context.day6_maxtemp = max_temp_value;
+                context.day6_icon = icon_value;
+                context.day6_name = day_name_value;
+            }
+            7 => {
+                context.day7_mintemp = min_temp_value;
+                context.day7_maxtemp = max_temp_value;
+                context.day7_icon = icon_value;
+                context.day7_name = day_name_value;
+            }
+            _ => {}
+        }
+
         i += 1;
     }
 
-    // if i < 8, this means that we have less than 7 days of forecast data
-    // so we need to NA the remaining days
-    while i < 8 {
-        let min_temp_key = format!("{{day{}_mintemp}}", i);
-        let max_temp_key = format!("{{day{}_maxtemp}}", i);
-        let icon_key = format!("{{day{}_icon}}", i);
-        let day_name_key = format!("{{day{}_name}}", i);
-
-        updated_template = updated_template
-            .replace(&min_temp_key, "NA")
-            .replace(&max_temp_key, "NA")
-            .replace(
-                &icon_key,
-                &format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
-            )
-            .replace(&day_name_key, "NA");
-
-        i += 1;
+    if i < 8 {
+        println!("Less than 7 days of forecast data");
     }
 
-    Ok(updated_template)
+    Ok(context)
 }
 
-fn update_hourly_forecast(template: String) -> Result<String, Error> {
+fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
     let hourly_forecast = fetch_hourly_forecast()?;
 
     let mut graph = DailyForcastGraph::default();
@@ -716,14 +819,11 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
         start_time: None,
     };
 
-    let mut updated_template = template
-        .replace("{temp_colour}", &temp_data.colour)
-        .replace("{feels_like_colour}", &feels_like_data.colour)
-        .replace("{rain_colour}", &rain_data.colour);
+    context.temp_colour = temp_data.colour.clone();
+    context.feels_like_colour = feels_like_data.colour.clone();
+    context.rain_colour = rain_data.colour.clone();
 
-    // hourly_forecast.data.sort_by(|a, b| a.time.cmp(&b.time));
-
-    updated_template = update_current_hour(&hourly_forecast.data[0], updated_template);
+    context = update_current_hour(&hourly_forecast.data[0], context);
     let current_date = chrono::Local::now()
         .naive_local()
         .with_minute(0)
@@ -798,31 +898,26 @@ fn update_hourly_forecast(template: String) -> Result<String, Error> {
             },
         );
 
-    updated_template = updated_template
-        .replace("{graph_hieght}", &graph.height.to_string())
-        .replace("{graph_width}", &graph.width.to_string())
-        .replace("{temp_curve_data}", &temp_curve_data)
-        .replace("{feel_like_curve_data}", &feel_like_curve_data)
-        .replace("{rain_curve_data}", &rain_curve_data)
-        .replace("{uv_index}", &hourly_forecast.data[0].uv.to_string())
-        .replace("{uv_index_icon}", &current_uv.get_icon_path().to_string())
-        .replace(
-            "{wind_speed}",
-            &hourly_forecast.data[0].wind.speed_kilometre.to_string(),
-        )
-        .replace("{wind_icon}", &hourly_forecast.data[0].wind.get_icon_path());
+    context.graph_height = graph.height.to_string();
+    context.graph_width = graph.width.to_string();
+    context.temp_curve_data = temp_curve_data;
+    context.feel_like_curve_data = feel_like_curve_data;
+    context.rain_curve_data = rain_curve_data;
+    context.uv_index = hourly_forecast.data[0].uv.to_string();
+    context.uv_index_icon = current_uv.get_icon_path().to_string();
+    context.wind_speed = hourly_forecast.data[0].wind.speed_kilometre.to_string();
+    context.wind_icon = hourly_forecast.data[0].wind.get_icon_path();
 
     let axis_data_path = graph.create_axis_with_labels(first_date.hour() as f64);
 
-    updated_template = updated_template
-        .replace("{x_axis_path}", &axis_data_path.0)
-        .replace("{y_left_axis_path}", &axis_data_path.1)
-        .replace("{x_labels}", &axis_data_path.2)
-        .replace("{y_left_labels}", &axis_data_path.3)
-        .replace("{y_right_axis_path}", &axis_data_path.4)
-        .replace("{y_right_labels}", &axis_data_path.5);
+    context.x_axis_path = axis_data_path.0;
+    context.y_left_axis_path = axis_data_path.1;
+    context.x_labels = axis_data_path.2;
+    context.y_left_labels = axis_data_path.3;
+    context.y_right_axis_path = axis_data_path.4;
+    context.y_right_labels = axis_data_path.5;
 
-    Ok(updated_template)
+    Ok(context)
 }
 
 fn get_moon_phase_icon() -> String {
@@ -854,7 +949,35 @@ fn get_moon_phase_icon() -> String {
     format!("{}{}", CONFIG.misc.icon_path, icon_name)
 }
 
-pub fn generate_weather_dashboard() -> io::Result<()> {
+fn load_config() -> Result<DashboardConfig, Error> {
+    let root = std::env::current_dir()?;
+    let config_path = root.join(CONFIG_NAME);
+    let settings = Config::builder()
+        .add_source(File::with_name(config_path.to_str().unwrap()))
+        .build()?;
+
+    settings.try_deserialize().map_err(Error::msg)
+}
+
+fn render_template(context: Context, dashboard_svg: String) -> Result<String, Error> {
+    let mut tt = TinyTemplate::new();
+
+    if let Err(e) = tt.add_template("dashboard", &dashboard_svg) {
+        println!("Failed to add template: {}", e);
+        return Err(e.into());
+    }
+    tt.set_default_formatter(&format_unescaped);
+    // Attempt to render the template
+    match tt.render("dashboard", &context) {
+        Ok(rendered) => Ok(rendered),
+        Err(e) => {
+            println!("Failed to render template: {}", e);
+            Err(e.into())
+        }
+    }
+}
+
+pub fn generate_weather_dashboard() -> Result<(), Error> {
     // print current directory
     let current_dir = std::env::current_dir()?;
     println!("Current directory: {:?}", current_dir);
@@ -867,65 +990,28 @@ pub fn generate_weather_dashboard() -> io::Result<()> {
         Ok(svg) => svg,
         Err(e) => {
             println!("Failed to read template file: {}", e);
-            return Err(e);
+            return Err(e.into());
         }
     };
 
-    let mut updated_svg = update_daily_forecast(template_svg);
-    updated_svg = update_hourly_forecast(updated_svg.unwrap());
+    let mut context = Context::default();
+    context = match update_daily_forecast(context) {
+        Ok(context) => context,
+        Err(e) => {
+            println!("Failed to update daily forecast: {}", e);
+            return Err(e);
+        }
+    };
+    context = update_hourly_forecast(context)?;
 
-    updated_svg = render_template(updated_svg.unwrap());
+    let updated_svg = render_template(context, template_svg)?;
 
     let mut output = fs::File::create(CONFIG.misc.modified_template_name.clone())?;
-    let unwraped_svg: String = updated_svg.unwrap();
-    output.write_all(unwraped_svg.as_bytes())?;
+    output.write_all(updated_svg.as_bytes())?;
 
     println!(
         "SVG has been modified and saved successfully at {}",
         CONFIG.misc.modified_template_name
     );
     Ok(())
-}
-
-fn load_config() -> Result<DashboardConfig, Error> {
-    let root = std::env::current_dir()?;
-    let config_path = root.join(CONFIG_NAME);
-    let settings = Config::builder()
-        .add_source(File::with_name(config_path.to_str().unwrap()))
-        .build()?;
-
-    settings.try_deserialize().map_err(Error::msg)
-}
-
-fn render_template(dashboard_svg: String) -> Result<String, Error> {
-    let mut tt = TinyTemplate::new();
-
-    if let Err(e) = tt.add_template("dashboard", &dashboard_svg) {
-        println!("Failed to add template: {}", e);
-        return Err(e.into());
-    }
-
-    let context = Context {
-        background_colour: "#f0f0f0".to_string(),
-        text_colour: "#000000".to_string(),
-        x_axis_colour: "#000000".to_string(),
-        y_left_axis_colour: "#000000".to_string(),
-        y_right_axis_colour: "#000000".to_string(),
-        temp_colour: "#ff0000".to_string(),
-        feels_like_colour: "#00ff00".to_string(),
-        rain_colour: "#0000ff".to_string(),
-        uv_max_today: "10".to_string(),
-        max_wind_gust_today: "50".to_string(),
-        max_relative_humidity_today: "100".to_string(),
-        total_rain_today: "10".to_string(),
-    };
-
-    // Attempt to render the template
-    match tt.render("dashboard", &context) {
-        Ok(rendered) => Ok(rendered),
-        Err(e) => {
-            println!("Failed to render template: {}", e);
-            Err(e.into())
-        }
-    }
 }
