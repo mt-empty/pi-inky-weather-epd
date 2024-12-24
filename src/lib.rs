@@ -21,11 +21,10 @@ lazy_static! {
     pub static ref CONFIG: DashboardConfig = load_config().expect("Failed to load config");
 }
 
-const USE_ONLINE_DATA: bool = false;
 const NOT_AVAILABLE_ICON: &str = "not-available.svg";
 const CONFIG_NAME: &str = "config.toml";
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 struct Context {
     background_colour: String,
     text_colour: String,
@@ -505,7 +504,9 @@ impl DailyForcastGraph {
                     data_path.push(GraphDataPath::TempFeelLike(path));
                 }
                 DataType::Rain => {
-                    data_path.push(GraphDataPath::Rain(path));
+                    let bounding_area_path =
+                        format!("{} L {} 0 L 0 0Z", path, DailyForcastGraph::WIDTH);
+                    data_path.push(GraphDataPath::Rain(bounding_area_path));
                 }
             }
         }
@@ -641,7 +642,7 @@ impl Icon for HourlyForecast {
 }
 
 fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &str) -> Result<T, Error> {
-    if USE_ONLINE_DATA {
+    if CONFIG.misc.use_online_data {
         let client = reqwest::blocking::Client::new();
         let response = client.get(endpoint).send()?;
         let body = response.text().map_err(Error::msg)?;
@@ -823,7 +824,6 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
     context.feels_like_colour = feels_like_data.colour.clone();
     context.rain_colour = rain_data.colour.clone();
 
-    context = update_current_hour(&hourly_forecast.data[0], context);
     let current_date = chrono::Local::now()
         .naive_local()
         .with_minute(0)
@@ -835,11 +835,11 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
 
     println!("Current time: {:?}", current_date);
     // we only want to display the next 24 hours
-    let first_date = &hourly_forecast
+    let first_date = hourly_forecast
         .data
         .iter()
         .find_map(
-            // find a the first time
+            // find the first time
             |forcast| match NaiveDateTime::parse_from_str(&forcast.time, "%Y-%m-%dT%H:%M:%SZ") {
                 Ok(datetime) => {
                     if datetime >= current_date {
@@ -853,7 +853,7 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
         )
         .unwrap_or_else(|| chrono::Local::now().naive_local());
 
-    let end_date = *first_date + chrono::Duration::hours(24);
+    let end_date = first_date + chrono::Duration::hours(24);
 
     println!("First date: {:?}", first_date);
     println!("End date: {:?}", end_date);
@@ -865,11 +865,15 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
         .iter()
         .filter(|forcast| {
             match NaiveDateTime::parse_from_str(&forcast.time, "%Y-%m-%dT%H:%M:%SZ") {
-                Ok(datetime) => datetime >= *first_date && datetime < end_date,
+                Ok(datetime) => datetime >= first_date && datetime < end_date,
                 Err(_) => false,
             }
         })
         .for_each(|forcast| {
+            if x == 0.0 {
+                // update current hour
+                context = update_current_hour(forcast, context.clone());
+            }
             // we won't push the actual hour right now
             // we can calculate it later
             // we push this index to make scaling graph easier
@@ -898,6 +902,19 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
             },
         );
 
+    let day_start = first_date
+        .with_hour(0)
+        .unwrap()
+        .with_minute(0)
+        .unwrap()
+        .with_second(0)
+        .unwrap();
+
+    let day_end = day_start + chrono::Duration::days(1);
+
+    println!("Day start: {:?}", day_start);
+    println!("Day end: {:?}", day_end);
+
     context.graph_height = graph.height.to_string();
     context.graph_width = graph.width.to_string();
     context.temp_curve_data = temp_curve_data;
@@ -906,6 +923,41 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
     context.uv_index = hourly_forecast.data[0].uv.to_string();
     context.uv_index_icon = current_uv.get_icon_path().to_string();
     context.wind_speed = hourly_forecast.data[0].wind.speed_kilometre.to_string();
+    context.max_wind_gust_today = find_max_item_between_dates(
+        &hourly_forecast.data,
+        &day_start,
+        &day_end,
+        |item| item.wind.speed_kilometre,
+        |item| &item.time,
+    )
+    .to_string();
+    // There is a discrepancy in max uv between hourly forcast and daily forcast
+    context.uv_max_today = find_max_item_between_dates(
+        &hourly_forecast.data,
+        &day_start,
+        &day_end,
+        |item| item.uv,
+        |item| &item.time,
+    )
+    .to_string();
+    context.max_relative_humidity_today = find_max_item_between_dates(
+        &hourly_forecast.data,
+        &day_start,
+        &day_end,
+        |item| item.relative_humidity,
+        |item| &item.time,
+    )
+    .to_string();
+
+    context.total_rain_today = (get_total_between_dates(
+        &hourly_forecast.data,
+        &day_start,
+        &day_end,
+        |item| (item.rain.amount.min.unwrap_or(0.0) + item.rain.amount.max.unwrap_or(0.0)) / 2.0,
+        |item| &item.time,
+    ) as usize)
+        .to_string();
+
     context.wind_icon = hourly_forecast.data[0].wind.get_icon_path();
 
     let axis_data_path = graph.create_axis_with_labels(first_date.hour() as f64);
@@ -918,6 +970,44 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
     context.y_right_labels = axis_data_path.5;
 
     Ok(context)
+}
+
+fn get_total_between_dates<T>(
+    data: &[T],
+    start_date: &NaiveDateTime,
+    end_date: &NaiveDateTime,
+    get_value: impl Fn(&T) -> f64,
+    get_time: impl Fn(&T) -> &str,
+) -> f64 {
+    data.iter()
+        .filter_map(|item| {
+            let date = NaiveDateTime::parse_from_str(get_time(item), "%Y-%m-%dT%H:%M:%SZ").ok()?;
+            if date >= *start_date && date < *end_date {
+                Some(get_value(item))
+            } else {
+                None
+            }
+        })
+        .sum()
+}
+
+fn find_max_item_between_dates<T>(
+    data: &[T],
+    start_date: &NaiveDateTime,
+    end_date: &NaiveDateTime,
+    get_value: impl Fn(&T) -> f64,
+    get_time: impl Fn(&T) -> &str,
+) -> f64 {
+    data.iter()
+        .filter_map(|item| {
+            let date = NaiveDateTime::parse_from_str(get_time(item), "%Y-%m-%dT%H:%M:%SZ").ok()?;
+            if date >= *start_date && date < *end_date {
+                Some(get_value(item))
+            } else {
+                None
+            }
+        })
+        .fold(f64::NEG_INFINITY, f64::max)
 }
 
 fn get_moon_phase_icon() -> String {

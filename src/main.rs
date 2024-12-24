@@ -1,6 +1,5 @@
 use pi_inky_weather_epd::generate_weather_dashboard;
-use std::io;
 
-fn main() -> io::Result<()> {
+fn main() -> Result<(), anyhow::Error> {
     generate_weather_dashboard()
 }

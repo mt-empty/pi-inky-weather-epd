@@ -3,11 +3,20 @@ download_release_url = ""
 
 [api]
 update_interval_mins = 60
-location = "r283sf"
-use_online_data = false
+
+# darwin = "qvv117"
+# sydney = "r3gx2f"
+# melbourne = "r1r0fs"
+# brisbane = "ynGBTJ"
+# perth = "r28ekz"
+# adelaide = "r1f93c"
+# hobart = "r22u0d"
+# canberra = "r3dp32"
+# tasmania-cold = "r283sf"
+location = "r1r0fs" # uses GeoHash, must be 6 characters
 
 [colours]
-background_colour = "grey"
+background_colour = "white"
 text_colour = "black"
 x_axis_colour = "#74838f"
 y_left_axis_colour = "#1f5079"
@@ -25,3 +34,4 @@ modified_template_dir_path = "../"
 icon_path = "static/fill-svg-static/"
 unit = "°C"
 use_moon_phase_instead_of_clear_night = true
+use_online_data = true # for debugging purposes
