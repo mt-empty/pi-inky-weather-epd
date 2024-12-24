@@ -47,8 +47,13 @@ pub fn catmull_bezier(points: Vec<Point>) -> Vec<Curve> {
         };
 
         let c1 = Point {
-            x: ((-p0.x + 6.0 * p1.x + p2.x) / 6.0), // TODO: fix for the first point
-            y: ((-p0.y + 6.0 * p1.y + p2.y) / 6.0),
+            x: if i == 0 {
+                // this is needed to make the first curve start at x=0
+                0.0
+            } else {
+                (-p0.x + 6.0 * p1.x + p2.x) / 6.0
+            },
+            y: (-p0.y + 6.0 * p1.y + p2.y) / 6.0,
         };
 
         let c2 = Point {
@@ -57,7 +62,6 @@ pub fn catmull_bezier(points: Vec<Point>) -> Vec<Curve> {
         };
 
         let end = p2;
-
         res.push(Curve { c1, c2, end });
     }
 
