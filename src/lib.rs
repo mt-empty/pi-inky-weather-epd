@@ -439,7 +439,8 @@ impl DailyForcastGraph {
                         // it's possible for both to be negative
                         self.height as f64 / (self.max_y.abs() - self.min_y.abs())
                     } else {
-                        self.height as f64 / self.max_y
+                        // when both are positive
+                        self.height as f64 / (self.max_y - self.min_y)
                     }
                 }
             };
@@ -451,7 +452,7 @@ impl DailyForcastGraph {
                 .points
                 .iter()
                 .map(|val| Point {
-                    x: (val.x * xfactor),
+                    x: (val.x * xfactor), // x always start from 0 so no need to adjust the x value
                     y: match data.graph_type {
                         DataType::Rain => val.y * yfactor,
                         DataType::Temp | DataType::TempFeelLike => {
@@ -460,7 +461,7 @@ impl DailyForcastGraph {
                             if self.min_y < 0.0 {
                                 (val.y + self.min_y.abs()) * yfactor
                             } else {
-                                val.y * yfactor
+                                (val.y - self.min_y) * yfactor
                             }
                         }
                     },
