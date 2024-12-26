@@ -3,6 +3,7 @@ mod bom;
 #[allow(dead_code)]
 mod chart;
 mod config;
+mod utils;
 
 use ::config::{Config, File};
 use anyhow::Error;
@@ -16,6 +17,7 @@ use std::fs;
 use std::io::Write;
 use strum_macros::Display;
 use tinytemplate::{format_unescaped, TinyTemplate};
+use utils::convert_svg_to_png;
 
 lazy_static! {
     pub static ref CONFIG: DashboardConfig = load_config().expect("Failed to load config");
@@ -1099,6 +1101,12 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
 
     let mut output = fs::File::create(CONFIG.misc.modified_template_name.clone())?;
     output.write_all(updated_svg.as_bytes())?;
+
+    convert_svg_to_png(
+        &CONFIG.misc.modified_template_name,
+        &CONFIG.misc.modified_template_name.replace(".svg", ".png"),
+    )
+    .map_err(Error::msg)?;
 
     println!(
         "SVG has been modified and saved successfully at {}",

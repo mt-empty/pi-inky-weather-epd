@@ -21,6 +21,8 @@ strum = "0.26"
 strum_macros = "0.26"
 config = "0.14"
 tinytemplate = "1.2"
+resvg = "0.44"
+image = "0.25"
 
 # dev dependencies
 [dev-dependencies]
