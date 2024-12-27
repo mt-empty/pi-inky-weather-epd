@@ -17,7 +17,7 @@ use std::fs;
 use std::io::Write;
 use strum_macros::Display;
 use tinytemplate::{format_unescaped, TinyTemplate};
-use utils::convert_svg_to_png;
+pub use utils::*;
 
 lazy_static! {
     pub static ref CONFIG: DashboardConfig = load_config().expect("Failed to load config");
@@ -91,6 +91,10 @@ struct Context {
     day7_maxtemp: String,
     day7_icon: String,
     day7_name: String,
+    sunset_time: String,
+    sunrise_time: String,
+    sunset_icon: String,
+    sunrise_icon: String,
 }
 
 impl Default for Context {
@@ -161,6 +165,10 @@ impl Default for Context {
             day7_maxtemp: "NA".to_string(),
             day7_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
             day7_name: "NA".to_string(),
+            sunrise_time: "NA".to_string(),
+            sunset_time: "NA".to_string(),
+            sunset_icon: format!("{}sunset.svg", CONFIG.misc.icon_path),
+            sunrise_icon: format!("{}sunrise.svg", CONFIG.misc.icon_path),
         }
     }
 }
@@ -273,8 +281,8 @@ impl DailyForcastGraph {
 
         // Number of ticks, +1 because fencepost problem
         let x_ticks = 6;
-        let y_left_ticks = 10;
-        let y_right_ticks = 10;
+        let y_left_ticks = 5;
+        let y_right_ticks = 5;
 
         let x_step = range_x / x_ticks as f64;
         let y_left_step = range_y_left / y_left_ticks as f64;
@@ -320,14 +328,15 @@ impl DailyForcastGraph {
             let label_str = format!("{:.0}{}", display_hour, period);
             // slight offset for the first label if the min_y is negative
             let label_x = if self.min_y < 0.0 && i == 0 {
-                xs + 20.0
+                xs + 22.0
             } else {
                 xs
             };
             x_labels.push_str(&format!(
-                r#"<text x="{x}" y="{y}" font-size="15" text-anchor="middle">{text}</text>"#,
+                r#"<text x="{x}" y="{y}" fill="{colour}" font-size="17" text-anchor="middle">{text}</text>"#,
                 x = label_x,
                 y = label_y,
+                colour = CONFIG.colours.text_colour,
                 text = label_str
             ));
         }
@@ -352,9 +361,10 @@ impl DailyForcastGraph {
             let label_x = y_axis_x - 10.0;
             let label_str = format!("{:.1}", y_val);
             y_left_labels.push_str(&format!(
-                r#"<text x="{x}" y="{y}" font-size="12" text-anchor="end" dy="4">{text}</text>"#,
+                r#"<text x="{x}" y="{y}"  fill="{colour}" font-size="17" text-anchor="end" dy="4">{text}</text>"#,
                 x = label_x,
                 y = ys,
+                colour = CONFIG.colours.text_colour,
                 text = label_str
             ));
         }
@@ -379,9 +389,10 @@ impl DailyForcastGraph {
             let label_x = y_right_axis_x + 10.0;
             let label_str = format!("{:.0}%", y_val);
             y_right_labels.push_str(&format!(
-                r#"<text x="{x}" y="{y}" font-size="12" text-anchor="start" dy="4">{text}</text>"#,
+                r#"<text x="{x}" y="{y}" fill="{colour}"  font-size="17" text-anchor="start" dy="4">{text}</text>"#,
                 x = label_x,
                 y = ys,
+                colour = CONFIG.colours.text_colour,
                 text = label_str
             ));
         }
@@ -673,7 +684,7 @@ fn fetch_hourly_forecast() -> Result<HourlyForcastResponse, Error> {
 fn update_current_hour(current_hour: &HourlyForecast, mut context: Context) -> Context {
     let mut curret_icon = current_hour.get_icon_path();
     if CONFIG.misc.use_moon_phase_instead_of_clear_night
-        && curret_icon == format!("{}{}", RainChanceName::Clear, DayNight::Night)
+        && curret_icon.ends_with(&format!("{}{}.svg", RainChanceName::Clear, DayNight::Night))
     {
         println!("Using moon phase icon instead of clear night");
         curret_icon = get_moon_phase_icon().to_string();
@@ -697,29 +708,18 @@ fn update_current_hour(current_hour: &HourlyForecast, mut context: Context) -> C
 // Extrusion Pattern: force everything through one function until it resembles spaghetti
 fn update_daily_forecast(mut context: Context) -> Result<Context, Error> {
     let daily_forecast_data = fetch_daily_forecast()?.data;
-    let mut i = 2;
+    let current_date = chrono::Local::now().date_naive();
+    let mut i = 1;
 
     for day in daily_forecast_data {
-        if let Some(date_str) = &day.date {
-            if let Ok(date) = chrono::NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%SZ")
-                .map(|datetime| datetime.date())
-            {
-                let current_date = chrono::Local::now().date_naive();
-
-                // If the date is today or in the past, skip it
-                if date <= current_date {
-                    continue;
-                }
+        if let Some(naive_date) = day.date {
+            if naive_date.date() < current_date {
+                // If the date is in the past, skip it
+                continue;
+            } else if naive_date.date() > current_date + chrono::Duration::days(7) {
+                // If the date is more than 7 days in the future, skip it
+                break;
             }
-        } else if day.date
-            == Some(
-                (chrono::Local::now() + chrono::Duration::days(7))
-                    .format("%Y-%m-%d")
-                    .to_string(),
-            )
-        {
-            // If the date is more than 7 days in the future, skip it
-            break;
         }
 
         let min_temp_value = day
@@ -729,18 +729,31 @@ fn update_daily_forecast(mut context: Context) -> Result<Context, Error> {
             .temp_max
             .map_or("NA".to_string(), |temp| temp.to_string());
         let icon_value = day.get_icon_path();
-        let day_name_value = day.date.as_ref().map_or("NA".to_string(), |date| {
-            chrono::NaiveDate::parse_from_str(date, "%Y-%m-%dT%H:%M:%SZ")
-                .map(|parsed_date| parsed_date.format("%A").to_string())
-                .map(|day_name| day_name.chars().take(3).collect::<String>())
-                .unwrap_or_else(|_| "NA".to_string())
-        });
+        let day_name_value = day
+            .date
+            .map_or("NA".to_string(), |date| date.format("%a").to_string());
 
         println!(
             "{} - min {} max {} temp",
             day_name_value, min_temp_value, max_temp_value
         );
         match i {
+            1 => {
+                context.sunrise_time = day
+                    .astronomical
+                    .unwrap_or_default()
+                    .sunrise_time
+                    .unwrap_or_default()
+                    .format("%H:%M")
+                    .to_string();
+                context.sunset_time = day
+                    .astronomical
+                    .unwrap_or_default()
+                    .sunset_time
+                    .unwrap_or_default()
+                    .format("%H:%M")
+                    .to_string();
+            }
             2 => {
                 context.day2_mintemp = min_temp_value;
                 context.day2_maxtemp = max_temp_value;
@@ -843,15 +856,12 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
         .iter()
         .find_map(
             // find the first time
-            |forcast| match NaiveDateTime::parse_from_str(&forcast.time, "%Y-%m-%dT%H:%M:%SZ") {
-                Ok(datetime) => {
-                    if datetime >= current_date {
-                        Some(datetime)
-                    } else {
-                        None
-                    }
+            |forcast| {
+                if forcast.time >= current_date {
+                    Some(forcast.time)
+                } else {
+                    None
                 }
-                Err(_) => None,
             },
         )
         .unwrap_or_else(|| chrono::Local::now().naive_local());
@@ -866,12 +876,7 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
     hourly_forecast
         .data
         .iter()
-        .filter(|forcast| {
-            match NaiveDateTime::parse_from_str(&forcast.time, "%Y-%m-%dT%H:%M:%SZ") {
-                Ok(datetime) => datetime >= first_date && datetime < end_date,
-                Err(_) => false,
-            }
-        })
+        .filter(|forcast| forcast.time >= first_date && forcast.time < end_date)
         .for_each(|forcast| {
             if x == 0.0 {
                 // update current hour
@@ -930,7 +935,7 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
         &hourly_forecast.data,
         &day_start,
         &day_end,
-        |item| item.wind.speed_kilometre,
+        |item| item.wind.gust_speed_kilometre.unwrap_or(0.0),
         |item| &item.time,
     )
     .to_string();
@@ -973,44 +978,6 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
     context.y_right_labels = axis_data_path.5;
 
     Ok(context)
-}
-
-fn get_total_between_dates<T>(
-    data: &[T],
-    start_date: &NaiveDateTime,
-    end_date: &NaiveDateTime,
-    get_value: impl Fn(&T) -> f64,
-    get_time: impl Fn(&T) -> &str,
-) -> f64 {
-    data.iter()
-        .filter_map(|item| {
-            let date = NaiveDateTime::parse_from_str(get_time(item), "%Y-%m-%dT%H:%M:%SZ").ok()?;
-            if date >= *start_date && date < *end_date {
-                Some(get_value(item))
-            } else {
-                None
-            }
-        })
-        .sum()
-}
-
-fn find_max_item_between_dates<T>(
-    data: &[T],
-    start_date: &NaiveDateTime,
-    end_date: &NaiveDateTime,
-    get_value: impl Fn(&T) -> f64,
-    get_time: impl Fn(&T) -> &str,
-) -> f64 {
-    data.iter()
-        .filter_map(|item| {
-            let date = NaiveDateTime::parse_from_str(get_time(item), "%Y-%m-%dT%H:%M:%SZ").ok()?;
-            if date >= *start_date && date < *end_date {
-                Some(get_value(item))
-            } else {
-                None
-            }
-        })
-        .fold(f64::NEG_INFINITY, f64::max)
 }
 
 fn get_moon_phase_icon() -> String {

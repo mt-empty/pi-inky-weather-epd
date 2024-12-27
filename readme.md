@@ -15,16 +15,35 @@ This project involves building a simple, static weather dashboard using Rust. Th
   - [x] display SVG graph
 - [x] display temperature over time
 - [x] display weather data
-- [ ] convert svg to png
+- [x] convert svg to png
 - [ ] find proper font for e-ink display
-- [ ] add icon when fetching data fails
+- [ ] add a warning icon when fetching data fails
 - [ ] create a program that auto generates some/all possible weather variations
-- [ ] create new icons
+- [ ] modify existing icons
   - [ ] rain measure with mm
   - [ ] wind speed with km/h
+  - [ ] evey other one to only use colors from the e-ink supported palette
 - [ ] break the program into smaller parts
-- [ ] log errors
-  - [ ] when NA is returned, including for icons
+- [ ] propper error logging
+  - [ ] when `NA` is returned, including for icons
+- [ ] Find out all the supported colors for the e-ink display
+  - [ ] Deep Pink 
+  - [ ] purple white color?
 
 
 https://github.com/bremor/bureau_of_meteorology/blob/main/api%20doc/API.md
+
+
+http://geohash.co/
+
+https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)_Manual#Overview
+
+### Supported colors
+        [0, 0, 0],        # Black
+        [255, 255, 255],  # White
+        [0, 255, 0],      # Green
+        [0, 0, 255],      # Blue
+        [255, 0, 0],      # Red
+        [255, 255, 0],    # Yellow
+        [255, 20, 147] # Deep Pink
+        [255, 140, 0],    # Orange
