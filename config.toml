@@ -15,6 +15,7 @@ update_interval_mins = 60
 # tasmania-cold = "r283sf"
 location = "r1r0fs" # uses GeoHash, must be 6 characters
 
+# supproted colors = [black, white, green, blue, red, yellow, orange]
 [colours]
 background_colour = "white"
 text_colour = "black"
@@ -30,7 +31,6 @@ store_local = true
 store_local_path = "./apis/"
 template_path = "dashboard-template-min.svg"
 modified_template_name = "dashboard.svg"
-modified_template_dir_path = "../"
 icon_path = "static/fill-svg-static/"
 unit = "°C"
 use_moon_phase_instead_of_clear_night = true

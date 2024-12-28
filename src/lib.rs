@@ -660,6 +660,10 @@ fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &str) -> Resul
         let client = reqwest::blocking::Client::new();
         let response = client.get(endpoint).send()?;
         let body = response.text().map_err(Error::msg)?;
+
+        // create path if it doesn't exist
+        let _ = fs::create_dir_all(file_path.rsplitn(2, '/').last().unwrap());
+
         fs::write(file_path, &body)?;
     }
 

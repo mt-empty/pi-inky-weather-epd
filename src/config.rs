@@ -38,7 +38,6 @@ pub struct Misc {
     pub store_local_path: String,
     pub template_path: String,
     pub modified_template_name: String,
-    pub modified_template_dir_path: String,
     pub icon_path: String,
     pub unit: String,
     pub use_moon_phase_instead_of_clear_night: bool,
