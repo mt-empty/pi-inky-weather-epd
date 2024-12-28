@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         target:
-          - arm-unknown-linux-gnueabi     # Raspberry Pi Zero
+          # - arm-unknown-linux-gnueabi     # Raspberry Pi Zero
           - armv7-unknown-linux-gnueabihf # Raspberry Pi Zero 2
           - aarch64-unknown-linux-gnu     # Raspberry Pi 4 and above
           - x86_64-unknown-linux-gnu      # x86

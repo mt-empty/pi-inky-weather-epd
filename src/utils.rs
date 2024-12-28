@@ -78,10 +78,9 @@ pub fn load_fonts(font_db: &mut fontdb::Database) {
     font_db.load_system_fonts();
 
     let font_files = [
-        "fonts/ttf/Roboto-Regular.ttf",
-        "fonts/quicksand/Quicksand_Dash.otf",
-        "fonts/mahamaya/Mahamaya Regular Devanagri 2016/Mahamaya.otf",
-        "fonts/dash-dot-square-7/dash_dot_square-7.ttf",
+        "static/fonts/Roboto-Regular.ttf",
+        "static/fonts/Quicksand_Dash.otf",
+        "static/fonts/Ubuntu-R.tff",
     ];
 
     for file in &font_files {
