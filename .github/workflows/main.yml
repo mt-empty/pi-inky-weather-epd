@@ -1,8 +1,13 @@
 name: Build and Release Rust Binaries
 
 on:
+  pull_request: 
+    branches: 
+        - master
   push:
-    tags:
+    branches:
+      - master
+    tags-ignore:
       - "v*"
   workflow_dispatch:
 
@@ -20,6 +25,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/index
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-index-
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
@@ -27,14 +56,21 @@ jobs:
           components: rustfmt, clippy
           override: true
 
-      - name: Install target
-        run: rustup target add ${{ matrix.target }}
+      - name: Run cargo fmt
+        run: cargo fmt -- --check
 
-      - name: Build binary
-        run: cargo build --release --target=${{ matrix.target }}
+      - name: Run cargo clippy
+        run: cargo clippy
+        # run: cargo clippy -- -D warnings
 
-      - name: Test binary
-        run: cargo test --target=${{ matrix.target }}
+      - name: Install cross
+        run: cargo install cross
+
+      - name: Build binary with cross
+        run: cross build --release --target=${{ matrix.target }}
+
+      - name: Test binary with cross
+        run: cross test --target=${{ matrix.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
