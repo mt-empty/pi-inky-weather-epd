@@ -1073,6 +1073,11 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
     let mut output = fs::File::create(CONFIG.misc.modified_template_name.clone())?;
     output.write_all(updated_svg.as_bytes())?;
 
+    println!(
+        "SVG has been modified and saved successfully at {}",
+        CONFIG.misc.modified_template_name
+    );
+
     convert_svg_to_png(
         &CONFIG.misc.modified_template_name,
         &CONFIG.misc.modified_template_name.replace(".svg", ".png"),
@@ -1080,8 +1085,8 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
     .map_err(Error::msg)?;
 
     println!(
-        "SVG has been modified and saved successfully at {}",
-        CONFIG.misc.modified_template_name
+        "PNG has been generated successfully at {}",
+        CONFIG.misc.modified_template_name.replace(".svg", ".png")
     );
     Ok(())
 }

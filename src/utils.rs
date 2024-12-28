@@ -77,6 +77,9 @@ pub fn convert_svg_to_png(input_path: &str, output_path: &str) -> Result<(), Str
 pub fn load_fonts(font_db: &mut fontdb::Database) {
     font_db.load_system_fonts();
 
+    // print urrent path
+    let current_path = std::env::current_dir().unwrap();
+
     let font_files = [
         "static/fonts/Roboto-Regular.ttf",
         "static/fonts/Quicksand_Dash.otf",
@@ -84,7 +87,10 @@ pub fn load_fonts(font_db: &mut fontdb::Database) {
     ];
 
     for file in &font_files {
-        font_db.load_font_file(file).unwrap();
+        match font_db.load_font_file(current_path.join(file)) {
+            Ok(_) => println!("Loaded font file: {}", file),
+            Err(e) => eprintln!("Failed to load font file: {}", e),
+        }
     }
 }
 
