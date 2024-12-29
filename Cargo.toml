@@ -23,6 +23,7 @@ config = "0.14"
 tinytemplate = "1.2"
 resvg = "0.44"
 image = "0.25"
+openssl = { version = "0.10", features = ["vendored"] }
 
 # dev dependencies
 [dev-dependencies]
