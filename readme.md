@@ -47,3 +47,7 @@ https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)_Manual#Overview
         [255, 255, 0],    # Yellow
         [255, 20, 147] # Deep Pink
         [255, 140, 0],    # Orange
+        
+        # [255, 248, 220, 255], // Cornsilk
+        # [255, 250, 205, 255], // Lemon Chiffon
+        # [255, 20, 147, 255],  // DeepPink
