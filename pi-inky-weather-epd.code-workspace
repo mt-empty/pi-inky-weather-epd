@@ -5,7 +5,10 @@
 		}
 	],
 	"settings": {
-		"svg.preview.background": "editor"
+		"svg.preview.background": "editor",
+		"explorer.excludeGitIgnore": false,
+		"search.useParentIgnoreFiles": false,
+		"search.useIgnoreFiles": false
 	},
 	"extensions": {
 		"recommendations": [

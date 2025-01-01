@@ -47,8 +47,10 @@ pub fn convert_svg_to_png(input_path: &str, output_path: &str) -> Result<(), Str
     load_fonts(&mut font_db);
 
     // Parse the SVG
-    let mut opts = usvg::Options::default();
-    opts.fontdb = font_db.into();
+    let opts = usvg::Options {
+        fontdb: font_db.into(),
+        ..Default::default()
+    };
 
     let tree = usvg::Tree::from_str(&svg_data, &opts)
         .map_err(|e| format!("Failed to parse SVG: {}", e))?;
@@ -83,7 +85,6 @@ pub fn load_fonts(font_db: &mut fontdb::Database) {
     let font_files = [
         "static/fonts/Roboto-Regular.ttf",
         "static/fonts/Quicksand_Dash.otf",
-        "static/fonts/Ubuntu-R.tff",
     ];
 
     for file in &font_files {

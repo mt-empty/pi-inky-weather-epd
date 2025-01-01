@@ -40,6 +40,7 @@ struct Context {
     max_wind_gust_today: String,
     max_relative_humidity_today: String,
     total_rain_today: String,
+    temp_unit: String,
     current_temp: String,
     current_icon: String,
     current_feels_like: String,
@@ -112,6 +113,7 @@ impl Default for Context {
             max_wind_gust_today: "NA".to_string(),
             max_relative_humidity_today: "NA".to_string(),
             total_rain_today: "NA".to_string(),
+            temp_unit: CONFIG.misc.temp_unit.clone(),
             current_temp: "NA".to_string(),
             current_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
             current_feels_like: "NA".to_string(),
@@ -1000,7 +1002,7 @@ fn get_moon_phase_icon() -> String {
 
     // Determine the moon phase icon based on the moon age
     let icon_name = match moon_age_days {
-        age if age < 1.84566 => "moon-new.svg",
+        age if age < 1.84566 => "moon-new.svtemp_unitg",
         age if age < 5.53699 => "moon-waxing-crescent.svg",
         age if age < 9.22831 => "moon-first-quarter.svg",
         age if age < 12.91963 => "moon-waxing-gibbous.svg",

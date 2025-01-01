@@ -34,12 +34,12 @@ pub struct Colours {
 
 #[derive(Debug, Deserialize)]
 pub struct Misc {
+    pub temp_unit: String,
     pub store_local: bool,
     pub store_local_path: String,
     pub template_path: String,
     pub modified_template_name: String,
     pub icon_path: String,
-    pub unit: String,
     pub use_moon_phase_instead_of_clear_night: bool,
     pub use_online_data: bool,
 }
