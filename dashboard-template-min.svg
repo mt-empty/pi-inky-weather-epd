@@ -14,8 +14,16 @@
         </pattern>
     </defs>
     <style>
-        @font-face \{ font-family: 'Quicksand';
-        src: url('static/fonts/Quicksand_Dash.otf') format('opentype');
+        @font-face \{
+            font-family: 'Quicksand';
+            src: url('static/fonts/Quicksand_Dash.otf') format('opentype');
+        }
+
+        .line \{
+            stroke: black;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
     </style>
 
@@ -29,87 +37,86 @@
         <text x="255" y="110" text-anchor="middle" dominant-baseline="middle" font-size="70" fill="{temp_colour}">
             {current_temp}<tspan baseline-shift="14" font-size="35">°{temp_unit}</tspan>
         </text>
-        <text x="175" y="170" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="{text_colour}">feels
-            like</text>
-        <!-- <text x="255" y="170" text-anchor="middle" font-family="Roboto" dominant-baseline="middle" font-size="50" stroke-width="1" stroke-dasharray="10,5"
-            fill="{feels_like_colour}" fill-opacity="50%" stroke="black">{current_feels_like}</text> -->
 
-        <!-- <text x="255" y="170" text-anchor="middle" font-family="Mahamaya" dominant-baseline="middle" font-size="50"
-            fill="{feels_like_colour}">{current_feels_like}</text> -->
 
-        <!-- <text x="255" y="170" text-anchor="middle" font-family="Dash Dot Square-7" dominant-baseline="middle" font-size="50"
-            fill="{feels_like_colour}">{current_feels_like}</text> -->
-        <text x="255" y="170" text-anchor="middle" font-family="Quicksand" dominant-baseline="middle" font-size="55"
-            fill="{feels_like_colour}">{current_feels_like}
-            <!-- Tspan doesn't work well with the degree symbol ° -->
-            <!-- <tspan baseline-shift="11" font-size="35">°</tspan>  --> 
+        <text text-anchor="middle" font-size="20" fill="black">
+            <tspan x="200" y="170" dy="-0.5em" dominant-baseline="middle">Feels</tspan>
+            <tspan x="200" y="170" dy="0.4em" dx="-0.26em" dominant-baseline="middle">Like</tspan>
+            <tspan x="255" y="170" text-anchor="middle" font-family="Quicksand" dominant-baseline="middle"
+                font-size="55" fill="{feels_like_colour}">{current_feels_like}
+                <!-- Tspan doesn't work well with the degree symbol ° -->
+                <!-- <tspan baseline-shift="11" font-size="35">°</tspan>  -->
+            </tspan>
         </text>
-        <!-- <text x="270" y="170">
-            <tspan font-size="35">°</tspan>
-        </text> -->
 
-        
+
+
     </svg>
-
-    <!-- UV Index -->
-    <svg x="20" y="190" label="UV-index">
-        <image width="75" height="75" href="{uv_index_icon}" />
-        <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{current_uv_index}<tspan x="85" dy="10" font-size="10">─────</tspan>
-            <tspan x="85" dy="15" font-size="15">now</tspan>
-        </text>
-        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{uv_max_today}<tspan x="140" dy="10" font-size="10">─────</tspan>
-            <tspan x="140" dy="15" font-size="15">Max</tspan>
-        </text>
-    </svg>
-
-    <!-- Wind Information -->
-    <svg x="20" y="260" label="wind">
-        <image width="75" height="75" href="{current_wind_icon}" />
-        <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{current_wind_speed}<tspan x="85" dy="10" font-size="10">─────</tspan>
-            <tspan x="85" dy="15" font-size="15">now</tspan>
-        </text>
-        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{max_wind_gust_today}<tspan x="140" dy="10" font-size="10">─────</tspan>
-            <tspan x="140" dy="15" font-size="15">Max</tspan>
-        </text>
-    </svg>
-
-    <!-- Relative Humidity -->
-    <svg x="20" y="330" label="relative_humidity">
-        <image width="75" height="75" href="{current_relative_humidity_icon}" />
-        <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{current_relative_humidity}<tspan x="85" dy="10" font-size="10">─────</tspan>
-            <tspan x="85" dy="15" font-size="15">now</tspan>
-        </text>
-        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{max_relative_humidity_today}<tspan x="140" dy="10" font-size="10">─────</tspan>
-            <tspan x="140" dy="15" font-size="15">Max</tspan>
-        </text>
-    </svg>
-
-    <!-- Rain Information -->
-    <!-- <svg x="20" y="400" label="rain">
-        <image width="75" height="75" href="{rain_measure_icon}" />
-        <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{current_rain_amount}</text>
-        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{total_rain_today}</text>
-    </svg> -->
 
     <!-- Sunset/Sunrise Information -->
-    <svg x="30" y="400" label="rain">
+    <svg x="30" y="145" label="rain">
         <image x="0" y="0" width="75" height="75" href="{sunrise_icon}" />
         <text x="12" y="65" text-anchor="start" dominant-baseline="middle" font-size="20"
             fill="{text_colour}">{sunrise_time}</text>
 
-        <image x="110" y="0" width="75" height="75" href="{sunset_icon}" />
-        <text x="123" y="65" text-anchor="start" dominant-baseline="middle" font-size="20"
+        <image x="70" y="0" width="75" height="75" href="{sunset_icon}" />
+        <text x="83" y="65" text-anchor="start" dominant-baseline="middle" font-size="20"
             fill="{text_colour}">{sunset_time}</text>
     </svg>
 
+
+    <!-- vertical lines with artistic variations -->
+    <path class="line" d="M95 240 C90 220, 95 320, 95 470" />
+    <path class="line" d="M150 240 C155 220, 145 320, 150 470" />
+
+    <!-- horizontal lines with artistic variations -->
+    <path class="line" d="M40 260 C150 261, 250 258, 185 260" />
+    <path class="line" d="M40 330 C150 325, 250 335, 185 330" />
+    <path class="line" d="M40 400 C150 402, 250 399, 185 400" />
+
+    <!-- row header-->
+    <svg x="15" y="210" label="UV-index">
+        <text x="20" y="37.5" text-anchor="" dominant-baseline="middle" font-size="20" fill="black">Today
+        </text>
+
+        <text x="85" y="37.5" text-anchor="" dominant-baseline="middle" font-size="20" fill="black">Now
+        </text>
+        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="20" fill="black">Max
+        </text>
+    </svg>
+
+    <!-- UV Index -->
+    <svg x="20" y="260" label="UV-index">
+        <image width="75" height="75" href="{uv_index_icon}" />
+        <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+            fill="{text_colour}">{current_uv_index}
+        </text>
+        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+            fill="{text_colour}">{uv_max_today}
+        </text>
+    </svg>
+
+    <!-- Wind Information -->
+    <svg x="20" y="330" label="wind">
+        <image width="75" height="75" href="{current_wind_icon}" />
+        <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+            fill="{text_colour}">{current_wind_speed}
+        </text>
+        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+            fill="{text_colour}">{max_wind_gust_today}
+        </text>
+    </svg>
+
+    <!-- Relative Humidity -->
+    <svg x="20" y="400" label="relative_humidity">
+        <image width="75" height="75" href="{current_relative_humidity_icon}" />
+        <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+            fill="{text_colour}">{current_relative_humidity}
+        </text>
+        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+            fill="{text_colour}">{max_relative_humidity_today}
+        </text>
+    </svg>
 
     <!-- Forecast for the next 5 days -->
     <svg x="300" y="30">

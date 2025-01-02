@@ -362,11 +362,13 @@ impl DailyForcastGraph {
             // Label: placed to the left of the y-axis
             let label_x = y_axis_x - 10.0;
             let label_str = format!("{:.1}", y_val);
+            let font_size = if j == 0 || j == y_left_ticks { 20 } else { 17 };
             y_left_labels.push_str(&format!(
-                r#"<text x="{x}" y="{y}"  fill="{colour}" font-size="17" text-anchor="end" dy="4">{text}</text>"#,
+                r#"<text x="{x}" y="{y}"  fill="{colour}" font-size="{font_size}" text-anchor="end" dy="4">{text}</text>"#,
                 x = label_x,
                 y = ys,
                 colour = CONFIG.colours.text_colour,
+                font_size = font_size,
                 text = label_str
             ));
         }
@@ -1002,7 +1004,7 @@ fn get_moon_phase_icon() -> String {
 
     // Determine the moon phase icon based on the moon age
     let icon_name = match moon_age_days {
-        age if age < 1.84566 => "moon-new.svtemp_unitg",
+        age if age < 1.84566 => "moon-new.svg",
         age if age < 5.53699 => "moon-waxing-crescent.svg",
         age if age < 9.22831 => "moon-first-quarter.svg",
         age if age < 12.91963 => "moon-waxing-gibbous.svg",
