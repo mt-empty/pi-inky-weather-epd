@@ -7,8 +7,8 @@ on:
   push:
     branches:
       - master
-    tags-ignore:
-      - "v*"
+    tags:
+      - 'v*' 
   workflow_dispatch:
 
 jobs:
@@ -80,7 +80,7 @@ jobs:
           path: target/${{ matrix.target }}/release/pi-inky-weather-epd
 
   release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -93,5 +93,3 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ./artifacts/**/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
