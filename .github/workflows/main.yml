@@ -79,10 +79,13 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}-binary
+          name: ${{ matrix.target }}
           path: |
             ${{ github.workspace }}/target/${{ matrix.target }}/release/pi-inky-weather-epd
             ${{ github.workspace }}/dashboard-template-min.svg
+            ${{ github.workspace }}/config.toml
+            ${{ github.workspace }}/static/**/*
+          overwrite: true
 
   release:
     if: startsWith(github.ref, 'refs/tags/')

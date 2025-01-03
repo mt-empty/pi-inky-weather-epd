@@ -660,13 +660,13 @@ impl Icon for HourlyForecast {
 }
 
 fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &str) -> Result<T, Error> {
+    // create path if it doesn't exist
+    let _ = fs::create_dir_all(file_path.rsplitn(2, '/').last().unwrap());
+
     if CONFIG.misc.use_online_data {
         let client = reqwest::blocking::Client::new();
         let response = client.get(endpoint).send()?;
         let body = response.text().map_err(Error::msg)?;
-
-        // create path if it doesn't exist
-        let _ = fs::create_dir_all(file_path.rsplitn(2, '/').last().unwrap());
 
         fs::write(file_path, &body)?;
     }
@@ -1070,7 +1070,13 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
             return Err(e);
         }
     };
-    context = update_hourly_forecast(context)?;
+    context = match update_hourly_forecast(context) {
+        Ok(context) => context,
+        Err(e) => {
+            println!("Failed to update hourly forecast: {}", e);
+            return Err(e);
+        }
+    };
 
     let updated_svg = render_template(context, template_svg)?;
 
