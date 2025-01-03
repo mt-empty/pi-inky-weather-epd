@@ -11,6 +11,9 @@ on:
       - 'v*' 
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - arm-unknown-linux-gnueabi     # Raspberry Pi Zero
+          - arm-unknown-linux-gnueabihf   # Raspberry Pi Zero
           - armv7-unknown-linux-gnueabihf # Raspberry Pi Zero 2
           - aarch64-unknown-linux-gnu     # Raspberry Pi 4 and above
           - x86_64-unknown-linux-gnu      # x86
@@ -77,7 +80,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}-binary
-          path: target/${{ matrix.target }}/release/pi-inky-weather-epd
+          path: |
+            ${{ github.workspace }}/target/${{ matrix.target }}/release/pi-inky-weather-epd
+            ${{ github.workspace }}/dashboard-template-min.svg
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
