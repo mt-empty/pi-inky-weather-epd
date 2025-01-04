@@ -37,9 +37,9 @@ jobs:
             ~/.cargo/index
             target
             ~/.cargo/bin
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cargo-${{ matrix.target }}-
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@v1
@@ -93,8 +93,19 @@ jobs:
         with:
           path: ./artifacts
 
+      - name: Zip artifacts
+        run: |
+          zip -r artifacts/arm-unknown-linux-gnueabihf.zip artifacts/arm-unknown-linux-gnueabihf
+          zip -r artifacts/armv7-unknown-linux-gnueabihf.zip artifacts/armv7-unknown-linux-gnueabihf
+          zip -r artifacts/aarch64-unknown-linux-gnu.zip artifacts/aarch64-unknown-linux-gnu
+          zip -r artifacts/x86_64-unknown-linux-gnu.zip artifacts/x86_64-unknown-linux-gnu
+
       - name: Create and Upload Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ./artifacts/**/*
+          files: |
+            artifacts/arm-unknown-linux-gnueabihf.zip
+            artifacts/armv7-unknown-linux-gnueabihf.zip
+            artifacts/aarch64-unknown-linux-gnu.zip
+            artifacts/x86_64-unknown-linux-gnu.zip
 
