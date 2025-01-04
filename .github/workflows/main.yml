@@ -95,10 +95,10 @@ jobs:
 
       - name: Zip artifacts
         run: |
-          zip -r artifacts/arm-unknown-linux-gnueabihf.zip artifacts/arm-unknown-linux-gnueabihf
-          zip -r artifacts/armv7-unknown-linux-gnueabihf.zip artifacts/armv7-unknown-linux-gnueabihf
-          zip -r artifacts/aarch64-unknown-linux-gnu.zip artifacts/aarch64-unknown-linux-gnu
-          zip -r artifacts/x86_64-unknown-linux-gnu.zip artifacts/x86_64-unknown-linux-gnu
+          cd artifacts/arm-unknown-linux-gnueabihf && zip -r ../arm-unknown-linux-gnueabihf.zip . && cd -
+          cd artifacts/armv7-unknown-linux-gnueabihf && zip -r ../armv7-unknown-linux-gnueabihf.zip . && cd -
+          cd artifacts/aarch64-unknown-linux-gnu && zip -r ../aarch64-unknown-linux-gnu.zip . && cd -
+          cd artifacts/x86_64-unknown-linux-gnu && zip -r ../x86_64-unknown-linux-gnu.zip . && cd -
 
       - name: Create and Upload Release
         uses: softprops/action-gh-release@v2
@@ -108,4 +108,3 @@ jobs:
             artifacts/armv7-unknown-linux-gnueabihf.zip
             artifacts/aarch64-unknown-linux-gnu.zip
             artifacts/x86_64-unknown-linux-gnu.zip
-
