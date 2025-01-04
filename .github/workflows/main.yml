@@ -1,14 +1,14 @@
 name: Build and Release Rust Binaries
 
 on:
-  pull_request: 
-    branches: 
-        - master
+  pull_request:
+    branches:
+      - master
   push:
     branches:
       - master
     tags:
-      - 'v*' 
+      - 'v*'
   workflow_dispatch:
 
 permissions:
@@ -29,31 +29,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache cargo registry
+      - name: Cache cargo build, registry, index, and binaries
         uses: actions/cache@v4
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/index
+            target
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-registry-
+            ${{ runner.os }}-cargo-
 
-      - name: Cache cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/index
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-index-
-
-      - name: Cache cargo build
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-build-
-
-      - name: Install Rust
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
@@ -63,12 +51,16 @@ jobs:
       - name: Run cargo fmt
         run: cargo fmt -- --check
 
-      - name: Run cargo clippy
-        run: cargo clippy
-        # run: cargo clippy -- -D warnings
+      - name: Run cargo check
+        run: cargo check
 
       - name: Install cross
-        run: cargo install cross
+        run: |
+          if ! command -v cross &> /dev/null; then
+            cargo install cross
+          else
+            echo "cross is already installed"
+          fi
 
       - name: Build binary with cross
         run: cross build --release --target=${{ matrix.target }}
@@ -76,28 +68,39 @@ jobs:
       - name: Test binary with cross
         run: cross test --target=${{ matrix.target }}
 
+      - name: Prepare artifact
+        run: |
+          mkdir -p artifact
+          cp ${{ github.workspace }}/target/${{ matrix.target }}/release/pi-inky-weather-epd artifact/
+          cp ${{ github.workspace }}/dashboard-template-min.svg artifact/
+          cp ${{ github.workspace }}/config.toml artifact/
+          cp -r ${{ github.workspace }}/static artifact/
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
-          path: |
-            ${{ github.workspace }}/target/${{ matrix.target }}/release/pi-inky-weather-epd
-            ${{ github.workspace }}/dashboard-template-min.svg
-            ${{ github.workspace }}/config.toml
-            ${{ github.workspace }}/static/**/*
+          path: artifact
           overwrite: true
 
   release:
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - arm-unknown-linux-gnueabihf   # Raspberry Pi Zero
+          - armv7-unknown-linux-gnueabihf # Raspberry Pi Zero 2
+          - aarch64-unknown-linux-gnu     # Raspberry Pi 4 and above
+          - x86_64-unknown-linux-gnu      # x86
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          path: ./artifacts
+          path: ./artifacts/${{ matrix.target }}
 
       - name: Create and Upload Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ./artifacts/**/*
+          files: ./artifacts/${{ matrix.target }}/*

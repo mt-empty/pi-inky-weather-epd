@@ -28,3 +28,4 @@ openssl = { version = "0.10", features = ["vendored"] }
 # dev dependencies
 [dev-dependencies]
 usvg = "0.44"
+cross = "0.2.5" # needed for ci/cd
