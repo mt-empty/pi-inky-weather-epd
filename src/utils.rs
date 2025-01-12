@@ -84,7 +84,7 @@ pub fn load_fonts(font_db: &mut fontdb::Database) {
 
     let font_files = [
         "static/fonts/Roboto-Regular.ttf",
-        "static/fonts/Quicksand_Dash.otf",
+        "static/fonts/Roboto-Regular-Dashed.ttf",
     ];
 
     for file in &font_files {

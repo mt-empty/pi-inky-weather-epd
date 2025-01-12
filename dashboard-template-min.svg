@@ -1,4 +1,4 @@
-<svg width="800" height="480" font-family="Roboto, Quicksand, sans-serif" xmlns="http://www.w3.org/2000/svg">
+<svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
     <defs>
         <pattern id="dots" patternUnits="userSpaceOnUse" width="10" height="10">
             <circle cx="5" cy="5" r="2" fill="{rain_colour}" />
@@ -15,8 +15,12 @@
     </defs>
     <style>
         @font-face \{
-            font-family: 'Quicksand';
-            src: url('static/fonts/Quicksand_Dash.otf') format('opentype');
+            font-family: 'Roboto';
+            src: url('static/fonts/Roboto-Regular.ttf') format('truetype');
+        }
+        @font-face \{
+            font-family: 'Roboto-Dashed';
+            src: url('static/fonts/Roboto-Regular-Dashed.ttf') format('truetype');
         }
 
         .line \{
@@ -42,7 +46,7 @@
         <text text-anchor="middle" font-size="20" fill="black">
             <tspan x="200" y="170" dy="-0.5em" dominant-baseline="middle">Feels</tspan>
             <tspan x="200" y="170" dy="0.4em" dx="-0.26em" dominant-baseline="middle">Like</tspan>
-            <tspan x="255" y="170" text-anchor="middle" font-family="Quicksand" dominant-baseline="middle"
+            <tspan x="255" y="170" text-anchor="middle" font-family="Roboto-Dashed" dominant-baseline="middle"
                 font-size="55" fill="{feels_like_colour}">{current_feels_like}
                 <!-- Tspan doesn't work well with the degree symbol ° -->
                 <!-- <tspan baseline-shift="11" font-size="35">°</tspan>  -->
