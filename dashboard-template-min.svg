@@ -19,7 +19,7 @@
             src: url('static/fonts/Roboto-Regular.ttf') format('truetype');
         }
         @font-face \{
-            font-family: 'Roboto-Dashed';
+            font-family: 'Roboto-Regular-Dashed';
             src: url('static/fonts/Roboto-Regular-Dashed.ttf') format('truetype');
         }
 
@@ -46,7 +46,7 @@
         <text text-anchor="middle" font-size="20" fill="black">
             <tspan x="200" y="170" dy="-0.5em" dominant-baseline="middle">Feels</tspan>
             <tspan x="200" y="170" dy="0.4em" dx="-0.26em" dominant-baseline="middle">Like</tspan>
-            <tspan x="255" y="170" text-anchor="middle" font-family="Roboto-Dashed" dominant-baseline="middle"
+            <tspan x="255" y="170" text-anchor="middle" font-family="Roboto-Regular-Dashed" dominant-baseline="middle"
                 font-size="55" fill="{feels_like_colour}">{current_feels_like}
                 <!-- Tspan doesn't work well with the degree symbol ° -->
                 <!-- <tspan baseline-shift="11" font-size="35">°</tspan>  -->

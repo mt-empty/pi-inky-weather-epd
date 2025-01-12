@@ -8,23 +8,18 @@ This project involves building a simple, static weather dashboard using Rust. Th
 ## Tasks
 - [x] fetch data from weather API
 - [x] find proper svg weather icons
-  - [x] load SVG icons
-  - [x] display SVG icons
-- [x] use SVG graph
-  - [x] load SVG graph
-  - [x] display SVG graph
-- [x] display temperature over time
 - [x] display weather data
+- [x] display temperature over time using graph
 - [x] convert svg to png
-- [ ] find proper font for e-ink display
-- [ ] add a warning icon when fetching data fails
+- [x] find proper font for e-ink display
+  - [x] Genererate Roboto-Regular-Dashed.ttf
 - [ ] create a program that auto generates some/all possible weather variations
 - [ ] modify existing icons
-  - [ ] rain measure with mm
   - [ ] wind speed with km/h
   - [ ] evey other one to only use colors from the e-ink supported palette
 - [ ] break the program into smaller parts
 - [ ] propper error logging
+  - [ ] add a warning icon when fetching data fails
   - [ ] when `NA` is returned, including for icons
 - [ ] Find out all the supported colors for the e-ink display
   - [ ] Deep Pink 
