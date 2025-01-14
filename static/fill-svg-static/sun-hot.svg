@@ -24,9 +24,9 @@
       y2="311.6"
       gradientUnits="userSpaceOnUse"
     >
-      <stop offset="0" stop-color="#d4d7dd" />
-      <stop offset=".5" stop-color="#d4d7dd" />
-      <stop offset="1" stop-color="#bec1c6" />
+      <stop offset="0" stop-color="black" />
+      <stop offset=".5" stop-color="black" />
+      <stop offset="1" stop-color="black" />
     </linearGradient>
     <linearGradient
       xlink:href="#c"

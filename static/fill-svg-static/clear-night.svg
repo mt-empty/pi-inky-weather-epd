@@ -1,32 +1,28 @@
 <svg
   xmlns="http://www.w3.org/2000/svg"
-  xmlns:xlink="http://www.w3.org/1999/xlink"
   viewBox="0 0 512 512"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
 >
   <defs>
-    <linearGradient
-      id="a"
-      x1="54.3"
-      x2="187.2"
-      y1="29"
-      y2="259.1"
-      gradientUnits="userSpaceOnUse"
-    >
-      <stop offset="0" stop-color="#86c3db" />
-      <stop offset=".5" stop-color="#86c3db" />
-      <stop offset="1" stop-color="#5eafcf" />
-    </linearGradient>
+    <!-- Symbol #b, previously gradient fill + light-blue stroke, now solid blue + black stroke -->
     <symbol id="b" viewBox="0 0 270 270">
       <path
-        fill="url(#a)"
-        stroke="#72b9d5"
+        fill="blue"
+        stroke="black"
         stroke-linecap="round"
         stroke-linejoin="round"
         stroke-width="6"
-        d="M252.3 168.6A133.4 133.4 0 01118 36.2 130.5 130.5 0 01122.5 3 133 133 0 003 134.6C3 207.7 63 267 137.2 267c62.5 0 114.8-42.2 129.8-99.2a135.6 135.6 0 01-14.8.8Z"
+        d="M252.3 168.6A133.4 133.4 0 01118 36.2
+           130.5 130.5 0 01122.5 3
+           133 133 0 003 134.6
+           C3 207.7 63 267 137.2 267
+           c62.5 0 114.8-42.2 129.8-99.2
+           a135.6 135.6 0 01-14.8.8Z"
       />
     </symbol>
   </defs>
+  
+  <!-- Use the symbol (blue shape), same position as original -->
   <use
     xlink:href="#b"
     width="270"
