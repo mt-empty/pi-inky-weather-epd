@@ -4,72 +4,73 @@
   xmlns:xlink="http://www.w3.org/1999/xlink"
 >
   <!-- First path: was stroke="url(#c)", now solid black stroke -->
-  <path
-    fill="none"
-    stroke="black"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    stroke-width="12"
-    d="M220 360a24 24 0 11-34-34l1.8-1.8L343 169"
-  />
-
-  <!-- Second path: was fill="url(#d)" stroke="#ef4444", now fill="red" stroke="black" -->
-  <path
-    fill="red"
-    stroke="black"
-    stroke-miterlimit="10"
-    stroke-width="4"
-    d="M354.3 327.4c37.5-37.5 29.9-105.8-17-152.7
-       s-115.3-54.5-152.8-17l13.2 4.9
-       a71.2 71.2 0 0141 41.7l4 11.5
-       7.3 2.4a70.9 70.9 0 0143.8 43.8
-       l2.3 7.2 11.6 4a71.1 71.1 0 0141.7 41Z"
-  />
-
-  <!-- Third path: was stroke="#ef4444", now stroke="black" -->
-  <path
-    fill="none"
-    stroke="black"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    stroke-width="2"
-    d="M296.1 269.3
-       c42.7-33.2 41.2-94.6 41.2-94.6
-       s-61.4-1.5-94.6 41.1"
-  />
-
-  <!-- Symbol usage (#e) (two arcs), originally gradient strokes, now black -->
-  <symbol id="arc-pair" viewBox="0 0 138 96">
+  <symbol id="umberella" viewBox="23 67 400 400">
     <path
       fill="none"
       stroke="black"
       stroke-linecap="round"
-      stroke-miterlimit="10"
+      stroke-linejoin="round"
       stroke-width="12"
-      d="M105.2 10.8A15.6 15.6 0 11116.4 37H6"
+      d="M220 360a24 24 0 11-34-34l1.8-1.8L343 169"
     />
+
+    <!-- Second path: was fill="url(#d)" and stroke="#ef4444", now fill="red" and stroke="black" -->
+    <path
+      fill="red"
+      stroke="black"
+      stroke-miterlimit="10"
+      stroke-width="4"
+      d="M442.8 240c-37.5 37.4-105.9 29.8-152.7-17s-54.5-115.3-17-152.8l4.9 13.1
+        a71.2 71.2 0 0041.7 41l11.6 4 2.3 7.3
+        a70.8 70.8 0 0043.8 43.8l7.3 2.4 4 11.5
+        a71.1 71.1 0 0041 41.7Z"
+    />
+
+    <!-- Third path: was stroke="#ef4444", now stroke="black" -->
     <path
       fill="none"
       stroke="black"
       stroke-linecap="round"
-      stroke-miterlimit="10"
-      stroke-width="12"
-      d="M60.7 85.2A15.6 15.6 0 1071.9 59H6.6"
+      stroke-linejoin="round"
+      stroke-width="2"
+      d="M384.6 181.8c-33.1 42.6-94.5 41.1-94.5 41.1
+        s-1.5-61.4 41.1-94.6"
     />
   </symbol>
+  <defs>
+    <!-- Symbol #e (two arcs), originally using gradients #a and #b -->
+  <symbol id="arc-pair" viewBox="50 0 258 396">
+      <path
+        fill="none"
+        stroke="black"
+        stroke-linecap="round"
+        stroke-miterlimit="10"
+        stroke-width="12"
+        d="M105.2 10.8A15.6 15.6 0 11116.4 37H6"
+      />
+      <path
+        fill="none"
+        stroke="black"
+        stroke-linecap="round"
+        stroke-miterlimit="10"
+        stroke-width="12"
+        d="M60.7 85.2A15.6 15.6 0 1071.9 59H6.6"
+      />
+    </symbol>
+  </defs>
 
-  <!-- Use the arc symbol -->
+  <!-- Use the symbol #e (two arcs), originally gradient strokes, now black -->
   <use
     xlink:href="#arc-pair"
-    width="138"
-    height="96"
     transform="translate(62.5 201)"
   />
-
+  <use
+    xlink:href="#umberella"
+  />
   <!-- Text "km/h", originally fill="#374251", now fill="black" -->
   <text
-    x="322.03732"
-    y="373.00394"
+    x="252"
+    y="452"
     fill="black"
     font-size="106.667px"
     font-weight="bold"

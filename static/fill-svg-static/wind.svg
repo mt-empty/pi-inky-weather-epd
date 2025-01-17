@@ -32,4 +32,16 @@
     height="240"
     transform="translate(82 136)"
   />
+  <!-- Text "km/h", originally fill="#374251", now fill="black" -->
+  <text
+    x="252"
+    y="452"
+    fill="black"
+    font-size="106.667px"
+    font-weight="bold"
+    font-family="sans-serif"
+    text-anchor="middle"
+  >
+    km/h
+  </text>
 </svg>
