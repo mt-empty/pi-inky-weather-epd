@@ -42,4 +42,5 @@ pub struct Misc {
     pub icon_path: String,
     pub use_moon_phase_instead_of_clear_night: bool,
     pub use_online_data: bool,
+    pub download_release_url: String,
 }
