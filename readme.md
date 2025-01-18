@@ -14,9 +14,9 @@ This project involves building a simple, static weather dashboard using Rust. Th
 - [x] find proper font for e-ink display
   - [x] Genererate Roboto-Regular-Dashed.ttf
 - [ ] create a program that auto generates some/all possible weather variations
-- [ ] modify existing icons
-  - [ ] wind speed with km/h
-  - [ ] evey other one to only use colors from the e-ink supported palette
+- [x] modify existing icons
+  - [x] wind speed with km/h
+  - [x] evey other one to only use colors from the e-ink supported palette
 - [ ] break the program into smaller parts
 - [ ] propper error logging
   - [ ] add a warning icon when fetching data fails

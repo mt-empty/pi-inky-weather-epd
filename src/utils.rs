@@ -19,7 +19,7 @@ use usvg::fontdb;
 ///
 /// * `Result<bool, std::io::Error>` - Ok(true) if the path has write permissions, Ok(false) if it does not, or an error if the check fails.
 pub fn has_write_permission(path: PathBuf) -> Result<bool, std::io::Error> {
-    match fs::create_dir_all(path.to_owned()) {
+    match fs::create_dir_all(&path) {
         Ok(()) => {
             let metadata = fs::metadata(path.clone())?;
             Ok(!metadata.permissions().readonly())

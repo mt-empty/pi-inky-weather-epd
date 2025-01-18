@@ -9,7 +9,7 @@ use ::config::{Config, File};
 use anyhow::Error;
 use bom::*;
 use chart::{catmull_bezier, Point};
-use chrono::{Datelike, NaiveDateTime, Timelike};
+use chrono::{Datelike, Timelike};
 use config::DashboardConfig;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};

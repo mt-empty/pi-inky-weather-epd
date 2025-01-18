@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::{utils, CONFIG};
 use chrono::NaiveDateTime;
 use lazy_static::lazy_static;
