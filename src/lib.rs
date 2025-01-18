@@ -3,6 +3,7 @@ mod bom;
 #[allow(dead_code)]
 mod chart;
 mod config;
+mod context;
 mod utils;
 
 use ::config::{Config, File};
@@ -11,168 +12,20 @@ use bom::*;
 use chart::{catmull_bezier, Point};
 use chrono::{Datelike, Timelike};
 use config::DashboardConfig;
+use context::Context;
 use lazy_static::lazy_static;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::fs;
 use std::io::Write;
 use strum_macros::Display;
 use tinytemplate::{format_unescaped, TinyTemplate};
 pub use utils::*;
 
-lazy_static! {
-    pub static ref CONFIG: DashboardConfig = load_config().expect("Failed to load config");
-}
-
-const NOT_AVAILABLE_ICON: &str = "not-available.svg";
+pub const NOT_AVAILABLE_ICON: &str = "not-available.svg";
 const CONFIG_NAME: &str = "config.toml";
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-struct Context {
-    background_colour: String,
-    text_colour: String,
-    x_axis_colour: String,
-    y_left_axis_colour: String,
-    y_right_axis_colour: String,
-    temp_colour: String,
-    feels_like_colour: String,
-    rain_colour: String,
-    uv_max_today: String,
-    max_wind_gust_today: String,
-    max_relative_humidity_today: String,
-    total_rain_today: String,
-    temp_unit: String,
-    current_temp: String,
-    current_icon: String,
-    current_feels_like: String,
-    current_wind_speed: String,
-    current_wind_icon: String,
-    current_uv_index: String,
-    current_relative_humidity: String,
-    current_relative_humidity_icon: String,
-    day1_name: String,
-    current_rain_amount: String,
-    rain_measure_icon: String,
-    graph_height: String,
-    graph_width: String,
-    temp_curve_data: String,
-    feel_like_curve_data: String,
-    rain_curve_data: String,
-    uv_index: String,
-    uv_index_icon: String,
-    wind_speed: String,
-    wind_icon: String,
-    x_axis_path: String,
-    y_left_axis_path: String,
-    x_labels: String,
-    y_left_labels: String,
-    y_right_axis_path: String,
-    y_right_labels: String,
-    // daily forecast
-    day2_mintemp: String,
-    day2_maxtemp: String,
-    day2_icon: String,
-    day2_name: String,
-    day3_mintemp: String,
-    day3_maxtemp: String,
-    day3_icon: String,
-    day3_name: String,
-    day4_mintemp: String,
-    day4_maxtemp: String,
-    day4_icon: String,
-    day4_name: String,
-    day5_mintemp: String,
-    day5_maxtemp: String,
-    day5_icon: String,
-    day5_name: String,
-    day6_mintemp: String,
-    day6_maxtemp: String,
-    day6_icon: String,
-    day6_name: String,
-    day7_mintemp: String,
-    day7_maxtemp: String,
-    day7_icon: String,
-    day7_name: String,
-    sunset_time: String,
-    sunrise_time: String,
-    sunset_icon: String,
-    sunrise_icon: String,
-}
-
-impl Default for Context {
-    fn default() -> Self {
-        Self {
-            background_colour: CONFIG.colours.background_colour.clone(),
-            text_colour: CONFIG.colours.text_colour.clone(),
-            x_axis_colour: CONFIG.colours.x_axis_colour.clone(),
-            y_left_axis_colour: CONFIG.colours.y_left_axis_colour.clone(),
-            y_right_axis_colour: CONFIG.colours.y_right_axis_colour.clone(),
-            temp_colour: CONFIG.colours.temp_colour.clone(),
-            feels_like_colour: CONFIG.colours.feels_like_colour.clone(),
-            rain_colour: CONFIG.colours.rain_colour.clone(),
-            uv_max_today: "NA".to_string(),
-            max_wind_gust_today: "NA".to_string(),
-            max_relative_humidity_today: "NA".to_string(),
-            total_rain_today: "NA".to_string(),
-            temp_unit: CONFIG.misc.temp_unit.clone(),
-            current_temp: "NA".to_string(),
-            current_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
-            current_feels_like: "NA".to_string(),
-            current_wind_speed: "NA".to_string(),
-            current_wind_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
-            current_uv_index: "NA".to_string(),
-            current_relative_humidity: "NA".to_string(),
-            current_relative_humidity_icon: format!(
-                "{}{}",
-                CONFIG.misc.icon_path, NOT_AVAILABLE_ICON
-            ),
-            day1_name: "NA".to_string(),
-            current_rain_amount: "NA".to_string(),
-            rain_measure_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
-            graph_height: "300".to_string(),
-            graph_width: "600".to_string(),
-            temp_curve_data: "".to_string(),
-            feel_like_curve_data: "".to_string(),
-            rain_curve_data: "".to_string(),
-            uv_index: "NA".to_string(),
-            uv_index_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
-            wind_speed: "NA".to_string(),
-            wind_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
-            x_axis_path: "".to_string(),
-            y_left_axis_path: "".to_string(),
-            x_labels: "".to_string(),
-            y_left_labels: "".to_string(),
-            y_right_axis_path: "".to_string(),
-            y_right_labels: "".to_string(),
-            day2_mintemp: "NA".to_string(),
-            day2_maxtemp: "NA".to_string(),
-            day2_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
-            day2_name: "NA".to_string(),
-            day3_mintemp: "NA".to_string(),
-            day3_maxtemp: "NA".to_string(),
-            day3_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
-            day3_name: "NA".to_string(),
-            day4_mintemp: "NA".to_string(),
-            day4_maxtemp: "NA".to_string(),
-            day4_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
-            day4_name: "NA".to_string(),
-            day5_mintemp: "NA".to_string(),
-            day5_maxtemp: "NA".to_string(),
-            day5_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
-            day5_name: "NA".to_string(),
-            day6_mintemp: "NA".to_string(),
-            day6_maxtemp: "NA".to_string(),
-            day6_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
-            day6_name: "NA".to_string(),
-            day7_mintemp: "NA".to_string(),
-            day7_maxtemp: "NA".to_string(),
-            day7_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),
-            day7_name: "NA".to_string(),
-            sunrise_time: "NA".to_string(),
-            sunset_time: "NA".to_string(),
-            sunset_icon: format!("{}sunset.svg", CONFIG.misc.icon_path),
-            sunrise_icon: format!("{}sunrise.svg", CONFIG.misc.icon_path),
-        }
-    }
+lazy_static! {
+    pub static ref CONFIG: DashboardConfig = load_config().expect("Failed to load config");
 }
 
 #[derive(Clone, Debug)]
