@@ -27,7 +27,7 @@
       <!-- Rays: was stroke="#fbbf24", now black -->
       <path
         fill="none"
-        stroke="black"
+        stroke="yellow"
         stroke-linecap="round"
         stroke-miterlimit="10"
         stroke-width="24"
@@ -56,7 +56,7 @@
   <!-- Path stroke was "#374151", now black -->
   <path
     fill="none"
-    stroke="black"
+    stroke="green"
     stroke-linecap="round"
     stroke-linejoin="round"
     stroke-width="18"
