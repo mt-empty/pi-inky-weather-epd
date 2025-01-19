@@ -39,7 +39,6 @@ pub enum DataType {
 pub struct GraphData {
     pub graph_type: DataType,
     pub points: Vec<Point>,
-    pub colour: String,
     pub smooth: bool,
 }
 
@@ -81,6 +80,43 @@ pub enum GraphDataPath {
     Temp(String),
     TempFeelLike(String),
     Rain(String),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UVIndexCategory {
+    None,
+    Low,
+    Moderate,
+    High,
+    VeryHigh,
+    Extreme,
+    Hazardous,
+}
+
+impl UVIndexCategory {
+    pub fn from_u8(value: u8) -> Self {
+        match value {
+            0 => UVIndexCategory::None,
+            1..=2 => UVIndexCategory::Low,
+            3..=5 => UVIndexCategory::Moderate,
+            6..=7 => UVIndexCategory::High,
+            8..=10 => UVIndexCategory::VeryHigh,
+            11..=12 => UVIndexCategory::Extreme,
+            _ => UVIndexCategory::Hazardous,
+        }
+    }
+
+    pub fn to_color(self) -> &'static str {
+        match self {
+            UVIndexCategory::None => "transparent",
+            UVIndexCategory::Low => "green",
+            UVIndexCategory::Moderate => "yellow",
+            UVIndexCategory::High => "orange",
+            UVIndexCategory::VeryHigh => "red",
+            UVIndexCategory::Extreme => "purple",
+            UVIndexCategory::Hazardous => "black",
+        }
+    }
 }
 
 impl DailyForcastGraph {
@@ -291,7 +327,23 @@ impl DailyForcastGraph {
         println!("Global Min y: {}, Max y: {}", self.min_y, self.max_y);
     }
 
-    pub fn draw_graph(&mut self) -> Result<Vec<GraphDataPath>, Error> {
+    fn draw_uv_gradient_over_time(&self, uv_data: [usize; 24]) -> String {
+        println!("UV data: {:?}", uv_data);
+        let mut gradient = String::new();
+
+        for (i, &uv) in uv_data.iter().enumerate() {
+            let offset = (i as f64 / 23.0) * 100.0;
+            let color = UVIndexCategory::from_u8(uv as u8).to_color();
+            gradient.push_str(&format!(
+                r#"<stop offset="{:.2}%" stop-color="{}"/>"#,
+                offset, color
+            ));
+        }
+
+        gradient
+    }
+
+    fn draw_graph(&mut self) -> Result<Vec<GraphDataPath>, Error> {
         // Calculate the minimum and maximum x values from the points
         let mut data_path = vec![];
 
@@ -672,21 +724,18 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
     let mut temp_data = GraphData {
         graph_type: DataType::Temp,
         points: vec![],
-        colour: "red".to_string(),
         smooth: true,
     };
 
     let mut feels_like_data = GraphData {
         graph_type: DataType::TempFeelLike,
         points: vec![],
-        colour: "green".to_string(),
         smooth: true,
     };
 
     let mut rain_data = GraphData {
         graph_type: DataType::Rain,
         points: vec![],
-        colour: "blue".to_string(),
         smooth: false,
     };
 
@@ -696,10 +745,6 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
         max_index: Some(hourly_forecast.data[0].uv as u32),
         start_time: None,
     };
-
-    context.temp_colour = temp_data.colour.clone();
-    context.feels_like_colour = feels_like_data.colour.clone();
-    context.rain_colour = rain_data.colour.clone();
 
     let current_date = chrono::Local::now()
         .naive_local()
@@ -734,6 +779,8 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
 
     let mut x = 0.0;
 
+    let mut uv_data = [0; 24];
+
     hourly_forecast
         .data
         .iter()
@@ -749,6 +796,7 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
             temp_data.add_point(x, forcast.temp);
             feels_like_data.add_point(x, forcast.temp_feels_like);
             rain_data.add_point(x, forcast.rain.chance.unwrap_or(0).into());
+            uv_data[x as usize] = forcast.uv as usize;
             x += 1.0;
         });
 
@@ -837,6 +885,8 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
     context.y_left_labels = axis_data_path.3;
     context.y_right_axis_path = axis_data_path.4;
     context.y_right_labels = axis_data_path.5;
+
+    context.uv_gradient = graph.draw_uv_gradient_over_time(uv_data);
 
     Ok(context)
 }

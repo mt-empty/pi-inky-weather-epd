@@ -79,45 +79,45 @@
     <path class="line" d="M40 400 C150 402, 250 399, 185 400" />
 
     <!-- row header-->
-    <svg x="15" y="210" label="UV-index">
-        <text x="20" y="37.5" text-anchor="" dominant-baseline="middle" font-size="20" fill="black">Today
+    <svg x="15" y="210" label="UV-index" text-anchor="start">
+        <text x="20" y="37.5" dominant-baseline="middle" font-size="20" fill="black">Today
         </text>
 
-        <text x="85" y="37.5" text-anchor="" dominant-baseline="middle" font-size="20" fill="black">Now
+        <text x="85" y="37.5" dominant-baseline="middle" font-size="20" fill="black">Now
         </text>
-        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="20" fill="black">Max
+        <text x="140" y="37.5" dominant-baseline="middle" font-size="20" fill="black">Max
         </text>
     </svg>
 
     <!-- UV Index -->
-    <svg x="20" y="260" label="UV-index">
+    <svg x="20" y="260" label="UV-index" text-anchor="middle">
         <image width="75" height="75" href="{uv_index_icon}" />
-        <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+        <text x="100" y="37.5" dominant-baseline="middle" font-size="30"
             fill="{text_colour}">{current_uv_index}
         </text>
-        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+        <text x="155" y="37.5" dominant-baseline="middle" font-size="30"
             fill="{text_colour}">{uv_max_today}
         </text>
     </svg>
 
     <!-- Wind Information -->
-    <svg x="20" y="330" label="wind">
+    <svg x="20" y="330" label="wind" text-anchor="middle">
         <image width="75" height="75" href="{current_wind_icon}" />
-        <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+        <text x="100" y="37.5" dominant-baseline="middle" font-size="30"
             fill="{text_colour}">{current_wind_speed}
         </text>
-        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+        <text x="155" y="37.5" dominant-baseline="middle" font-size="30"
             fill="{text_colour}">{max_wind_gust_today}
         </text>
     </svg>
 
     <!-- Relative Humidity -->
-    <svg x="20" y="400" label="relative_humidity">
+    <svg x="20" y="400" label="relative_humidity" text-anchor="middle">
         <image width="75" height="75" href="{current_relative_humidity_icon}" />
-        <text x="85" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+        <text x="100" y="37.5"  dominant-baseline="middle" font-size="30"
             fill="{text_colour}">{current_relative_humidity}
         </text>
-        <text x="140" y="37.5" text-anchor="start" dominant-baseline="middle" font-size="30"
+        <text x="155" y="37.5"  dominant-baseline="middle" font-size="30"
             fill="{text_colour}">{max_relative_humidity_today}
         </text>
     </svg>
@@ -189,5 +189,11 @@
         <path stroke="{feels_like_colour}" stroke-linejoin="round" stroke-dasharray="5,5"
             transform="translate(0, 300) scale(1, -1)" d="{feel_like_curve_data}" stroke-width="3.0" fill="none" />
         <path transform="translate(0, 300) scale(1, -1)" d="{rain_curve_data}" fill="blue" fill-opacity="25%" />
+        <defs>
+            <linearGradient id="UVGradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1=0" y2="0">
+                {uv_gradient}
+            </linearGradient>
+        </defs>
+        <rect x="0" y="-14" width="600" height="8" fill="url(#UVGradient)"  />
     </svg>
 </svg>

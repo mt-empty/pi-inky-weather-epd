@@ -13,18 +13,18 @@ update_interval_mins = 60
 # hobart = "r22u0d"
 # canberra = "r3dp32"
 # tasmania-cold = "r283sf"
-location = "qvv117" # uses GeoHash, must be 6 characters
+location = "r22u0d" # uses GeoHash, must be 6 characters
 
 # supproted colors = [black, white, green, blue, red, yellow, orange]
 [colours]
 background_colour = "white"
 text_colour = "black"
-x_axis_colour = "#74838f"
-y_left_axis_colour = "#1f5079"
-y_right_axis_colour = "#1b69a8"
-temp_colour = "#ff0000"
-feels_like_colour = "#00ff00"
-rain_colour = "#0000ff"
+x_axis_colour = "black"
+y_left_axis_colour = "red"
+y_right_axis_colour = "blue"
+temp_colour = "red"
+feels_like_colour = "green"
+rain_colour = "blue"
 
 [misc]
 temp_unit = "C"

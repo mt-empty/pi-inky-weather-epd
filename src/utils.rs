@@ -1,3 +1,4 @@
+use anyhow::Result;
 use chrono::Local;
 use chrono::NaiveDate;
 use chrono::NaiveDateTime;
@@ -6,6 +7,7 @@ use resvg::tiny_skia;
 use resvg::usvg;
 use serde::Deserialize;
 use std::fs;
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use usvg::fontdb;
 
@@ -17,15 +19,11 @@ use usvg::fontdb;
 ///
 /// # Returns
 ///
-/// * `Result<bool, std::io::Error>` - Ok(true) if the path has write permissions, Ok(false) if it does not, or an error if the check fails.
-pub fn has_write_permission(path: PathBuf) -> Result<bool, std::io::Error> {
-    match fs::create_dir_all(&path) {
-        Ok(()) => {
-            let metadata = fs::metadata(path.clone())?;
-            Ok(!metadata.permissions().readonly())
-        }
-        Err(error) => Err(error),
-    }
+/// * `Result<bool>` - `true` if the path has write permissions, `false` otherwise.
+pub fn has_write_permission(path: PathBuf) -> Result<bool> {
+    let metadata = fs::metadata(path)?;
+    let permissions = metadata.permissions();
+    Ok(permissions.mode() & 0o200 != 0)
 }
 
 /// Converts an SVG file to a PNG file.

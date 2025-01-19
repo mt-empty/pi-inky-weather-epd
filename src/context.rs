@@ -42,6 +42,7 @@ pub struct Context {
     pub y_left_labels: String,
     pub y_right_axis_path: String,
     pub y_right_labels: String,
+    pub uv_gradient: String,
     // daily forecast
     pub day2_mintemp: String,
     pub day2_maxtemp: String,
@@ -118,6 +119,7 @@ impl Default for Context {
             y_left_labels: "".to_string(),
             y_right_axis_path: "".to_string(),
             y_right_labels: "".to_string(),
+            uv_gradient: "".to_string(),
             day2_mintemp: "NA".to_string(),
             day2_maxtemp: "NA".to_string(),
             day2_icon: format!("{}{}", CONFIG.misc.icon_path, NOT_AVAILABLE_ICON),

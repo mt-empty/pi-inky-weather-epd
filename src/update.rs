@@ -1,19 +1,13 @@
 use std::fs;
 use std::io::Cursor;
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use pi_inky_weather_epd::CONFIG;
+use pi_inky_weather_epd::{has_write_permission, CONFIG};
 use zip::ZipArchive;
 
 const BINARY_BASE_DIR: &str = "./archives"; // TODO: Change this to a more appropriate location
 
-fn has_write_permission(path: PathBuf) -> Result<bool> {
-    let metadata = fs::metadata(path)?;
-    let permissions = metadata.permissions();
-    Ok(permissions.mode() & 0o200 != 0)
-}
 pub fn update() -> Result<()> {
     fs::create_dir_all(BINARY_BASE_DIR).context("Failed to create binary base directory")?;
 
