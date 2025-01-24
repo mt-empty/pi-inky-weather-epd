@@ -1,17 +1,18 @@
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-
 pub struct DashboardConfig {
     pub release: Release,
     pub api: Api,
     pub colours: Colours,
     pub misc: Misc,
+    pub render_options: RenderOptions,
+    pub debugging: Debugging,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Release {
-    pub download_release_url: String,
+    pub url: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,13 +35,23 @@ pub struct Colours {
 
 #[derive(Debug, Deserialize)]
 pub struct Misc {
-    pub temp_unit: String,
-    pub store_local: bool,
-    pub store_local_path: String,
+    pub weather_data_store_path: String,
     pub template_path: String,
     pub modified_template_name: String,
-    pub icon_path: String,
+    pub svg_icons_directory: String,
+    pub python_script_path: String,
+    pub python_path: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RenderOptions {
+    pub saturation: f32,
+    pub temp_unit: String,
     pub use_moon_phase_instead_of_clear_night: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Debugging {
     pub use_online_data: bool,
-    pub download_release_url: String,
+    pub enable_png_output: bool,
 }

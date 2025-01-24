@@ -11,7 +11,7 @@ const BINARY_BASE_DIR: &str = "./archives"; // TODO: Change this to a more appro
 pub fn update() -> Result<()> {
     fs::create_dir_all(BINARY_BASE_DIR).context("Failed to create binary base directory")?;
 
-    let response = reqwest::blocking::get(CONFIG.misc.download_release_url.as_str())
+    let response = reqwest::blocking::get(CONFIG.release.url.as_str())
         .context("Failed to download ZIP archive")?;
     if !response.status().is_success() {
         return Err(anyhow::anyhow!(

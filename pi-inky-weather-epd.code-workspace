@@ -5,7 +5,7 @@
 		}
 	],
 	"settings": {
-		"svg.preview.background": "editor",
+		"svg.preview.background": "dark-transparent",
 		"explorer.excludeGitIgnore": false,
 		"search.useParentIgnoreFiles": false,
 		"search.useIgnoreFiles": false

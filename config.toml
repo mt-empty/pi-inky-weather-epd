@@ -1,5 +1,5 @@
 [release]
-download_release_url = ""
+url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/latest/download/x86_64-unknown-linux-gnu.zip"
 
 [api]
 update_interval_mins = 60
@@ -13,7 +13,8 @@ update_interval_mins = 60
 # hobart = "r22u0d"
 # canberra = "r3dp32"
 # tasmania-cold = "r283sf"
-location = "r22u0d" # uses GeoHash, must be 6 characters
+# new-south-wales-hot = "qgph8w"
+location = "qgph8w" # uses GeoHash, must be 6 characters
 
 # supproted colors = [black, white, green, blue, red, yellow, orange]
 [colours]
@@ -26,13 +27,19 @@ temp_colour = "red"
 feels_like_colour = "green"
 rain_colour = "blue"
 
-[misc]
+[render_options]
+saturation = 1.0
 temp_unit = "C"
-store_local = true
-store_local_path = "./apis/"
+use_moon_phase_instead_of_clear_night = true
+
+[misc]
+weather_data_store_path = "./src/apis/bom/samples/"
 template_path = "dashboard-template-min.svg"
 modified_template_name = "dashboard.svg"
-icon_path = "static/fill-svg-static/"
-use_moon_phase_instead_of_clear_night = true
-use_online_data = true                         # for debugging purposes
-download_release_url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/latest/download/x86_64-unknown-linux-gnu.zip"
+svg_icons_directory = "static/fill-svg-static/"
+python_script_path = "$HOME/Pimoroni/inky/examples/7color/image.py"
+python_path = "$HOME/env/bin/python3"
+
+[debugging]
+use_online_data = true
+enable_png_output = false

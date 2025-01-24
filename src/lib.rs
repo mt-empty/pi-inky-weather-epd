@@ -1,6 +1,5 @@
 // mod apis;
 mod bom;
-#[allow(dead_code)]
 mod chart;
 mod config;
 mod context;
@@ -15,8 +14,8 @@ use config::DashboardConfig;
 use context::Context;
 use lazy_static::lazy_static;
 use serde::Deserialize;
-use std::fs;
 use std::io::Write;
+use std::{fs, path::PathBuf};
 use strum_macros::Display;
 use tinytemplate::{format_unescaped, TinyTemplate};
 pub use utils::*;
@@ -47,7 +46,7 @@ impl GraphData {
         self.points.push(Point { x, y })
     }
 }
-pub struct DailyForcastGraph {
+pub struct DailyForecastGraph {
     pub name: String,
     pub data: Vec<GraphData>,
     pub height: usize,
@@ -58,13 +57,13 @@ pub struct DailyForcastGraph {
     pub max_y: f64,
 }
 
-impl DailyForcastGraph {
+impl DailyForecastGraph {
     const HEIGHT: usize = 300;
     const WIDTH: usize = 600;
 
     fn default() -> Self {
         Self {
-            name: "Hourly Forcast".to_string(),
+            name: "Hourly Forecast".to_string(),
             data: vec![],
             height: Self::HEIGHT,
             width: Self::WIDTH,
@@ -119,7 +118,7 @@ impl UVIndexCategory {
     }
 }
 
-impl DailyForcastGraph {
+impl DailyForecastGraph {
     fn create_axis_with_labels(
         &self,
         current_hour: f64,
@@ -189,12 +188,14 @@ impl DailyForcastGraph {
         let mut y_left_labels = String::new();
         let mut y_right_labels = String::new();
 
+        let mut x_val: f64 = 0.0;
         // X-axis ticks and labels
         for i in 0..=x_ticks {
-            let x_val = self.starting_x + i as f64 * x_step;
             if x_val > self.ending_x {
                 break;
             }
+            x_val = self.starting_x + i as f64 * x_step;
+
             let xs = map_x(x_val);
             // Tick mark
             x_axis_path.push_str(&format!(
@@ -428,7 +429,7 @@ impl DailyForcastGraph {
                 }
                 DataType::Rain => {
                     let bounding_area_path =
-                        format!("{} L {} 0 L 0 0Z", path, DailyForcastGraph::WIDTH);
+                        format!("{} L {} 0 L 0 0Z", path, DailyForecastGraph::WIDTH);
                     data_path.push(GraphDataPath::Rain(bounding_area_path));
                 }
             }
@@ -468,7 +469,11 @@ enum DayNight {
 trait Icon {
     fn get_icon_name(&self) -> String;
     fn get_icon_path(&self) -> String {
-        format!("{}{}", CONFIG.misc.icon_path, self.get_icon_name())
+        format!(
+            "{}{}",
+            CONFIG.misc.svg_icons_directory,
+            self.get_icon_name()
+        )
     }
     fn rain_amount_to_name(amount: u32) -> String {
         match amount {
@@ -564,39 +569,39 @@ impl Icon for HourlyForecast {
     }
 }
 
-fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &str) -> Result<T, Error> {
-    // create path if it doesn't exist
-    let _ = fs::create_dir_all(file_path.rsplitn(2, '/').last().unwrap());
+fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &PathBuf) -> Result<T, Error> {
+    if !file_path.exists() {
+        fs::create_dir_all(file_path.parent().unwrap())?;
+    }
 
-    if CONFIG.misc.use_online_data {
+    if CONFIG.debugging.use_online_data {
         let client = reqwest::blocking::Client::new();
         let response = client.get(endpoint).send()?;
         let body = response.text().map_err(Error::msg)?;
 
         fs::write(file_path, &body)?;
+        serde_json::from_str(&body).map_err(Error::msg)
+    } else {
+        let body = fs::read_to_string(file_path)?;
+        serde_json::from_str(&body).map_err(Error::msg)
     }
-
-    let body = fs::read_to_string(file_path)?;
-    serde_json::from_str(&body).map_err(Error::msg)
 }
 
 fn fetch_daily_forecast() -> Result<DailyForcastResponse, Error> {
-    fetch(
-        &DAILY_FORECAST_ENDPOINT,
-        "./src/apis/bom/samples/daily_forcast.json",
-    )
+    let file_path =
+        std::path::Path::new(&CONFIG.misc.weather_data_store_path).join("daily_forecast.json");
+    fetch(&DAILY_FORECAST_ENDPOINT, &file_path)
 }
 
 fn fetch_hourly_forecast() -> Result<HourlyForcastResponse, Error> {
-    fetch(
-        &HOURLY_FORECAST_ENDPOINT,
-        "./src/apis/bom/samples/hourly_forcast.json",
-    )
+    let file_path =
+        std::path::Path::new(&CONFIG.misc.weather_data_store_path).join("hourly_forecast.json");
+    fetch(&HOURLY_FORECAST_ENDPOINT, &file_path)
 }
 
 fn update_current_hour(current_hour: &HourlyForecast, mut context: Context) -> Context {
     let mut curret_icon = current_hour.get_icon_path();
-    if CONFIG.misc.use_moon_phase_instead_of_clear_night
+    if CONFIG.render_options.use_moon_phase_instead_of_clear_night
         && curret_icon.ends_with(&format!("{}{}.svg", RainChanceName::Clear, DayNight::Night))
     {
         println!("Using moon phase icon instead of clear night");
@@ -719,7 +724,7 @@ fn update_daily_forecast(mut context: Context) -> Result<Context, Error> {
 fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
     let hourly_forecast = fetch_hourly_forecast()?;
 
-    let mut graph = DailyForcastGraph::default();
+    let mut graph = DailyForecastGraph::default();
 
     let mut temp_data = GraphData {
         graph_type: DataType::Temp,
@@ -762,9 +767,9 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
         .iter()
         .find_map(
             // find the first time
-            |forcast| {
-                if forcast.time >= current_date {
-                    Some(forcast.time)
+            |forecast| {
+                if forecast.time >= current_date {
+                    Some(forecast.time)
                 } else {
                     None
                 }
@@ -784,19 +789,19 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
     hourly_forecast
         .data
         .iter()
-        .filter(|forcast| forcast.time >= first_date && forcast.time < end_date)
-        .for_each(|forcast| {
+        .filter(|forecast| forecast.time >= first_date && forecast.time < end_date)
+        .for_each(|forecast| {
             if x == 0.0 {
                 // update current hour
-                context = update_current_hour(forcast, context.clone());
+                context = update_current_hour(forecast, context.clone());
             }
             // we won't push the actual hour right now
             // we can calculate it later
             // we push this index to make scaling graph easier
-            temp_data.add_point(x, forcast.temp);
-            feels_like_data.add_point(x, forcast.temp_feels_like);
-            rain_data.add_point(x, forcast.rain.chance.unwrap_or(0).into());
-            uv_data[x as usize] = forcast.uv as usize;
+            temp_data.add_point(x, forecast.temp);
+            feels_like_data.add_point(x, forecast.temp_feels_like);
+            rain_data.add_point(x, forecast.rain.chance.unwrap_or(0).into());
+            uv_data[x as usize] = forecast.uv as usize;
             x += 1.0;
         });
 
@@ -848,7 +853,7 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
         |item| &item.time,
     )
     .to_string();
-    // There is a discrepancy in max uv between hourly forcast and daily forcast
+    // There is a discrepancy in max uv between hourly forecast and daily forecast
     context.uv_max_today = find_max_item_between_dates(
         &hourly_forecast.data,
         &day_start,
@@ -917,7 +922,7 @@ fn get_moon_phase_icon() -> String {
         _ => "moon-waning-crescent.svg",
     };
 
-    format!("{}{}", CONFIG.misc.icon_path, icon_name)
+    format!("{}{}", CONFIG.misc.svg_icons_directory, icon_name)
 }
 
 fn load_config() -> Result<DashboardConfig, Error> {
