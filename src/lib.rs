@@ -5,6 +5,12 @@ mod config;
 mod context;
 mod utils;
 
+// #[cfg(debug_assertions)]
+// mod dev;
+
+// #[cfg(debug_assertions)]
+// use dev::create_striped_png;
+
 use ::config::{Config, File};
 use anyhow::Error;
 use bom::*;
@@ -122,7 +128,7 @@ impl DailyForecastGraph {
     fn create_axis_with_labels(
         &self,
         current_hour: f64,
-    ) -> (String, String, String, String, String, String) {
+    ) -> (String, String, String, String, String, String, String) {
         let width = self.width as f64;
         let height = self.height as f64;
 
@@ -167,6 +173,7 @@ impl DailyForecastGraph {
 
         // Axis paths
         let mut x_axis_path = format!("M 0 {} L {} {}", x_axis_y, width, x_axis_y);
+        let mut x_axis_guideline_path = format!("M 0 {} L {} {}", x_axis_y, width, x_axis_y);
         let mut y_left_axis_path = format!("M {} 0 L {} {}", y_axis_x, y_axis_x, height);
         let mut y_right_axis_path =
             format!("M {} 0 L {} {}", y_right_axis_x, y_right_axis_x, height);
@@ -206,6 +213,11 @@ impl DailyForecastGraph {
                 x_axis_y - 5.0,
                 xs,
                 x_axis_y + 5.0
+            ));
+
+            x_axis_guideline_path.push_str(&format!(
+                r#" M {} {} v -{} m 0 2 v -2"#,
+                xs, x_axis_y, self.height
             ));
 
             // Label: placed below the x-axis line
@@ -301,6 +313,7 @@ impl DailyForecastGraph {
             y_left_labels,
             y_right_axis_path,
             y_right_labels,
+            x_axis_guideline_path,
         )
     }
 
@@ -892,6 +905,7 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
     context.y_left_labels = axis_data_path.3;
     context.y_right_axis_path = axis_data_path.4;
     context.y_right_labels = axis_data_path.5;
+    context.x_axis_guideline_path = axis_data_path.6;
 
     context.uv_gradient = graph.draw_uv_gradient_over_time(uv_data);
 

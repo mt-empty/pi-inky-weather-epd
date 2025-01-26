@@ -174,7 +174,10 @@
     <!-- Graph for hourly forecast -->
     <svg x="230" y="160" width="560" height="350" viewBox="-50 0 690 300" preserveAspectRatio="xMidYMid meet">
         <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{x_axis_path}" fill="none"
-            stroke-dasharray="5,5" />
+             />
+        <!-- X axis Guidelines -->
+        <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="1" d="{x_axis_guideline_path}" fill="none" stroke-dasharray="5,10"
+             />
         <path stroke="{y_left_axis_colour}" stroke-linejoin="10 6" stroke-width="2" d="{y_left_axis_path}" />
         <path stroke="{y_right_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{y_right_axis_path}"
             fill="none" />
