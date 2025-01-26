@@ -48,6 +48,7 @@ pub struct RenderOptions {
     pub saturation: f32,
     pub temp_unit: String,
     pub use_moon_phase_instead_of_clear_night: bool,
+    pub x_axis_always_at_min: bool,
 }
 
 #[derive(Debug, Deserialize)]

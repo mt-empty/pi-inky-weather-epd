@@ -141,12 +141,14 @@ impl DailyForecastGraph {
         // Determine where to place the x-axis (shared between both left and right data)
         // If 0 is within the y range, place x-axis at y=0.
         // Otherwise, place it at the min or max y boundary.
-        let x_axis_y = if self.min_y <= 0.0 && self.max_y >= 0.0 {
-            map_y_left(0.0)
-        } else if self.min_y > 0.0 {
-            map_y_left(self.min_y)
+        let x_axis_y = if CONFIG.render_options.x_axis_always_at_min
+            || self.min_y > 0.0 && self.max_y > 0.00
+        {
+            map_y_left(self.min_y) // min and max are both positive, so place it at min
+        } else if self.min_y <= 0.0 && self.max_y >= 0.0 {
+            map_y_left(0.0) // place x axis in between min and max
         } else {
-            map_y_left(self.max_y)
+            map_y_left(self.max_y) // min and max are both negative, so place it at max
         };
 
         // Determine where to place the y-axis
