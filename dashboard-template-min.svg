@@ -38,8 +38,9 @@
     <svg x="0" y="0">
         <text x="250" y="50" font-size="35" fill="{text_colour}">{day1_name} </text>
         <image x="0" y="0" width="200" height="180" href="{current_icon}" />
-        <text x="255" y="110" text-anchor="middle" dominant-baseline="middle" font-size="70" fill="{temp_colour}">
-            {current_temp}<tspan baseline-shift="14" font-size="35">°{temp_unit}</tspan>
+        <text x="325" y="110" dominant-baseline="middle" font-size="70" fill="{temp_colour}">
+            <tspan text-anchor="end">{current_temp}</tspan>
+            <tspan baseline-shift="15" dx="-18" font-size="35">°{temp_unit}</tspan>
         </text>
 
 
@@ -49,7 +50,7 @@
             <tspan x="225" y="170" text-anchor="start" font-family="Roboto-Regular-Dashed" dominant-baseline="middle"
                 font-size="55" fill="{feels_like_colour}">{current_feels_like}
                 <!-- Tspan doesn't work well with the degree symbol ° for some fonts!-->
-                <tspan baseline-shift="8" dx="-10" font-size="35">°</tspan> 
+                <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan> 
             </tspan>
         </text>
 
@@ -126,49 +127,67 @@
     <svg x="300" y="30">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
             fill="{text_colour}">{day2_name}</text>
-        <image x="20" y="50" width="75" height="100" href="{day2_icon}" />
-        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{day2_maxtemp}°|{day2_mintemp}°</text>
+        <image x="12" y="50" width="75" height="100" href="{day2_icon}" />
+        <text x="82" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="{text_colour}">
+            <tspan text-anchor="end" dx="0">{day2_maxtemp}°</tspan>
+            <tspan text-anchor="middle" dx="-5">|</tspan>
+            <tspan text-anchor="start" dx="-5">{day2_mintemp}°</tspan>
+        </text>
     </svg>
 
     <svg x="380" y="30">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
             fill="{text_colour}">{day3_name}</text>
-        <image x="20" y="50" width="75" height="100" href="{day3_icon}" />
-        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{day3_maxtemp}°|{day3_mintemp}°</text>
+        <image x="12" y="50" width="75" height="100" href="{day3_icon}" />
+        <text x="82" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="{text_colour}">
+            <tspan text-anchor="end" dx="0">{day3_maxtemp}°</tspan>
+            <tspan text-anchor="middle" dx="-5">|</tspan>
+            <tspan text-anchor="start" dx="-5">{day3_mintemp}°</tspan>
+        </text>
     </svg>
 
     <svg x="460" y="30">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
             fill="{text_colour}">{day4_name}</text>
-        <image x="20" y="50" width="75" height="100" href="{day4_icon}" />
-        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{day4_maxtemp}°|{day4_mintemp}°</text>
+        <image x="12" y="50" width="75" height="100" href="{day4_icon}" />
+        <text x="82" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="{text_colour}">
+            <tspan text-anchor="end" dx="0">{day4_maxtemp}°</tspan>
+            <tspan text-anchor="middle" dx="-5">|</tspan>
+            <tspan text-anchor="start" dx="-5">{day4_mintemp}°</tspan>
+        </text>
     </svg>
 
     <svg x="540" y="30">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
             fill="{text_colour}">{day5_name}</text>
-        <image x="20" y="50" width="75" height="100" href="{day5_icon}" />
-        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{day5_maxtemp}°|{day5_mintemp}°</text>
+        <image x="12" y="50" width="75" height="100" href="{day5_icon}" />
+        <text x="82" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="{text_colour}">
+            <tspan text-anchor="end" dx="0">{day5_maxtemp}°</tspan>
+            <tspan text-anchor="middle" dx="-5">|</tspan>
+            <tspan text-anchor="start" dx="-5">{day5_mintemp}°</tspan>
+        </text>
     </svg>
 
     <svg x="620" y="30">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
             fill="{text_colour}">{day6_name}</text>
-        <image x="20" y="50" width="75" height="100" href="{day6_icon}" />
-        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{day6_maxtemp}°|{day6_mintemp}°</text>
+        <image x="12" y="50" width="75" height="100" href="{day6_icon}" />
+        <text x="82" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="{text_colour}">
+            <tspan text-anchor="end" dx="0">{day6_maxtemp}°</tspan>
+            <tspan text-anchor="middle" dx="-5">|</tspan>
+            <tspan text-anchor="start" dx="-5">{day6_mintemp}°</tspan>
+        </text>
     </svg>
 
     <svg x="700" y="30">
         <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
             fill="{text_colour}">{day7_name}</text>
-        <image x="20" y="50" width="75" height="100" href="{day7_icon}" />
-        <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{day7_maxtemp}°|{day7_mintemp}°</text>
+        <image x="12" y="50" width="75" height="100" href="{day7_icon}" />
+        <text x="82" y="150" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="{text_colour}">
+            <tspan text-anchor="end" dx="0">{day7_maxtemp}°</tspan>
+            <tspan text-anchor="middle" dx="-5">|</tspan>
+            <tspan text-anchor="start" dx="-5">{day7_mintemp}°</tspan>
+        </text>
     </svg>
 
     <!-- Graph for hourly forecast -->
