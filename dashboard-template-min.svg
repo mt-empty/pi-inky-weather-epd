@@ -36,7 +36,7 @@
 
     <!-- Current Day Information -->
     <svg x="0" y="0">
-        <text x="250" y="50" font-size="35" fill="{text_colour}">{day1_name} </text>
+        <text x="250" y="50" font-size="35" fill="{text_colour}">{current_day_name} </text>
         <image x="0" y="0" width="200" height="180" href="{current_icon}" />
         <text x="325" y="110" dominant-baseline="middle" font-size="70" fill="{temp_colour}">
             <tspan text-anchor="end">{current_temp}</tspan>

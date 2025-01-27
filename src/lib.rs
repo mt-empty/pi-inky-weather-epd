@@ -178,7 +178,7 @@ impl DailyForecastGraph {
         let mut y_right_axis_path =
             format!("M {} 0 L {} {}", y_right_axis_x, y_right_axis_x, height);
 
-        // Number of ticks, +1 because fencepost problem
+        // Number of ticks, +1 because of the fencepost problem
         let x_ticks = 6;
         let y_left_ticks = 5;
         let y_right_ticks = 5;
@@ -215,9 +215,14 @@ impl DailyForecastGraph {
                 x_axis_y + 5.0
             ));
 
+            let x_guideline_len = if CONFIG.render_options.x_axis_always_at_min {
+                height
+            } else {
+                x_axis_y
+            };
             x_axis_guideline_path.push_str(&format!(
                 r#" M {} {} v -{} m 0 2 v -2"#,
-                xs, x_axis_y, self.height
+                xs, x_axis_y, x_guideline_len
             ));
 
             // Label: placed below the x-axis line
@@ -233,11 +238,19 @@ impl DailyForecastGraph {
             };
             let label_str = format!("{:.0}{}", display_hour, period);
             // slight offset for the first label if the min_y is negative
-            let label_x = if self.min_y < 0.0 && i == 0 {
-                xs + 22.0
+            let x_offset = if !CONFIG.render_options.x_axis_always_at_min && self.min_y < 0.0 {
+                if i == 0 {
+                    22.0
+                } else if i == x_ticks {
+                    -22.0
+                } else {
+                    0.0
+                }
             } else {
-                xs
+                0.0
             };
+
+            let label_x = xs + x_offset;
             x_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}" fill="{colour}" font-size="17" text-anchor="middle">{text}</text>"#,
                 x = label_x,
@@ -630,7 +643,7 @@ fn update_current_hour(current_hour: &HourlyForecast, mut context: Context) -> C
     context.current_uv_index = current_hour.uv.to_string();
     context.current_relative_humidity = current_hour.relative_humidity.to_string();
     context.current_relative_humidity_icon = current_hour.relative_humidity.get_icon_path();
-    context.day1_name = chrono::Local::now().format("%A, %d %b").to_string();
+    context.current_day_name = chrono::Local::now().format("%A, %d %b").to_string();
     context.current_rain_amount = (current_hour.rain.amount.min.unwrap_or(0.0)
         + current_hour.rain.amount.min.unwrap_or(0.0))
     .to_string();
@@ -951,17 +964,44 @@ fn load_config() -> Result<DashboardConfig, Error> {
     settings.try_deserialize().map_err(Error::msg)
 }
 
-fn render_template(context: Context, dashboard_svg: String) -> Result<String, Error> {
-    let mut tt = TinyTemplate::new();
+pub fn update_forecast_context(mut context: Context) -> Result<Context, Error> {
+    context = match update_daily_forecast(context) {
+        Ok(context) => context,
+        Err(e) => {
+            println!("Failed to update daily forecast: {}", e);
+            return Err(e);
+        }
+    };
+    context = match update_hourly_forecast(context) {
+        Ok(context) => context,
+        Err(e) => {
+            println!("Failed to update hourly forecast: {}", e);
+            return Err(e);
+        }
+    };
+    Ok(context)
+}
 
-    if let Err(e) = tt.add_template("dashboard", &dashboard_svg) {
+fn render_template(context: Context, dashboard_svg: String) -> Result<(), Error> {
+    let mut tt = TinyTemplate::new();
+    let tt_name = "dashboard";
+
+    if let Err(e) = tt.add_template(tt_name, &dashboard_svg) {
         println!("Failed to add template: {}", e);
         return Err(e.into());
     }
     tt.set_default_formatter(&format_unescaped);
     // Attempt to render the template
-    match tt.render("dashboard", &context) {
-        Ok(rendered) => Ok(rendered),
+    match tt.render(tt_name, &context) {
+        Ok(rendered) => {
+            let mut output = fs::File::create(CONFIG.misc.modified_template_name.clone())?;
+            output.write_all(rendered.as_bytes())?;
+            println!(
+                "SVG has been modified and saved successfully at {}",
+                CONFIG.misc.modified_template_name
+            );
+            Ok(())
+        }
         Err(e) => {
             println!("Failed to render template: {}", e);
             Err(e.into())
@@ -985,32 +1025,8 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
             return Err(e.into());
         }
     };
-
-    let mut context = Context::default();
-    context = match update_daily_forecast(context) {
-        Ok(context) => context,
-        Err(e) => {
-            println!("Failed to update daily forecast: {}", e);
-            return Err(e);
-        }
-    };
-    context = match update_hourly_forecast(context) {
-        Ok(context) => context,
-        Err(e) => {
-            println!("Failed to update hourly forecast: {}", e);
-            return Err(e);
-        }
-    };
-
-    let updated_svg = render_template(context, template_svg)?;
-
-    let mut output = fs::File::create(CONFIG.misc.modified_template_name.clone())?;
-    output.write_all(updated_svg.as_bytes())?;
-
-    println!(
-        "SVG has been modified and saved successfully at {}",
-        CONFIG.misc.modified_template_name
-    );
+    let context = update_forecast_context(Context::default())?;
+    render_template(context, template_svg)?;
 
     convert_svg_to_png(
         &CONFIG.misc.modified_template_name,
