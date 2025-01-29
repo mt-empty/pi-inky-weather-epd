@@ -1,9 +1,7 @@
-name: Build and Release Rust Binaries
+name: Release Pi Inky Weather EPD
 
 on:
   push:
-    branches:
-      - master
     tags:
       - 'v*'
   workflow_dispatch:

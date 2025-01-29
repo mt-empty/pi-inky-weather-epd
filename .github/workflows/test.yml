@@ -1,4 +1,4 @@
-name: Build and Release Rust Binaries
+name: Test 
 
 on:
   pull_request:
@@ -10,9 +10,6 @@ on:
     tags-ignore:
       - 'v*'
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 env:
   TARGET: arm-unknown-linux-gnueabihf
