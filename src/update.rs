@@ -65,8 +65,6 @@ fn fetch_release_info(
             response.status()
         ));
     }
-    let response_text = response.text().context("Failed to read response text")?;
-    fs::write("response.txt", &response_text).context("Failed to write response to file")?;
     // let release_info: GithubRelease = response
     //     .json()
     //     .context("Failed to parse latest release info")?;
@@ -95,7 +93,6 @@ fn download_and_extract_release(
         latest_version,
         TARGET_ARTIFACT
     );
-    println!("Downloading from: {}", download_url);
     let response = client
         .get(download_url)
         .header(reqwest::header::USER_AGENT, header_value)

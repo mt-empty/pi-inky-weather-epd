@@ -158,3 +158,16 @@ pub struct DailyForcastResponse {
     pub metadata: DailyMetadata,
     pub data: Vec<DailyEntry>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct BomError {
+    pub errors: Vec<ErrorDetail>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ErrorDetail {
+    pub code: String,
+    pub title: String,
+    pub status: String,
+    pub detail: String,
+}

@@ -16,7 +16,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # TODO: change to arm once it is no longer in public preview 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -607,6 +607,15 @@ fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &PathBuf) -> R
         let response = client.get(endpoint).send()?;
         let body = response.text().map_err(Error::msg)?;
 
+        if let Ok(api_error) = serde_json::from_str::<BomError>(&body) {
+            for error in api_error.errors {
+                eprintln!("API Error: {}", error.detail);
+            }
+            return Err(Error::msg(
+                "API request failed, double check your api configs.",
+            ));
+        }
+
         fs::write(file_path, &body)?;
         serde_json::from_str(&body).map_err(Error::msg)
     } else {

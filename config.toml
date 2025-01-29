@@ -1,7 +1,7 @@
 [release]
 release_info_url = "https://api.github.com/repos/mt-empty/pi-inky-weather-epd/releases/latest"
 download_base_url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/download"
-auto_update = true
+auto_update = false
 update_interval_days = 7
 
 
@@ -11,14 +11,14 @@ update_interval_mins = 60
 # darwin = "qvv117"
 # sydney = "r3gx2f"
 # melbourne = "r1r0fs"
-# brisbane = "ynGBTJ"
+# brisbane = "r7hgd6"
 # perth = "r28ekz"
 # adelaide = "r1f93c"
 # hobart = "r22u0d"
 # canberra = "r3dp32"
 # tasmania-cold = "r283sf"
 # new-south-wales-hot = "qgph8w"
-location = "ynGBTJ" # uses GeoHash, must be 6 characters
+location = "r7hgd6" # uses GeoHash, must be 6 characters
 
 # supproted colors = [black, white, green, blue, red, yellow, orange]
 [colours]
