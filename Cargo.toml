@@ -25,6 +25,7 @@ resvg = "0.44"
 image = "0.25"
 openssl = { version = "0.10", features = ["vendored"] }
 zip = "2.2.2"
+semver = "1.0.25"
 
 # dev dependencies
 [dev-dependencies]

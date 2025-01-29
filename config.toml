@@ -1,5 +1,9 @@
 [release]
-url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/latest/download/x86_64-unknown-linux-gnu.zip"
+release_info_url = "https://api.github.com/repos/mt-empty/pi-inky-weather-epd/releases/latest"
+download_base_url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/download"
+auto_update = true
+update_interval_days = 7
+
 
 [api]
 update_interval_mins = 60
@@ -14,7 +18,7 @@ update_interval_mins = 60
 # canberra = "r3dp32"
 # tasmania-cold = "r283sf"
 # new-south-wales-hot = "qgph8w"
-location = "r283sf" # uses GeoHash, must be 6 characters
+location = "ynGBTJ" # uses GeoHash, must be 6 characters
 
 # supproted colors = [black, white, green, blue, red, yellow, orange]
 [colours]
@@ -38,9 +42,10 @@ x_axis_always_at_min = false
 weather_data_store_path = "./src/apis/bom/samples/"
 template_path = "dashboard-template-min.svg"
 modified_template_name = "dashboard.svg"
+generated_png_name = "dashboard.png"
 svg_icons_directory = "static/fill-svg-static/"
-python_script_path = "$HOME/Pimoroni/inky/examples/7color/image.py"
-python_path = "$HOME/env/bin/python3"
+python_script_path = "/home/dietpi/Pimoroni/inky/examples/7color/image.py"
+python_path = "/home/dietpi/env/bin/python3"
 
 [debugging]
 use_online_data = true

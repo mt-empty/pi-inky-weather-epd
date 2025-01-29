@@ -12,12 +12,14 @@ pub struct DashboardConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct Release {
-    pub url: String,
+    pub release_info_url: String,
+    pub download_base_url: String,
+    pub auto_update: bool,
+    pub update_interval_days: i64,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Api {
-    pub update_interval_mins: u32,
     pub location: String,
 }
 
@@ -38,6 +40,7 @@ pub struct Misc {
     pub weather_data_store_path: String,
     pub template_path: String,
     pub modified_template_name: String,
+    pub generated_png_name: String,
     pub svg_icons_directory: String,
     pub python_script_path: String,
     pub python_path: String,
