@@ -1,9 +1,6 @@
 name: Build and Release Rust Binaries
 
 on:
-  pull_request:
-    branches:
-      - master
   push:
     branches:
       - master
@@ -20,21 +17,12 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        include:
-          - target: arm-unknown-linux-gnueabihf   # Raspberry Pi Zero
-            tag_only: false
-          # - target: armv7-unknown-linux-gnueabihf # Raspberry Pi Zero 2
-          #   tag_only: true
-          - target: aarch64-unknown-linux-gnu     # Raspberry Pi 4 and above
-            tag_only: true
-          - target: x86_64-unknown-linux-gnu      # x86
-            tag_only: true
-
+        target:
+          - arm-unknown-linux-gnueabihf   # Raspberry Pi Zero
+          # - armv7-unknown-linux-gnueabihf # Raspberry Pi Zero 2
+          - aarch64-unknown-linux-gnu     # Raspberry Pi 4 and above
+          - x86_64-unknown-linux-gnu      # x86
     steps:
-      - name: cancel if not tagged
-        if: ${{ matrix.tag_only == true && !startsWith(github.ref, 'refs/tags/v') }}
-        run: exit 78
-
       - name: Checkout code
         uses: actions/checkout@v4
 

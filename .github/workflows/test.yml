@@ -1,0 +1,64 @@
+name: Build and Release Rust Binaries
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+    tags-ignore:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TARGET: arm-unknown-linux-gnueabihf
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache cargo build, registry, index, and binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/index
+            target
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ env.TARGET }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ env.TARGET }}-
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+          override: true
+
+      - name: Run cargo fmt
+        run: cargo fmt -- --check
+
+      - name: Run cargo check
+        run: cargo check
+
+      - name: Install cross
+        run: |
+          if ! command -v cross &> /dev/null; then
+            cargo install cross
+          else
+            echo "cross is already installed"
+          fi
+
+      - name: Build binary with cross
+        run: cross build --release --target=${{ env.TARGET }}
+
+      - name: Test binary with cross
+        run: cross test --target=${{ env.TARGET }}
