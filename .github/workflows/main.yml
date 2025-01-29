@@ -18,15 +18,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        target:
-          - arm-unknown-linux-gnueabihf   # Raspberry Pi Zero
-          - armv7-unknown-linux-gnueabihf # Raspberry Pi Zero 2
-          - aarch64-unknown-linux-gnu     # Raspberry Pi 4 and above
-          - x86_64-unknown-linux-gnu      # x86
+        include:
+          - target: arm-unknown-linux-gnueabihf   # Raspberry Pi Zero
+            tag_only: false
+          # - target: armv7-unknown-linux-gnueabihf # Raspberry Pi Zero 2
+          #   tag_only: true
+          - target: aarch64-unknown-linux-gnu     # Raspberry Pi 4 and above
+            tag_only: true
+          - target: x86_64-unknown-linux-gnu      # x86
+            tag_only: true
+
     steps:
       - name: Checkout code
+        if: ${{ !matrix.tag_only || startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/checkout@v4
 
       - name: Cache cargo build, registry, index, and binaries
