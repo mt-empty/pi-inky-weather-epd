@@ -30,6 +30,12 @@ struct GithubRelease {
     tag_name: String,
 }
 
+/// Fetches the latest release from the GitHub repository and updates the application if a newer version is available.
+///
+/// # Errors
+///
+/// Returns an error if the current version cannot be parsed, if the release info cannot be fetched,
+/// if the latest version cannot be parsed, or if the release cannot be downloaded and extracted.
 fn fetch_latest_release() -> Result<(), anyhow::Error> {
     let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
     let package_name = env!("CARGO_PKG_NAME");
@@ -50,6 +56,16 @@ fn fetch_latest_release() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
+/// Fetches the release information from the GitHub API.
+///
+/// # Arguments
+///
+/// * `client` - The HTTP client to use for the request.
+/// * `header_value` - The value to use for the User-Agent header.
+///
+/// # Errors
+///
+/// Returns an error if the request fails or if the response cannot be parsed.
 fn fetch_release_info(
     client: &reqwest::blocking::Client,
     header_value: &str,
@@ -65,14 +81,21 @@ fn fetch_release_info(
             response.status()
         ));
     }
-    // let release_info: GithubRelease = response
-    //     .json()
-    //     .context("Failed to parse latest release info")?;
-    Ok(GithubRelease {
-        tag_name: "v0.1.0".to_string(),
-    })
+    let release_info: GithubRelease = response
+        .json()
+        .context("Failed to parse latest release info")?;
+    Ok(release_info)
 }
 
+/// Parses the latest version from the GitHub release information.
+///
+/// # Arguments
+///
+/// * `release_info` - The release information fetched from the GitHub API.
+///
+/// # Errors
+///
+/// Returns an error if the version string cannot be parsed.
 fn parse_latest_version(release_info: &GithubRelease) -> Result<Version, anyhow::Error> {
     let latest_version = release_info
         .tag_name
@@ -82,6 +105,18 @@ fn parse_latest_version(release_info: &GithubRelease) -> Result<Version, anyhow:
     Ok(latest_version)
 }
 
+/// Downloads and extracts the latest release from the GitHub repository.
+///
+/// # Arguments
+///
+/// * `client` - The HTTP client to use for the request.
+/// * `header_value` - The value to use for the User-Agent header.
+/// * `latest_version` - The latest version to download.
+///
+/// # Errors
+///
+/// Returns an error if the download fails, if the ZIP archive cannot be read,
+/// if the binary base directory cannot be created, or if the archive cannot be extracted.
 fn download_and_extract_release(
     client: &reqwest::blocking::Client,
     header_value: &str,
@@ -128,6 +163,11 @@ fn download_and_extract_release(
     Ok(())
 }
 
+/// Gets the base directory path of the current executable.
+///
+/// # Errors
+///
+/// Returns an error if the executable path cannot be determined.
 fn get_base_dir_path() -> Result<PathBuf> {
     let exe_path = std::env::current_exe()?;
     let base_dir = exe_path.parent().ok_or_else(|| {
@@ -139,7 +179,13 @@ fn get_base_dir_path() -> Result<PathBuf> {
     Ok(base_dir.to_path_buf())
 }
 
-pub fn update() -> Result<(), anyhow::Error> {
+/// Checks for updates and updates the application if a newer version is available.
+///
+/// # Errors
+///
+/// Returns an error if the last checked timestamp cannot be read or written,
+/// if the timestamp cannot be parsed, or if the update process fails.
+pub fn update_app() -> Result<(), anyhow::Error> {
     // create a file to store the last time we checked for an update
     let last_checked_path = get_base_dir_path()?.join(LAST_CHECKED_FILE_NAME);
     if !Path::new(&last_checked_path).exists() {

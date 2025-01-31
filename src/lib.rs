@@ -30,7 +30,8 @@ pub const NOT_AVAILABLE_ICON: &str = "not-available.svg";
 const CONFIG_NAME: &str = "config.toml";
 
 lazy_static! {
-    pub static ref CONFIG: DashboardConfig = load_config().expect("Failed to load config");
+    pub static ref CONFIG: DashboardConfig =
+        load_dashboard_config().expect("Failed to load config");
 }
 
 #[derive(Clone, Debug)]
@@ -597,7 +598,10 @@ impl Icon for HourlyForecast {
     }
 }
 
-fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &PathBuf) -> Result<T, Error> {
+fn fetch_data<T: for<'de> Deserialize<'de>>(
+    endpoint: &str,
+    file_path: &PathBuf,
+) -> Result<T, Error> {
     if !file_path.exists() {
         fs::create_dir_all(file_path.parent().unwrap())?;
     }
@@ -624,25 +628,25 @@ fn fetch<T: for<'de> Deserialize<'de>>(endpoint: &str, file_path: &PathBuf) -> R
     }
 }
 
-fn fetch_daily_forecast() -> Result<DailyForcastResponse, Error> {
+fn fetch_daily_forecast_data() -> Result<DailyForcastResponse, Error> {
     let file_path =
         std::path::Path::new(&CONFIG.misc.weather_data_store_path).join("daily_forecast.json");
-    fetch(&DAILY_FORECAST_ENDPOINT, &file_path)
+    fetch_data(&DAILY_FORECAST_ENDPOINT, &file_path)
 }
 
-fn fetch_hourly_forecast() -> Result<HourlyForcastResponse, Error> {
+fn fetch_hourly_forecast_data() -> Result<HourlyForcastResponse, Error> {
     let file_path =
         std::path::Path::new(&CONFIG.misc.weather_data_store_path).join("hourly_forecast.json");
-    fetch(&HOURLY_FORECAST_ENDPOINT, &file_path)
+    fetch_data(&HOURLY_FORECAST_ENDPOINT, &file_path)
 }
 
-fn update_current_hour(current_hour: &HourlyForecast, mut context: Context) -> Context {
+fn update_current_hour_data(current_hour: &HourlyForecast, context: &mut Context) {
     let mut curret_icon = current_hour.get_icon_path();
     if CONFIG.render_options.use_moon_phase_instead_of_clear_night
         && curret_icon.ends_with(&format!("{}{}.svg", RainChanceName::Clear, DayNight::Night))
     {
         println!("Using moon phase icon instead of clear night");
-        curret_icon = get_moon_phase_icon().to_string();
+        curret_icon = get_moon_phase_icon_path().to_string();
     }
     context.current_temp = current_hour.temp.to_string();
     context.current_icon = curret_icon;
@@ -657,12 +661,11 @@ fn update_current_hour(current_hour: &HourlyForecast, mut context: Context) -> C
         + current_hour.rain.amount.min.unwrap_or(0.0))
     .to_string();
     context.rain_measure_icon = current_hour.rain.amount.get_icon_path();
-    context
 }
 
 // Extrusion Pattern: force everything through one function until it resembles spaghetti
-fn update_daily_forecast(mut context: Context) -> Result<Context, Error> {
-    let daily_forecast_data = fetch_daily_forecast()?.data;
+fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
+    let daily_forecast_data = fetch_daily_forecast_data()?.data;
     let current_date = chrono::Local::now().date_naive();
     let mut i = 1;
 
@@ -755,11 +758,11 @@ fn update_daily_forecast(mut context: Context) -> Result<Context, Error> {
         println!("Less than 7 days of forecast data");
     }
 
-    Ok(context)
+    Ok(())
 }
 
-fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
-    let hourly_forecast = fetch_hourly_forecast()?;
+fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
+    let hourly_forecast = fetch_hourly_forecast_data()?;
 
     let mut graph = DailyForecastGraph::default();
 
@@ -830,7 +833,7 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
         .for_each(|forecast| {
             if x == 0.0 {
                 // update current hour
-                context = update_current_hour(forecast, context.clone());
+                update_current_hour_data(forecast, context);
             }
             // we won't push the actual hour right now
             // we can calculate it later
@@ -930,11 +933,10 @@ fn update_hourly_forecast(mut context: Context) -> Result<Context, Error> {
     context.x_axis_guideline_path = axis_data_path.6;
 
     context.uv_gradient = graph.draw_uv_gradient_over_time(uv_data);
-
-    Ok(context)
+    Ok(())
 }
 
-fn get_moon_phase_icon() -> String {
+fn get_moon_phase_icon_path() -> String {
     let now = chrono::Local::now();
     let year = now.year();
     let month = now.month();
@@ -963,7 +965,7 @@ fn get_moon_phase_icon() -> String {
     format!("{}{}", CONFIG.misc.svg_icons_directory, icon_name)
 }
 
-fn load_config() -> Result<DashboardConfig, Error> {
+fn load_dashboard_config() -> Result<DashboardConfig, Error> {
     let root = std::env::current_dir()?;
     let config_path = root.join(CONFIG_NAME);
     let settings = Config::builder()
@@ -973,25 +975,25 @@ fn load_config() -> Result<DashboardConfig, Error> {
     settings.try_deserialize().map_err(Error::msg)
 }
 
-pub fn update_forecast_context(mut context: Context) -> Result<Context, Error> {
-    context = match update_daily_forecast(context) {
+pub fn update_forecast_context(context: &mut Context) -> Result<(), Error> {
+    match update_daily_forecast_data(context) {
         Ok(context) => context,
         Err(e) => {
             println!("Failed to update daily forecast: {}", e);
             return Err(e);
         }
     };
-    context = match update_hourly_forecast(context) {
+    match update_hourly_forecast_data(context) {
         Ok(context) => context,
         Err(e) => {
             println!("Failed to update hourly forecast: {}", e);
             return Err(e);
         }
     };
-    Ok(context)
+    Ok(())
 }
 
-fn render_template(context: Context, dashboard_svg: String) -> Result<(), Error> {
+fn render_dashboard_template(context: &mut Context, dashboard_svg: String) -> Result<(), Error> {
     let mut tt = TinyTemplate::new();
     let tt_name = "dashboard";
 
@@ -1034,8 +1036,9 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
             return Err(e.into());
         }
     };
-    let context = update_forecast_context(Context::default())?;
-    render_template(context, template_svg)?;
+    let mut context = Context::default();
+    update_forecast_context(&mut context)?;
+    render_dashboard_template(&mut context, template_svg)?;
 
     convert_svg_to_png(
         &CONFIG.misc.modified_template_name,
