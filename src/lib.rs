@@ -11,7 +11,6 @@ mod utils;
 // #[cfg(debug_assertions)]
 // use dev::create_striped_png;
 
-use ::config::{Config, File};
 use anyhow::Error;
 use bom::*;
 use chart::{catmull_bezier, Point};
@@ -27,7 +26,6 @@ use tinytemplate::{format_unescaped, TinyTemplate};
 pub use utils::*;
 
 pub const NOT_AVAILABLE_ICON: &str = "not-available.svg";
-const CONFIG_NAME: &str = "config.toml";
 
 lazy_static! {
     pub static ref CONFIG: DashboardConfig =
@@ -56,28 +54,32 @@ impl GraphData {
 pub struct DailyForecastGraph {
     pub name: String,
     pub data: Vec<GraphData>,
-    pub height: usize,
-    pub width: usize,
+    pub height: f64,
+    pub width: f64,
     pub starting_x: f64,
     pub ending_x: f64,
     pub min_y: f64,
     pub max_y: f64,
+    pub x_ticks: usize,
+    pub y_left_ticks: usize,
+    pub y_right_ticks: usize,
 }
 
-impl DailyForecastGraph {
-    const HEIGHT: usize = 300;
-    const WIDTH: usize = 600;
-
+impl Default for DailyForecastGraph {
     fn default() -> Self {
         Self {
             name: "Hourly Forecast".to_string(),
             data: vec![],
-            height: Self::HEIGHT,
-            width: Self::WIDTH,
+            height: 300.0,
+            width: 600.0,
             starting_x: 0.0,
             ending_x: 23.0,
             min_y: f64::INFINITY,
             max_y: -f64::INFINITY,
+            // Number of ticks, +1 to each because of the fencepost problem
+            x_ticks: 6,
+            y_left_ticks: 5,
+            y_right_ticks: 5,
         }
     }
 }
@@ -125,14 +127,19 @@ impl UVIndexCategory {
     }
 }
 
-impl DailyForecastGraph {
-    fn create_axis_with_labels(
-        &self,
-        current_hour: f64,
-    ) -> (String, String, String, String, String, String, String) {
-        let width = self.width as f64;
-        let height = self.height as f64;
+/// Collect all axis paths and labels into one struct
+pub struct AxisPaths {
+    pub x_axis_path: String,
+    pub x_axis_guideline_path: String,
+    pub y_left_axis_path: String,
+    pub y_right_axis_path: String,
+    pub x_labels: String,
+    pub y_left_labels: String,
+    pub y_right_labels: String,
+}
 
+impl DailyForecastGraph {
+    fn create_axis_with_labels(&self, current_hour: f64) -> AxisPaths {
         let range_x = self.ending_x - self.starting_x + 1.0; // +1 because last hour is 23
         let range_y_left = self.max_y - self.min_y;
         let range_y_right = 100.0; // Rain data is in percentage
@@ -140,10 +147,10 @@ impl DailyForecastGraph {
         // Mapping functions from data space to SVG space
         // x data domain maps to [0, width]
         // y data domain maps to [height, 0] (SVG y goes down)
-        let map_x = |x: f64| (x - self.starting_x) * (width / range_x);
-        let map_y_left = |y: f64| height - ((y - self.min_y) * (height / range_y_left));
+        let map_x = |x: f64| (x - self.starting_x) * (self.width / range_x);
+        let map_y_left = |y: f64| self.height - ((y - self.min_y) * (self.height / range_y_left));
         // For the right axis, we assume 0 to 100% maps directly onto the height.
-        let map_y_right = |y: f64| height - (y * (height / range_y_right));
+        let map_y_right = |y: f64| self.height - (y * (self.height / range_y_right));
 
         // Determine where to place the x-axis (shared between both left and right data)
         // If 0 is within the y range, place x-axis at y=0.
@@ -170,129 +177,68 @@ impl DailyForecastGraph {
         };
 
         // Right axis will be placed at the right side of the chart
-        let y_right_axis_x = width;
+        let y_right_axis_x = self.width;
 
         // Axis paths
-        let mut x_axis_path = format!("M 0 {} L {} {}", x_axis_y, width, x_axis_y);
-        let mut x_axis_guideline_path = format!("M 0 {} L {} {}", x_axis_y, width, x_axis_y);
-        let mut y_left_axis_path = format!("M {} 0 L {} {}", y_axis_x, y_axis_x, height);
-        let mut y_right_axis_path =
-            format!("M {} 0 L {} {}", y_right_axis_x, y_right_axis_x, height);
+        let mut x_axis_path = format!("M 0 {} L {} {}", x_axis_y, self.width, x_axis_y);
+        let mut x_axis_guideline_path = format!("M 0 {} L {} {}", x_axis_y, self.width, x_axis_y);
+        let mut y_left_axis_path = format!("M {} 0 L {} {}", y_axis_x, y_axis_x, self.height);
+        let mut y_right_axis_path = format!(
+            "M {} 0 L {} {}",
+            y_right_axis_x, y_right_axis_x, self.height
+        );
 
-        // Number of ticks, +1 because of the fencepost problem
-        let x_ticks = 6;
-        let y_left_ticks = 5;
-        let y_right_ticks = 5;
-
-        let x_step = range_x / x_ticks as f64;
-        let y_left_step = range_y_left / y_left_ticks as f64;
-        let y_right_step = range_y_right / y_right_ticks as f64;
+        let x_step = range_x / self.x_ticks as f64;
+        let y_left_step = range_y_left / self.y_left_ticks as f64;
+        let y_right_step = range_y_right / self.y_right_ticks as f64;
 
         println!(
             "X step: {}, Y step (left): {}, Y step (right): {}",
             x_step, y_left_step, y_right_step
         );
 
-        // Labels storage
-        let mut x_labels = String::new();
-        let mut y_left_labels = String::new();
-        let mut y_right_labels = String::new();
-
-        let mut x_val: f64 = 0.0;
         // X-axis ticks and labels
-        for i in 0..=x_ticks {
-            if x_val > self.ending_x {
-                break;
-            }
-            x_val = self.starting_x + i as f64 * x_step;
-
-            let xs = map_x(x_val);
-            // Tick mark
-            x_axis_path.push_str(&format!(
-                " M {} {} L {} {}",
-                xs,
-                x_axis_y - 5.0,
-                xs,
-                x_axis_y + 5.0
-            ));
-
-            let x_guideline_len = if CONFIG.render_options.x_axis_always_at_min {
-                height
-            } else {
-                x_axis_y
-            };
-            x_axis_guideline_path.push_str(&format!(
-                r#" M {} {} v -{} m 0 2 v -2"#,
-                xs, x_axis_y, x_guideline_len
-            ));
-
-            // Label: placed below the x-axis line
-            let label_y = x_axis_y + 20.0;
-            let hour = (current_hour + x_val) % 24.0;
-            let period = if hour < 12.0 { "am" } else { "pm" };
-            let display_hour = if hour == 0.0 && period == "am" {
-                12.0
-            } else if hour > 12.0 {
-                hour - 12.0
-            } else {
-                hour
-            };
-            let label_str = format!("{:.0}{}", display_hour, period);
-            // slight offset for the first label if the min_y is negative
-            let x_offset = if !CONFIG.render_options.x_axis_always_at_min && self.min_y < 0.0 {
-                if i == 0 {
-                    22.0
-                } else if i == x_ticks {
-                    -22.0
-                } else {
-                    0.0
-                }
-            } else {
-                0.0
-            };
-
-            let label_x = xs + x_offset;
-            x_labels.push_str(&format!(
-                r#"<text x="{x}" y="{y}" fill="{colour}" font-size="17" text-anchor="middle">{text}</text>"#,
-                x = label_x,
-                y = label_y,
-                colour = CONFIG.colours.text_colour,
-                text = label_str
-            ));
-        }
+        let x_labels = self.generate_x_axis_labels(
+            current_hour,
+            map_x,
+            x_axis_y,
+            &mut x_axis_path,
+            &mut x_axis_guideline_path,
+            x_step,
+        );
 
         // Y-axis ticks and labels (left)
-        for j in 0..=y_left_ticks {
-            let y_val = self.min_y + j as f64 * y_left_step;
-            if y_val > self.max_y {
-                break;
-            }
-            let ys = map_y_left(y_val);
-            // Tick mark
-            y_left_axis_path.push_str(&format!(
-                " M {} {} L {} {}",
-                y_axis_x - 5.0,
-                ys,
-                y_axis_x + 5.0,
-                ys
-            ));
-
-            // Label: placed to the left of the y-axis
-            let label_x = y_axis_x - 10.0;
-            let label_str = format!("{:.1}", y_val);
-            let font_size = if j == 0 || j == y_left_ticks { 20 } else { 17 };
-            y_left_labels.push_str(&format!(
-                r#"<text x="{x}" y="{y}"  fill="{colour}" font-size="{font_size}" text-anchor="end" dy="4">{text}</text>"#,
-                x = label_x,
-                y = ys,
-                colour = CONFIG.colours.text_colour,
-                font_size = font_size,
-                text = label_str
-            ));
-        }
+        let y_left_labels =
+            self.generate_y_axis_ticks(map_y_left, y_axis_x, &mut y_left_axis_path, y_left_step);
 
         // Y-axis ticks and labels (right - 0 to 100%)
-        for k in 0..=y_right_ticks {
+        let y_right_labels = self.generate_right_axis_ticks(
+            map_y_right,
+            y_right_axis_x,
+            &mut y_right_axis_path,
+            y_right_step,
+        );
+
+        AxisPaths {
+            x_axis_path,
+            x_axis_guideline_path,
+            y_left_axis_path,
+            x_labels,
+            y_left_labels,
+            y_right_axis_path,
+            y_right_labels,
+        }
+    }
+
+    fn generate_right_axis_ticks(
+        &self,
+        map_y_right: impl Fn(f64) -> f64,
+        y_right_axis_x: f64,
+        y_right_axis_path: &mut String,
+        y_right_step: f64,
+    ) -> String {
+        let mut y_right_labels = String::new();
+        for k in 0..=self.y_right_ticks {
             let y_val = k as f64 * y_right_step; // percentage step
             if y_val > 100.0 {
                 break;
@@ -318,17 +264,124 @@ impl DailyForecastGraph {
                 text = label_str
             ));
         }
+        y_right_labels
+    }
 
-        // Return all axis paths and labels, now including the right axis
-        (
-            x_axis_path,
-            y_left_axis_path,
-            x_labels,
-            y_left_labels,
-            y_right_axis_path,
-            y_right_labels,
-            x_axis_guideline_path,
-        )
+    fn generate_y_axis_ticks(
+        &self,
+        map_y_left: impl Fn(f64) -> f64,
+        y_axis_x: f64,
+        y_left_axis_path: &mut String,
+        y_left_step: f64,
+    ) -> String {
+        let mut y_left_labels = String::new();
+        for j in 0..=self.y_left_ticks {
+            let y_val = self.min_y + j as f64 * y_left_step;
+            if y_val > self.max_y {
+                break;
+            }
+            let ys = map_y_left(y_val);
+            // Tick mark
+            y_left_axis_path.push_str(&format!(
+                " M {} {} L {} {}",
+                y_axis_x - 5.0,
+                ys,
+                y_axis_x + 5.0,
+                ys
+            ));
+
+            // Label: placed to the left of the y-axis
+            let label_x = y_axis_x - 10.0;
+            let label_str = format!("{:.1}", y_val);
+            let font_size = if j == 0 || j == self.y_left_ticks {
+                20
+            } else {
+                17
+            };
+            y_left_labels.push_str(&format!(
+                r#"<text x="{x}" y="{y}"  fill="{colour}" font-size="{font_size}" text-anchor="end" dy="4">{text}</text>"#,
+                x = label_x,
+                y = ys,
+                colour = CONFIG.colours.text_colour,
+                font_size = font_size,
+                text = label_str
+            ));
+        }
+        y_left_labels
+    }
+
+    fn generate_x_axis_labels(
+        &self,
+        current_hour: f64,
+        map_x: impl Fn(f64) -> f64,
+        x_axis_y: f64,
+        x_axis_path: &mut String,
+        x_axis_guideline_path: &mut String,
+        x_step: f64,
+    ) -> String {
+        let mut x_val: f64 = 0.0;
+        let mut x_labels = String::new();
+        for i in 0..=self.x_ticks {
+            if x_val > self.ending_x {
+                break;
+            }
+            x_val = self.starting_x + i as f64 * x_step;
+
+            let xs = map_x(x_val);
+            // Tick mark
+            x_axis_path.push_str(&format!(
+                " M {} {} L {} {}",
+                xs,
+                x_axis_y - 5.0,
+                xs,
+                x_axis_y + 5.0
+            ));
+
+            let x_guideline_len = if CONFIG.render_options.x_axis_always_at_min {
+                self.height
+            } else {
+                x_axis_y
+            };
+            x_axis_guideline_path.push_str(&format!(
+                r#" M {} {} v -{} m 0 2 v -2"#,
+                xs, x_axis_y, x_guideline_len
+            ));
+
+            // Label: placed below the x-axis line
+            let label_y = x_axis_y + 20.0;
+            let hour = (current_hour + x_val) % 24.0;
+            let period = if hour < 12.0 { "am" } else { "pm" };
+            let display_hour = if hour == 0.0 && period == "am" {
+                12.0
+            } else if hour > 12.0 {
+                hour - 12.0
+            } else {
+                hour
+            };
+            let label_str = format!("{:.0}{}", display_hour, period);
+            // slight offset for the first and last labels if the min_y is negative
+            let x_offset = if !CONFIG.render_options.x_axis_always_at_min && self.min_y < 0.0 {
+                if i == 0 {
+                    22.0
+                } else if i == self.x_ticks {
+                    -22.0
+                } else {
+                    0.0
+                }
+            } else {
+                0.0
+            };
+
+            let label_x = xs + x_offset;
+            x_labels.push_str(&format!(
+                r#"<text x="{x}" y="{y}" fill="{colour}" font-size="17" text-anchor="middle">{text}</text>"#,
+                x = label_x,
+                y = label_y,
+                colour = CONFIG.colours.text_colour,
+                text = label_str
+            ));
+        }
+        x_labels
     }
 
     fn initialize_x_y_bounds(&mut self) {
@@ -381,18 +434,18 @@ impl DailyForecastGraph {
         for data in &self.data {
             // println!("Data: {:?}", data);
             // Calculate scaling factors for x and y to fit the graph within the given width and height
-            let xfactor = self.width as f64 / self.ending_x;
+            let xfactor = self.width / self.ending_x;
             let yfactor = match data.graph_type {
-                DataType::Rain => self.height as f64 / 100.0, // Rain data is in percentage
+                DataType::Rain => self.height / 100.0, // Rain data is in percentage
                 DataType::Temp | DataType::TempFeelLike => {
                     if self.max_y >= 0.0 && self.min_y < 0.0 {
-                        self.height as f64 / (self.max_y + self.min_y.abs())
+                        self.height / (self.max_y + self.min_y.abs())
                     } else if self.min_y < 0.0 {
                         // it's possible for both to be negative
-                        self.height as f64 / (self.max_y.abs() - self.min_y.abs())
+                        self.height / (self.max_y.abs() - self.min_y.abs())
                     } else {
                         // when both are positive
-                        self.height as f64 / (self.max_y - self.min_y)
+                        self.height / (self.max_y - self.min_y)
                     }
                 }
             };
@@ -457,8 +510,7 @@ impl DailyForecastGraph {
                     data_path.push(GraphDataPath::TempFeelLike(path));
                 }
                 DataType::Rain => {
-                    let bounding_area_path =
-                        format!("{} L {} 0 L 0 0Z", path, DailyForecastGraph::WIDTH);
+                    let bounding_area_path = format!("{} L {} 0 L 0 0Z", path, self.width);
                     data_path.push(GraphDataPath::Rain(bounding_area_path));
                 }
             }
@@ -924,13 +976,13 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
 
     let axis_data_path = graph.create_axis_with_labels(first_date.hour() as f64);
 
-    context.x_axis_path = axis_data_path.0;
-    context.y_left_axis_path = axis_data_path.1;
-    context.x_labels = axis_data_path.2;
-    context.y_left_labels = axis_data_path.3;
-    context.y_right_axis_path = axis_data_path.4;
-    context.y_right_labels = axis_data_path.5;
-    context.x_axis_guideline_path = axis_data_path.6;
+    context.x_axis_path = axis_data_path.x_axis_path;
+    context.y_left_axis_path = axis_data_path.y_left_axis_path;
+    context.x_labels = axis_data_path.x_labels;
+    context.y_left_labels = axis_data_path.y_left_labels;
+    context.y_right_axis_path = axis_data_path.y_right_axis_path;
+    context.y_right_labels = axis_data_path.y_right_labels;
+    context.x_axis_guideline_path = axis_data_path.x_axis_guideline_path;
 
     context.uv_gradient = graph.draw_uv_gradient_over_time(uv_data);
     Ok(())
@@ -963,16 +1015,6 @@ fn get_moon_phase_icon_path() -> String {
     };
 
     format!("{}{}", CONFIG.misc.svg_icons_directory, icon_name)
-}
-
-fn load_dashboard_config() -> Result<DashboardConfig, Error> {
-    let root = std::env::current_dir()?;
-    let config_path = root.join(CONFIG_NAME);
-    let settings = Config::builder()
-        .add_source(File::with_name(config_path.to_str().unwrap()))
-        .build()?;
-
-    settings.try_deserialize().map_err(Error::msg)
 }
 
 pub fn update_forecast_context(context: &mut Context) -> Result<(), Error> {
