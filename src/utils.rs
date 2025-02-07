@@ -41,11 +41,11 @@ pub fn has_write_permission(path: PathBuf) -> Result<bool> {
 ///
 /// # Returns
 ///
-/// * `Result<(), String>` - Ok(()) if successful, or an error message.
-pub fn convert_svg_to_png(input_path: &str, output_path: &str) -> Result<(), String> {
+/// * `Result<(), Error>` - Ok(()) if successful, or an error message.
+pub fn convert_svg_to_png(input_path: &str, output_path: &str) -> Result<(), Error> {
     // Read the SVG file
-    let svg_data =
-        fs::read_to_string(input_path).map_err(|e| format!("Failed to read SVG file: {}", e))?;
+    let svg_data = fs::read_to_string(input_path)
+        .map_err(|e| Error::msg(format!("Failed to read SVG file: {}", e)))?;
 
     let mut font_db = fontdb::Database::new();
     load_fonts(&mut font_db);
@@ -57,12 +57,12 @@ pub fn convert_svg_to_png(input_path: &str, output_path: &str) -> Result<(), Str
     };
 
     let tree = usvg::Tree::from_str(&svg_data, &opts)
-        .map_err(|e| format!("Failed to parse SVG: {}", e))?;
+        .map_err(|e| Error::msg(format!("Failed to parse SVG: {}", e)))?;
 
     // Create a canvas
     let pixmap_size = tree.size().to_int_size();
     let mut pixmap = tiny_skia::Pixmap::new(pixmap_size.width(), pixmap_size.height())
-        .ok_or_else(|| "Failed to create pixmap".to_string())?;
+        .ok_or_else(|| Error::msg("Failed to create pixmap"))?;
 
     // Render SVG onto the canvas
     resvg::render(&tree, tiny_skia::Transform::default(), &mut pixmap.as_mut());
@@ -70,7 +70,7 @@ pub fn convert_svg_to_png(input_path: &str, output_path: &str) -> Result<(), Str
     // Save the PNG file
     pixmap
         .save_png(output_path)
-        .map_err(|e| format!("Failed to save PNG: {}", e))?;
+        .map_err(|e| Error::msg(format!("Failed to save PNG: {}", e)))?;
 
     Ok(())
 }

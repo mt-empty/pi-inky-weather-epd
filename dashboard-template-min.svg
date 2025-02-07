@@ -43,6 +43,13 @@
             <tspan baseline-shift="15" dx="-18" font-size="35">°{temp_unit}</tspan>
         </text>
 
+        <!-- Warning Message -->
+        <svg x="600" y="0" width="200" height="100"  text-anchor="middle"  visibility="{{warning_visibility}}">
+            <image x="75" y="0" width="50" height="50" href="{{warning_icon}}" />
+            <text x="100" y="50" width="200" font-size="12">
+                {{warning_message}}
+            </text>
+        </svg>
 
         <text text-anchor="middle" font-size="20" fill="black">
             <tspan x="200" y="170" dy="-0.5em" dominant-baseline="middle">Feels</tspan>

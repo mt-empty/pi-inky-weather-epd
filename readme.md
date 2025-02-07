@@ -17,10 +17,10 @@ This project involves building a simple, static weather dashboard using Rust. Th
 - [x] modify existing icons
   - [x] wind speed with km/h
   - [x] evey other one to only use colors from the e-ink supported palette
-- [ ] break the program into smaller parts
-- [ ] propper error logging
-  - [ ] add a warning icon when fetching data fails
-  - [ ] when `NA` is returned, including for icons
+- [x] break the program into smaller parts
+- [x] propper error logging
+  - [x] add a warning icon when fetching data fails
+  - [x] when `NA` is returned, including for icons
 - [ ] Find out all the supported colors for the e-ink display
   - [ ] Deep Pink 
   - [ ] purple white color?
@@ -29,7 +29,7 @@ This project involves building a simple, static weather dashboard using Rust. Th
 https://github.com/bremor/bureau_of_meteorology/blob/main/api%20doc/API.md
 
 
-http://geohash.co/
+https://geohash.softeng.co
 
 https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)_Manual#Overview
 
@@ -46,3 +46,10 @@ https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)_Manual#Overview
         # [255, 248, 220, 255], // Cornsilk
         # [255, 250, 205, 255], // Lemon Chiffon
         # [255, 20, 147, 255],  // DeepPink
+
+
+https://shop.pimoroni.com/products/inky-impression-7-3?variant=40512683376723
+
+Waveshare display https://www.waveshare.com/7.3inch-e-paper-hat-f.htm
+
+documentation https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)

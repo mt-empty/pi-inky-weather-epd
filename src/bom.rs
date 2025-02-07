@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use serde::Deserialize;
 use utils::*;
 
-const WEATHER_PROVIDER: &str = "https://api.weather.bom.gov.au/v1/locations/";
+const WEATHER_PROVIDER: &str = "https://api.weather.bom.gov.au/v1/locations";
 lazy_static! {
     pub static ref DAILY_FORECAST_ENDPOINT: String = format!(
         "{}/{}/forecasts/daily",

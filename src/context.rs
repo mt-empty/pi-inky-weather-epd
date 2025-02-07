@@ -73,6 +73,9 @@ pub struct Context {
     pub sunrise_time: String,
     pub sunset_icon: String,
     pub sunrise_icon: String,
+    pub warning_message: String,
+    pub warning_icon: String,
+    pub warning_visibility: String,
 }
 
 impl Default for Context {
@@ -150,6 +153,9 @@ impl Default for Context {
             sunset_time: "NA".to_string(),
             sunset_icon: format!("{}sunset.svg", CONFIG.misc.svg_icons_directory),
             sunrise_icon: format!("{}sunrise.svg", CONFIG.misc.svg_icons_directory),
+            warning_message: "NA".to_string(),
+            warning_icon: format!("{}{}", CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON),
+            warning_visibility: "hidden".to_string(),
         }
     }
 }

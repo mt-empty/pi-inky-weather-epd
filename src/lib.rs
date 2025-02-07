@@ -3,6 +3,7 @@ mod bom;
 mod chart;
 mod config;
 mod context;
+mod errors;
 mod utils;
 
 // #[cfg(debug_assertions)]
@@ -17,6 +18,7 @@ use chart::{catmull_bezier, Point};
 use chrono::{Datelike, Timelike};
 use config::DashboardConfig;
 use context::Context;
+use errors::*;
 use lazy_static::lazy_static;
 use serde::Deserialize;
 use std::io::Write;
@@ -556,6 +558,7 @@ trait Icon {
             self.get_icon_name()
         )
     }
+    // TODO: this should not be here
     fn rain_amount_to_name(amount: u32) -> String {
         match amount {
             0..=2 => "".to_string(),
@@ -564,6 +567,7 @@ trait Icon {
         }
     }
 
+    // TODO: this should not be here
     fn rain_chance_to_name(chance: u32) -> String {
         match chance {
             0..=25 => RainChanceName::Clear.to_string(),
@@ -660,22 +664,36 @@ fn fetch_data<T: for<'de> Deserialize<'de>>(
 
     if CONFIG.debugging.use_online_data {
         let client = reqwest::blocking::Client::new();
-        let response = client.get(endpoint).send()?;
-        let body = response.text().map_err(Error::msg)?;
+        let response = client.get(endpoint).send();
+        let body = response
+            .map_err(|e| {
+                eprintln!("API request failed: {}", e);
+                DashboardError::NoInternet {
+                    details: e.to_string(),
+                }
+            })?
+            .text()
+            .map_err(Error::msg)?;
 
         if let Ok(api_error) = serde_json::from_str::<BomError>(&body) {
+            let first_error_detail = api_error.errors.iter().collect::<Vec<_>>()[0]
+                .detail
+                .clone();
             for error in api_error.errors {
                 eprintln!("API Error: {}", error.detail);
             }
-            return Err(Error::msg(
-                "API request failed, double check your api configs.",
-            ));
+            eprintln!("API request failed, double check your api configs.");
+            return Err(DashboardError::ApiError(first_error_detail).into());
         }
 
         fs::write(file_path, &body)?;
         serde_json::from_str(&body).map_err(Error::msg)
     } else {
-        let body = fs::read_to_string(file_path)?;
+        let body = fs::read_to_string(file_path).map_err(|_| {
+            Error::msg(
+                "Weather data JSON file not found. This might be the first time running the application. Please ensure 'use_online_data' is set to true in the configuration.",
+            )
+        })?;
         serde_json::from_str(&body).map_err(Error::msg)
     }
 }
@@ -697,7 +715,7 @@ fn update_current_hour_data(current_hour: &HourlyForecast, context: &mut Context
     if CONFIG.render_options.use_moon_phase_instead_of_clear_night
         && curret_icon.ends_with(&format!("{}{}.svg", RainChanceName::Clear, DayNight::Night))
     {
-        println!("Using moon phase icon instead of clear night");
+        println!("'use_moon_phase_instead_of_clear_night' is set to true, using moon phase icon instead of clear night");
         curret_icon = get_moon_phase_icon_path().to_string();
     }
     context.current_temp = current_hour.temp.to_string();
@@ -807,7 +825,7 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
     }
 
     if i < 8 {
-        println!("Less than 7 days of forecast data");
+        println!("Warning: Less than 7 days of daily forecast data");
     }
 
     Ok(())
@@ -1021,14 +1039,14 @@ pub fn update_forecast_context(context: &mut Context) -> Result<(), Error> {
     match update_daily_forecast_data(context) {
         Ok(context) => context,
         Err(e) => {
-            println!("Failed to update daily forecast: {}", e);
+            eprintln!("Failed to update daily forecast");
             return Err(e);
         }
     };
     match update_hourly_forecast_data(context) {
         Ok(context) => context,
         Err(e) => {
-            println!("Failed to update hourly forecast: {}", e);
+            eprintln!("Failed to update hourly forecast");
             return Err(e);
         }
     };
@@ -1064,6 +1082,7 @@ fn render_dashboard_template(context: &mut Context, dashboard_svg: String) -> Re
 
 pub fn generate_weather_dashboard() -> Result<(), Error> {
     // print current directory
+
     let current_dir = std::env::current_dir()?;
     println!("Current directory: {:?}", current_dir);
 
@@ -1079,14 +1098,29 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
         }
     };
     let mut context = Context::default();
-    update_forecast_context(&mut context)?;
-    render_dashboard_template(&mut context, template_svg)?;
+    update_forecast_context(&mut context).inspect_err(|e| {
+        if let Some(dashboard_error) = e.downcast_ref::<DashboardError>() {
+            handle_errors(&mut context, dashboard_error.clone());
+        }
+    })?;
+
+    render_dashboard_template(&mut context, template_svg).inspect_err(|e| {
+        handle_errors(
+            &mut context,
+            DashboardError::ApplicationCrashed(e.to_string()),
+        )
+    })?;
 
     convert_svg_to_png(
         &CONFIG.misc.modified_template_name,
         &CONFIG.misc.modified_template_name.replace(".svg", ".png"),
     )
-    .map_err(Error::msg)?;
+    .inspect_err(|e| {
+        handle_errors(
+            &mut context,
+            DashboardError::ApplicationCrashed(e.to_string()),
+        );
+    })?;
 
     println!(
         "PNG has been generated successfully at {}",
