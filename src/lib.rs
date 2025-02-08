@@ -2,8 +2,10 @@
 mod bom;
 mod chart;
 mod config;
-mod context;
+pub mod context;
 mod errors;
+mod pimironi_image_py;
+mod update;
 mod utils;
 
 // #[cfg(debug_assertions)]
@@ -20,11 +22,13 @@ use config::DashboardConfig;
 use context::Context;
 use errors::*;
 use lazy_static::lazy_static;
+use pimironi_image_py::invoke_pimironi_image_script;
 use serde::Deserialize;
 use std::io::Write;
 use std::{fs, path::PathBuf};
 use strum_macros::Display;
 use tinytemplate::{format_unescaped, TinyTemplate};
+use update::update_app;
 pub use utils::*;
 
 pub const NOT_AVAILABLE_ICON: &str = "not-available.svg";
@@ -549,8 +553,48 @@ enum DayNight {
     Night,
 }
 
+/// A trait representing an icon with methods to get its name and path.
+///
+/// # Methods
+///
+/// - `get_icon_name(&self) -> String`
+///
+///   Returns the name of the icon as a `String`.
+///
+/// - `get_icon_path(&self) -> String`
+///
+///   Returns the full path to the icon as a `String`. The path is constructed
+///   by concatenating the `svg_icons_directory` from the `CONFIG` with the icon name.
+///
+/// - `rain_amount_to_name(amount: u32) -> String`
+///
+///   Converts a given rain amount (in millimeters) to a corresponding name.
+///   This method should not be part of this trait and needs to be refactored.
+///
+///   - `amount: u32` - The amount of rain in millimeters.
+///   - Returns a `String` representing the rain amount name:
+///     - `""` for 0 to 2 mm
+///     - `"Drizzle"` for 3 to 20 mm
+///     - `"Rain"` for 21 mm and above
+///
+/// - `rain_chance_to_name(chance: u32) -> String`
+///
+///   Converts a given rain chance (in percentage) to a corresponding name.
+///   This method should not be part of this trait and needs to be refactored.
+///
+///   - `chance: u32` - The chance of rain in percentage.
+///   - Returns a `String` representing the rain chance name:
+///     - `"Clear"` for 0 to 25%
+///     - `"PartlyCloudy"` for 26 to 50%
+///     - `"Overcast"` for 51 to 75%
+///     - `"Extreme"` for 76% and above
 trait Icon {
+    /// Returns the name of the icon as a `String`.
     fn get_icon_name(&self) -> String;
+
+    /// Returns the path of the icon as a `String`.
+    /// The path is constructed using the `svg_icons_directory` from the configuration
+    /// and the icon name obtained from `get_icon_name`.
     fn get_icon_path(&self) -> String {
         format!(
             "{}{}",
@@ -558,8 +602,25 @@ trait Icon {
             self.get_icon_name()
         )
     }
-    // TODO: this should not be here
+
+    /// Converts a given rain amount (in u32) to a corresponding name as a `String`.
+    ///
+    /// # Arguments
+    ///
+    /// * `amount` - The amount of rain.
+    ///
+    /// # Returns
+    ///
+    /// * A `String` representing the name corresponding to the rain amount.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let name = Icon::rain_amount_to_name(5);
+    /// assert_eq!(name, "Drizzle");
+    /// ```
     fn rain_amount_to_name(amount: u32) -> String {
+        // TODO: this should be moved to a more appropriate place
         match amount {
             0..=2 => "".to_string(),
             3..=20 => RainAmountName::Drizzle.to_string(),
@@ -567,8 +628,24 @@ trait Icon {
         }
     }
 
-    // TODO: this should not be here
+    /// Converts a given rain chance (in u32) to a corresponding name as a `String`.
+    ///
+    /// # Arguments
+    ///
+    /// * `chance` - The chance of rain.
+    ///
+    /// # Returns
+    ///
+    /// * A `String` representing the name corresponding to the rain chance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let name = Icon::rain_chance_to_name(30);
+    /// assert_eq!(name, "PartlyCloudy");
+    /// ```
     fn rain_chance_to_name(chance: u32) -> String {
+        // TODO: this should be moved to a more appropriate place
         match chance {
             0..=25 => RainChanceName::Clear.to_string(),
             26..=50 => RainChanceName::PartlyCloudy.to_string(),
@@ -654,57 +731,85 @@ impl Icon for HourlyForecast {
     }
 }
 
+pub enum FetchOutcome<T> {
+    Fresh(T),
+    Stale { data: T, error: DashboardError },
+}
+
+fn load_cached<T: for<'de> Deserialize<'de>>(file_path: &PathBuf) -> Result<T, Error> {
+    let cached = fs::read_to_string(file_path).map_err(|_| {
+        Error::msg(
+            "Weather data JSON file not found. If this is your first time running the application. Please ensure 'use_online_data' is set to true in the configuration.",
+        )
+    })?;
+    let data = serde_json::from_str(&cached).map_err(Error::msg)?;
+    Ok(data)
+}
+
+fn fallback<T: for<'de> Deserialize<'de>>(
+    file_path: &PathBuf,
+    dashboard_error: DashboardError,
+) -> Result<FetchOutcome<T>, Error> {
+    let data = load_cached(file_path)?;
+    Ok(FetchOutcome::Stale {
+        data,
+        error: dashboard_error,
+    })
+}
+
 fn fetch_data<T: for<'de> Deserialize<'de>>(
     endpoint: &str,
     file_path: &PathBuf,
-) -> Result<T, Error> {
+) -> Result<FetchOutcome<T>, Error> {
     if !file_path.exists() {
         fs::create_dir_all(file_path.parent().unwrap())?;
     }
 
     if CONFIG.debugging.use_online_data {
         let client = reqwest::blocking::Client::new();
-        let response = client.get(endpoint).send();
-        let body = response
-            .map_err(|e| {
+        let response = match client.get(endpoint).send() {
+            Ok(res) => res,
+            Err(e) => {
                 eprintln!("API request failed: {}", e);
-                DashboardError::NoInternet {
-                    details: e.to_string(),
-                }
-            })?
-            .text()
-            .map_err(Error::msg)?;
+
+                return fallback(
+                    file_path,
+                    DashboardError::NoInternet {
+                        details: e.to_string(),
+                    },
+                );
+            }
+        };
+
+        let body = response.text().map_err(Error::msg)?;
 
         if let Ok(api_error) = serde_json::from_str::<BomError>(&body) {
-            let first_error_detail = api_error.errors.iter().collect::<Vec<_>>()[0]
-                .detail
-                .clone();
-            for error in api_error.errors {
-                eprintln!("API Error: {}", error.detail);
+            if let Some(first_error) = api_error.errors.first() {
+                eprintln!("Warning: API request failed, double check your api configs, trying to load cached data");
+                let first_error_detail = first_error.detail.clone();
+                for (i, error) in api_error.errors.iter().enumerate() {
+                    eprintln!("API Errors, {}: {}", i + 1, error.detail);
+                }
+
+                return fallback(file_path, DashboardError::ApiError(first_error_detail));
             }
-            eprintln!("API request failed, double check your api configs.");
-            return Err(DashboardError::ApiError(first_error_detail).into());
         }
 
         fs::write(file_path, &body)?;
-        serde_json::from_str(&body).map_err(Error::msg)
+        let data = serde_json::from_str(&body).map_err(Error::msg)?;
+        Ok(FetchOutcome::Fresh(data))
     } else {
-        let body = fs::read_to_string(file_path).map_err(|_| {
-            Error::msg(
-                "Weather data JSON file not found. This might be the first time running the application. Please ensure 'use_online_data' is set to true in the configuration.",
-            )
-        })?;
-        serde_json::from_str(&body).map_err(Error::msg)
+        Ok(FetchOutcome::Fresh(load_cached(file_path)?))
     }
 }
 
-fn fetch_daily_forecast_data() -> Result<DailyForcastResponse, Error> {
+fn fetch_daily_forecast_data() -> Result<FetchOutcome<DailyForcastResponse>, Error> {
     let file_path =
         std::path::Path::new(&CONFIG.misc.weather_data_store_path).join("daily_forecast.json");
     fetch_data(&DAILY_FORECAST_ENDPOINT, &file_path)
 }
 
-fn fetch_hourly_forecast_data() -> Result<HourlyForcastResponse, Error> {
+fn fetch_hourly_forecast_data() -> Result<FetchOutcome<HourlyForcastResponse>, Error> {
     let file_path =
         std::path::Path::new(&CONFIG.misc.weather_data_store_path).join("hourly_forecast.json");
     fetch_data(&HOURLY_FORECAST_ENDPOINT, &file_path)
@@ -735,7 +840,15 @@ fn update_current_hour_data(current_hour: &HourlyForecast, context: &mut Context
 
 // Extrusion Pattern: force everything through one function until it resembles spaghetti
 fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
-    let daily_forecast_data = fetch_daily_forecast_data()?.data;
+    let daily_forecast_data = match fetch_daily_forecast_data() {
+        Ok(FetchOutcome::Fresh(data)) => data.data,
+        Ok(FetchOutcome::Stale { data, error }) => {
+            eprintln!("Warning: Using stale data");
+            handle_errors(context, error);
+            data.data
+        }
+        Err(e) => return Err(e),
+    };
     let current_date = chrono::Local::now().date_naive();
     let mut i = 1;
 
@@ -832,7 +945,15 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
 }
 
 fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
-    let hourly_forecast = fetch_hourly_forecast_data()?;
+    let hourly_forecast_data = match fetch_hourly_forecast_data() {
+        Ok(FetchOutcome::Fresh(data)) => data.data,
+        Ok(FetchOutcome::Stale { data, error }) => {
+            eprintln!("Warning: Using stale data");
+            handle_errors(context, error);
+            data.data
+        }
+        Err(e) => return Err(e),
+    };
 
     let mut graph = DailyForecastGraph::default();
 
@@ -857,7 +978,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
     let current_uv = UV {
         category: None,
         end_time: None,
-        max_index: Some(hourly_forecast.data[0].uv as u32),
+        max_index: Some(hourly_forecast_data[0].uv as u32),
         start_time: None,
     };
 
@@ -872,8 +993,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
 
     println!("Current time: {:?}", current_date);
     // we only want to display the next 24 hours
-    let first_date = hourly_forecast
-        .data
+    let first_date = hourly_forecast_data
         .iter()
         .find_map(
             // find the first time
@@ -896,8 +1016,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
 
     let mut uv_data = [0; 24];
 
-    hourly_forecast
-        .data
+    hourly_forecast_data
         .iter()
         .filter(|forecast| forecast.time >= first_date && forecast.time < end_date)
         .for_each(|forecast| {
@@ -952,11 +1071,11 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
     context.temp_curve_data = temp_curve_data;
     context.feel_like_curve_data = feel_like_curve_data;
     context.rain_curve_data = rain_curve_data;
-    context.uv_index = hourly_forecast.data[0].uv.to_string();
+    context.uv_index = hourly_forecast_data[0].uv.to_string();
     context.uv_index_icon = current_uv.get_icon_path().to_string();
-    context.wind_speed = hourly_forecast.data[0].wind.speed_kilometre.to_string();
+    context.wind_speed = hourly_forecast_data[0].wind.speed_kilometre.to_string();
     context.max_wind_gust_today = find_max_item_between_dates(
-        &hourly_forecast.data,
+        &hourly_forecast_data,
         &day_start,
         &day_end,
         |item| item.wind.gust_speed_kilometre.unwrap_or(0.0),
@@ -965,7 +1084,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
     .to_string();
     // There is a discrepancy in max uv between hourly forecast and daily forecast
     context.uv_max_today = find_max_item_between_dates(
-        &hourly_forecast.data,
+        &hourly_forecast_data,
         &day_start,
         &day_end,
         |item| item.uv,
@@ -973,7 +1092,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
     )
     .to_string();
     context.max_relative_humidity_today = find_max_item_between_dates(
-        &hourly_forecast.data,
+        &hourly_forecast_data,
         &day_start,
         &day_end,
         |item| item.relative_humidity,
@@ -982,7 +1101,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
     .to_string();
 
     context.total_rain_today = (get_total_between_dates(
-        &hourly_forecast.data,
+        &hourly_forecast_data,
         &day_start,
         &day_end,
         |item| (item.rain.amount.min.unwrap_or(0.0) + item.rain.amount.max.unwrap_or(0.0)) / 2.0,
@@ -990,7 +1109,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
     ) as usize)
         .to_string();
 
-    context.wind_icon = hourly_forecast.data[0].wind.get_icon_path();
+    context.wind_icon = hourly_forecast_data[0].wind.get_icon_path();
 
     let axis_data_path = graph.create_axis_with_labels(first_date.hour() as f64);
 
@@ -1035,7 +1154,7 @@ fn get_moon_phase_icon_path() -> String {
     format!("{}{}", CONFIG.misc.svg_icons_directory, icon_name)
 }
 
-pub fn update_forecast_context(context: &mut Context) -> Result<(), Error> {
+fn update_forecast_context(context: &mut Context) -> Result<(), Error> {
     match update_daily_forecast_data(context) {
         Ok(context) => context,
         Err(e) => {
@@ -1081,50 +1200,42 @@ fn render_dashboard_template(context: &mut Context, dashboard_svg: String) -> Re
 }
 
 pub fn generate_weather_dashboard() -> Result<(), Error> {
-    // print current directory
-
     let current_dir = std::env::current_dir()?;
-    println!("Current directory: {:?}", current_dir);
-
-    //print current dir + template path
     let template_path = current_dir.join(&CONFIG.misc.template_path);
-    println!("Template path: {:?}", template_path);
+    let mut context = Context::default();
 
-    let template_svg = match fs::read_to_string(template_path) {
+    let template_svg = match fs::read_to_string(&template_path) {
         Ok(svg) => svg,
         Err(e) => {
+            println!("Current directory: {:?}", current_dir);
+            println!("Template path: {:?}", &template_path);
             println!("Failed to read template file: {}", e);
             return Err(e.into());
         }
     };
-    let mut context = Context::default();
-    update_forecast_context(&mut context).inspect_err(|e| {
-        if let Some(dashboard_error) = e.downcast_ref::<DashboardError>() {
-            handle_errors(&mut context, dashboard_error.clone());
-        }
-    })?;
+    update_forecast_context(&mut context)?;
 
-    render_dashboard_template(&mut context, template_svg).inspect_err(|e| {
-        handle_errors(
-            &mut context,
-            DashboardError::ApplicationCrashed(e.to_string()),
-        )
-    })?;
+    render_dashboard_template(&mut context, template_svg)?;
 
     convert_svg_to_png(
         &CONFIG.misc.modified_template_name,
         &CONFIG.misc.modified_template_name.replace(".svg", ".png"),
-    )
-    .inspect_err(|e| {
-        handle_errors(
-            &mut context,
-            DashboardError::ApplicationCrashed(e.to_string()),
-        );
-    })?;
+    )?;
 
     println!(
         "PNG has been generated successfully at {}",
         CONFIG.misc.modified_template_name.replace(".svg", ".png")
     );
+    Ok(())
+}
+
+pub fn run_weather_dashboard() -> Result<(), anyhow::Error> {
+    generate_weather_dashboard()?;
+    if CONFIG.debugging.invoke_python_script {
+        invoke_pimironi_image_script()?;
+    }
+    if CONFIG.release.auto_update {
+        update_app()?;
+    };
     Ok(())
 }

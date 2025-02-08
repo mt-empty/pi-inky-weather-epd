@@ -58,4 +58,5 @@ pub struct RenderOptions {
 pub struct Debugging {
     pub use_online_data: bool,
     pub enable_png_output: bool,
+    pub invoke_python_script: bool,
 }

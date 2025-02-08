@@ -8,14 +8,12 @@
       y2="416.3"
       gradientUnits="userSpaceOnUse"
     >
-      <stop offset="0" stop-color="#51cf66" />
-      <stop offset=".5" stop-color="#51cf66" />
-      <stop offset="1" stop-color="#37b24d" />
+      <stop offset="0" stop-color="green" />
     </linearGradient>
   </defs>
   <path
     fill="url(#a)"
-    stroke="#40c057"
+    stroke="green"
     stroke-linecap="round"
     stroke-miterlimit="10"
     stroke-width="4"

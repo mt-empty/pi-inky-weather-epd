@@ -18,7 +18,7 @@ update_interval_mins = 60
 # canberra = "r3dp32"
 # tasmania-cold = "r283sf"
 # new-south-wales-hot = "qgph8w"
-location = "r7hgd6" # uses GeoHash, must be 6 characters
+location = "r283sf" # uses GeoHash, must be 6 characters
 
 # supproted colors = [black, white, green, blue, red, yellow, orange]
 [colours]
@@ -50,3 +50,4 @@ python_path = "/home/dietpi/env/bin/python3"
 [debugging]
 use_online_data = true
 enable_png_output = false
+invoke_python_script = false

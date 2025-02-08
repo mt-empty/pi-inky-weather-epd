@@ -2,9 +2,10 @@ use std::io::{Cursor, ErrorKind};
 use std::path::PathBuf;
 use std::{fs, path::Path};
 
+use crate::utils::has_write_permission;
+use crate::CONFIG;
 use anyhow::{Context, Error, Result};
 use chrono::{DateTime, Duration, Utc};
-use pi_inky_weather_epd::{has_write_permission, CONFIG};
 use semver::Version;
 use serde::Deserialize;
 use zip::ZipArchive;

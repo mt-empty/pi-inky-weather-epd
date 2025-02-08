@@ -1,6 +1,6 @@
 use std::process::Command;
 
-use pi_inky_weather_epd::CONFIG;
+use crate::CONFIG;
 
 /// Invokes the Pimironi image generation script using the Python interpreter specified in the configuration.
 ///
