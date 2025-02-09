@@ -343,18 +343,14 @@ impl DailyForecastGraph {
                 x_axis_y + 5.0
             ));
 
-            let x_guideline_len = if CONFIG.render_options.x_axis_always_at_min {
-                self.height
-            } else {
-                x_axis_y
-            };
+            let x_guideline_len = self.height;
             x_axis_guideline_path.push_str(&format!(
                 r#" M {} {} v -{} m 0 2 v -2"#,
-                xs, x_axis_y, x_guideline_len
+                xs, x_guideline_len, x_guideline_len
             ));
 
             // Label: placed below the x-axis line
-            let label_y = x_axis_y + 20.0;
+            let label_y = self.height + 20.0;
             let hour = (current_hour + x_val) % 24.0;
             let period = if hour < 12.0 { "am" } else { "pm" };
             let display_hour = if hour == 0.0 && period == "am" {
@@ -365,20 +361,8 @@ impl DailyForecastGraph {
                 hour
             };
             let label_str = format!("{:.0}{}", display_hour, period);
-            // slight offset for the first and last labels if the min_y is negative
-            let x_offset = if !CONFIG.render_options.x_axis_always_at_min && self.min_y < 0.0 {
-                if i == 0 {
-                    22.0
-                } else if i == self.x_ticks {
-                    -22.0
-                } else {
-                    0.0
-                }
-            } else {
-                0.0
-            };
 
-            let label_x = xs + x_offset;
+            let label_x = xs;
             x_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}" fill="{colour}" font-size="17" text-anchor="middle">{text}</text>"#,
                 x = label_x,

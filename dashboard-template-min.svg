@@ -38,10 +38,26 @@
     <svg x="0" y="0">
         <text x="250" y="50" font-size="35" fill="{text_colour}">{current_day_name} </text>
         <image x="0" y="0" width="200" height="180" href="{current_icon}" />
-        <text x="325" y="110" dominant-baseline="middle" font-size="70" fill="{temp_colour}">
-            <tspan text-anchor="end">{current_temp}</tspan>
-            <tspan baseline-shift="15" dx="-18" font-size="35">°{temp_unit}</tspan>
+        <text x="260" y="110" dominant-baseline="middle" font-size="70" fill="{temp_colour}">
+            <tspan text-anchor="middle">
+            {current_temp}
+            </tspan>
+            <tspan baseline-shift="15" dx="-20" font-size="35">°{temp_unit}</tspan>
         </text>
+
+        <text  text-anchor="middle" font-size="18" fill="black">
+            <tspan x="250" y="160" dominant-baseline="middle">
+                <tspan dy="-0.5em" >Feels</tspan>
+                <tspan dy="1.0em" dx="-2.6em">Like</tspan>
+            </tspan>
+            <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle"
+                font-size="55" fill="{feels_like_colour}"  dx="10" dy="-0.1em">
+                {current_feels_like}
+                <!-- Tspan doesn't work well with the degree symbol ° for some fonts!-->
+                <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan> 
+            </tspan>
+        </text>
+
 
         <!-- Warning Message -->
         <svg x="600" y="0" width="200" height="100"  text-anchor="middle"  visibility="{warning_visibility}">
@@ -50,18 +66,6 @@
                 {warning_message}
             </text>
         </svg>
-
-        <text text-anchor="middle" font-size="20" fill="black">
-            <tspan x="200" y="170" dy="-0.5em" dominant-baseline="middle">Feels</tspan>
-            <tspan x="200" y="170" dy="0.4em" dx="-0.26em" dominant-baseline="middle">Like</tspan>
-            <tspan x="225" y="170" text-anchor="start" font-family="Roboto-Regular-Dashed" dominant-baseline="middle"
-                font-size="55" fill="{feels_like_colour}">{current_feels_like}
-                <!-- Tspan doesn't work well with the degree symbol ° for some fonts!-->
-                <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan> 
-            </tspan>
-        </text>
-
-
 
     </svg>
 
