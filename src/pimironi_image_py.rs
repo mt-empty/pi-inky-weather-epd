@@ -24,6 +24,7 @@ pub fn invoke_pimironi_image_script() -> Result<(), anyhow::Error> {
     let output = Command::new(CONFIG.misc.python_path.clone())
         .arg(CONFIG.misc.python_script_path.clone())
         .arg(CONFIG.misc.generated_png_name.clone())
+        .arg(CONFIG.render_options.saturation.to_string())
         .output()
         .expect("Failed to execute Pimironi script");
 

@@ -56,7 +56,7 @@ pub struct RenderOptions {
 
 #[derive(Debug, Deserialize)]
 pub struct Debugging {
-    pub use_online_data: bool,
-    pub enable_png_output: bool,
-    pub invoke_python_script: bool,
+    pub use_cached_data: bool,
+    pub disable_png_output: bool,
+    pub disable_drawing_on_epd: bool,
 }

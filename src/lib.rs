@@ -198,10 +198,10 @@ impl DailyForecastGraph {
         let y_left_step = range_y_left / self.y_left_ticks as f64;
         let y_right_step = range_y_right / self.y_right_ticks as f64;
 
-        println!(
-            "X step: {}, Y step (left): {}, Y step (right): {}",
-            x_step, y_left_step, y_right_step
-        );
+        // println!(
+        //     "X step: {}, Y step (left): {}, Y step (right): {}",
+        //     x_step, y_left_step, y_right_step
+        // );
 
         // X-axis ticks and labels
         let x_labels = self.generate_x_axis_labels(
@@ -393,15 +393,15 @@ impl DailyForecastGraph {
             self.ending_x = ending_x_data;
         }
 
-        println!(
-            "starting x: {}, ending x: {}",
-            self.starting_x, self.ending_x
-        );
+        // println!(
+        //     "starting x: {}, ending x: {}",
+        //     self.starting_x, self.ending_x
+        // );
         println!("Global Min y: {}, Max y: {}", self.min_y, self.max_y);
     }
 
     fn draw_uv_gradient_over_time(&self, uv_data: [usize; 24]) -> String {
-        println!("UV data: {:?}", uv_data);
+        // println!("UV data: {:?}", uv_data);
         let mut gradient = String::new();
 
         for (i, &uv) in uv_data.iter().enumerate() {
@@ -440,7 +440,7 @@ impl DailyForecastGraph {
                 }
             };
 
-            println!("X factor: {}, Y factor: {}", xfactor, yfactor);
+            // println!("X factor: {}, Y factor: {}", xfactor, yfactor);
 
             // Scale the points according to the calculated factors
             let points: Vec<Point> = data
@@ -587,7 +587,7 @@ trait Icon {
         )
     }
 
-    /// Converts a given rain amount (in u32) to a corresponding name as a `String`.
+    /// Converts a given rain amount (in millimeters) to a corresponding name.
     ///
     /// # Arguments
     ///
@@ -596,13 +596,6 @@ trait Icon {
     /// # Returns
     ///
     /// * A `String` representing the name corresponding to the rain amount.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let name = Icon::rain_amount_to_name(5);
-    /// assert_eq!(name, "Drizzle");
-    /// ```
     fn rain_amount_to_name(amount: u32) -> String {
         // TODO: this should be moved to a more appropriate place
         match amount {
@@ -612,7 +605,7 @@ trait Icon {
         }
     }
 
-    /// Converts a given rain chance (in u32) to a corresponding name as a `String`.
+    /// Converts a given rain chance (in pecentage) to a corresponding name as a `String`.
     ///
     /// # Arguments
     ///
@@ -621,13 +614,6 @@ trait Icon {
     /// # Returns
     ///
     /// * A `String` representing the name corresponding to the rain chance.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let name = Icon::rain_chance_to_name(30);
-    /// assert_eq!(name, "PartlyCloudy");
-    /// ```
     fn rain_chance_to_name(chance: u32) -> String {
         // TODO: this should be moved to a more appropriate place
         match chance {
@@ -723,7 +709,7 @@ pub enum FetchOutcome<T> {
 fn load_cached<T: for<'de> Deserialize<'de>>(file_path: &PathBuf) -> Result<T, Error> {
     let cached = fs::read_to_string(file_path).map_err(|_| {
         Error::msg(
-            "Weather data JSON file not found. If this is your first time running the application. Please ensure 'use_online_data' is set to true in the configuration.",
+            "Weather data JSON file not found. If this is your first time running the application. Please ensure 'use_cached_data' is set to false in the configuration so data can be cached.",
         )
     })?;
     let data = serde_json::from_str(&cached).map_err(Error::msg)?;
@@ -749,7 +735,7 @@ fn fetch_data<T: for<'de> Deserialize<'de>>(
         fs::create_dir_all(file_path.parent().unwrap())?;
     }
 
-    if CONFIG.debugging.use_online_data {
+    if CONFIG.debugging.use_cached_data {
         let client = reqwest::blocking::Client::new();
         let response = match client.get(endpoint).send() {
             Ok(res) => res,
@@ -836,6 +822,7 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
     let current_date = chrono::Local::now().date_naive();
     let mut i = 1;
 
+    println!("Daily forcast");
     for day in daily_forecast_data {
         if let Some(naive_date) = day.date {
             if naive_date.date() < current_date {
@@ -922,7 +909,14 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
     }
 
     if i < 8 {
-        println!("Warning: Less than 7 days of daily forecast data");
+        println!("Warning: Less than 7 days of daily forecast data, Using stale data");
+        handle_errors(
+            context,
+            DashboardError::NoInternet {
+                details: "Warning: Less than 7 days of daily forecast data, Using stale data"
+                    .to_string(),
+            },
+        );
     }
 
     Ok(())
@@ -993,8 +987,8 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
 
     let end_date = first_date + chrono::Duration::hours(24);
 
-    println!("First date: {:?}", first_date);
-    println!("End date: {:?}", end_date);
+    // println!("First date: {:?}", first_date);
+    // println!("End date: {:?}", end_date);
 
     let mut x = 0.0;
 
@@ -1201,21 +1195,23 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
 
     render_dashboard_template(&mut context, template_svg)?;
 
-    convert_svg_to_png(
-        &CONFIG.misc.modified_template_name,
-        &CONFIG.misc.modified_template_name.replace(".svg", ".png"),
-    )?;
+    if !CONFIG.debugging.disable_png_output {
+        convert_svg_to_png(
+            &CONFIG.misc.modified_template_name,
+            &CONFIG.misc.modified_template_name.replace(".svg", ".png"),
+        )?;
 
-    println!(
-        "PNG has been generated successfully at {}",
-        CONFIG.misc.modified_template_name.replace(".svg", ".png")
-    );
+        println!(
+            "PNG has been generated successfully at {}",
+            CONFIG.misc.modified_template_name.replace(".svg", ".png")
+        );
+    }
     Ok(())
 }
 
 pub fn run_weather_dashboard() -> Result<(), anyhow::Error> {
     generate_weather_dashboard()?;
-    if CONFIG.debugging.invoke_python_script {
+    if !CONFIG.debugging.disable_png_output && !CONFIG.debugging.disable_drawing_on_epd {
         invoke_pimironi_image_script()?;
     }
     if CONFIG.release.auto_update {

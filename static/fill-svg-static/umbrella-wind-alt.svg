@@ -4,7 +4,7 @@
   xmlns:xlink="http://www.w3.org/1999/xlink"
 >
   <!-- First path: was stroke="url(#c)", now solid black stroke -->
-  <symbol id="umberella" viewBox="23 67 400 400">
+  <symbol id="umberella" viewBox="23 87 430 370">
     <path
       fill="none"
       stroke="black"
@@ -62,7 +62,7 @@
   <!-- Use the symbol #e (two arcs), originally gradient strokes, now black -->
   <use
     xlink:href="#arc-pair"
-    transform="translate(62.5 201)"
+    transform="translate(62.5 161)"
   />
   <use
     xlink:href="#umberella"
