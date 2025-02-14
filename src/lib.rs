@@ -659,6 +659,7 @@ impl Icon for UV {
 
 impl Icon for DailyEntry {
     fn get_icon_name(&self) -> String {
+        // TODO: this might generate invalid icon names, like clear day drzzile/rain
         let temp = format!(
             "{}{}{}.svg",
             DailyEntry::rain_chance_to_name(self.rain.as_ref().unwrap().chance.unwrap_or(0)),
@@ -709,8 +710,12 @@ pub enum FetchOutcome<T> {
 fn load_cached<T: for<'de> Deserialize<'de>>(file_path: &PathBuf) -> Result<T, Error> {
     let cached = fs::read_to_string(file_path).map_err(|_| {
         Error::msg(
-            "Weather data JSON file not found. If this is your first time running the application. Please ensure 'use_cached_data' is set to false in the configuration so data can be cached.",
+            "Weather data JSON file not found. If this is your first time running the application. Please ensure 'disable_network_requests' is set to false in the configuration so data can be cached.",
         )
+    }).map_err(|_| {
+        DashboardError::NoInternet {
+            details: "No hourly forecast data available".to_string(),
+        }
     })?;
     let data = serde_json::from_str(&cached).map_err(Error::msg)?;
     Ok(data)
@@ -735,7 +740,7 @@ fn fetch_data<T: for<'de> Deserialize<'de>>(
         fs::create_dir_all(file_path.parent().unwrap())?;
     }
 
-    if CONFIG.debugging.use_cached_data {
+    if !CONFIG.debugging.disable_network_requests {
         let client = reqwest::blocking::Client::new();
         let response = match client.get(endpoint).send() {
             Ok(res) => res,
@@ -846,8 +851,8 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
             .map_or("NA".to_string(), |date| date.format("%a").to_string());
 
         println!(
-            "{} - min {} max {} temp",
-            day_name_value, min_temp_value, max_temp_value
+            "{} - max {} min {} temp",
+            day_name_value, max_temp_value, min_temp_value
         );
         match i {
             1 => {
@@ -971,19 +976,28 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
 
     println!("Current time: {:?}", current_date);
     // we only want to display the next 24 hours
-    let first_date = hourly_forecast_data
-        .iter()
-        .find_map(
-            // find the first time
-            |forecast| {
-                if forecast.time >= current_date {
-                    Some(forecast.time)
-                } else {
-                    None
-                }
-            },
-        )
-        .unwrap_or_else(|| chrono::Local::now().naive_local());
+    let first_date = hourly_forecast_data.iter().find_map(
+        // find the first time
+        |forecast| {
+            if forecast.time >= current_date {
+                Some(forecast.time)
+            } else {
+                None
+            }
+        },
+    );
+    let first_date = match first_date {
+        Some(date) => date,
+        None => {
+            handle_errors(
+                context,
+                DashboardError::NoInternet {
+                    details: "No hourly forecast data available, Could Not find a date later than the current datee".to_string(),
+                },
+            );
+            return Ok(());
+        }
+    };
 
     let end_date = first_date + chrono::Duration::hours(24);
 

@@ -56,7 +56,7 @@ pub struct RenderOptions {
 
 #[derive(Debug, Deserialize)]
 pub struct Debugging {
-    pub use_cached_data: bool,
+    pub disable_network_requests: bool,
     pub disable_png_output: bool,
     pub disable_drawing_on_epd: bool,
 }

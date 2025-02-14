@@ -30,7 +30,7 @@ feels_like_colour = "green"
 rain_colour = "blue"
 
 [render_options]
-saturation = 0.0
+saturation = 1.0
 temp_unit = "C"
 use_moon_phase_instead_of_clear_night = true
 # this controls the placement of the x-axis when the temperature is below zero
@@ -46,6 +46,6 @@ python_script_path = "/home/dietpi/Pimoroni/inky/examples/7color/image.py"
 python_path = "/home/dietpi/env/bin/python3"
 
 [debugging]
-use_cached_data = false # if true, the weather data will be loaded from a file instead of the API
+disable_network_requests = false # if true, the weather data will be loaded from a cached file instead of the API, make you ran the application at least once with this set to false 
 disable_png_output = false
-disable_drawing_on_epd = false 
+disable_drawing_on_epd = true 

@@ -1,0 +1,45 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 512 512"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+>
+  <defs>
+    <!-- Symbol #b (originally with a gradient fill + orange stroke) -->
+    <symbol id="b" viewBox="0 0 384 384">
+      <!-- Circle (sun center): now solid orange + black stroke -->
+      <circle
+        cx="192"
+        cy="192"
+        r="84"
+        fill="yellow"
+        stroke="black"
+        stroke-miterlimit="10"
+        stroke-width="6"
+      />
+      <!-- Rays: was stroke="#fbbf24", now black -->
+      <path
+        fill="none"
+        stroke="black"
+        stroke-linecap="round"
+        stroke-miterlimit="10"
+        stroke-width="24"
+        d="M192 61.7V12
+           m0 360v-49.7
+           m92.2-222.5 35-35
+           M64.8 319.2l35.1-35.1
+           m0-184.4-35-35
+           m254.5 254.5-35.1-35.1
+           M61.7 192H12
+           m360 0h-49.7"
+      />
+    </symbol>
+  </defs>
+
+  <!-- Use the symbol, positioned as in the original -->
+  <use
+    xlink:href="#b"
+    width="384"
+    height="384"
+    transform="translate(64 64)"
+  />
+</svg>
