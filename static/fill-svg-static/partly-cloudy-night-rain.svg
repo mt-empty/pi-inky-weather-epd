@@ -4,8 +4,8 @@
   xmlns:xlink="http://www.w3.org/1999/xlink"
 >
   <defs>
-    <!-- Symbol #g (was gradient-filled), now solid blue with black stroke -->
-    <symbol id="g" viewBox="0 0 172 172">
+    <!-- Symbol #g: Moon -->
+    <symbol id="g" viewBox="0 0 196 196">
       <path
         fill="blue"
         stroke="black"
@@ -22,13 +22,13 @@
       />
     </symbol>
 
-    <!-- Symbol #h (was gradient-filled cloud), now white fill + black stroke -->
-    <symbol id="h" viewBox="0 0 350 222">
+    <!-- Symbol #h: Cloud -->
+    <symbol id="h" viewBox="-5 0 360 222">
       <path
         fill="white"
         stroke="black"
         stroke-miterlimit="10"
-        stroke-width="6"
+        stroke-width="10"
         d="m291 107-2.5.1
            A83.9 83.9 0 00135.6 43
            A56 56 0 0051 91
@@ -39,46 +39,79 @@
       />
     </symbol>
 
-    <!-- Symbol #f: combines #g (blue shape) + #h (cloud) -->
-    <symbol id="f" viewBox="0 0 351 246">
-      <use
-        xlink:href="#g"
-        width="172"
-        height="172"
-      />
-      <use
-        xlink:href="#h"
-        width="350"
-        height="222"
-        transform="translate(1 24)"
+    <symbol id="ee" viewBox="-5 0 360 222">
+      <path
+        fill="white"
+        stroke="black"
+        stroke-miterlimit="10"
+        stroke-width="12"
+        d="m291 107-2.5.1
+           A83.9 83.9 0 00135.6 43
+           A56 56 0 0051 91
+           a56.6 56.6 0 00.8 9
+           A60 60 0 0063 219
+           l4-.2v.2h224
+           a56 56 0 000-112Z"
       />
     </symbol>
 
-    <!-- Symbol #i (three shapes), was gradient-filled, now solid blue + black stroke -->
+    <!-- Symbol #f: Combined moon (#g) + clouds (#h, #ee) -->
+    <symbol id="f" viewBox="0 -30 363 288">
+      <!-- Moon -->
+      <use
+        width="350"
+        height="280"
+        xlink:href="#g" 
+        transform="translate(0,-30)" 
+      />
+      <!-- Clouds -->
+      <use
+        xlink:href="#ee"
+        width="170"
+        height="222"
+        transform="translate(190 6)"
+      />
+      <use
+        xlink:href="#h"
+        width="220"
+        height="222"
+        transform="translate(13 76)"
+      />
+    </symbol>
+
+    <!-- Symbol #i: Three small shapes -->
     <symbol id="i" viewBox="0 0 129 110">
       <path
         fill="blue"
-        stroke="black"
-        stroke-miterlimit="10"
-        d="M8.5 56.5
+        d="M-41.5 86.5
            a8 8 0 01-8-8v-40
            a8 8 0 0116 0v40
            a8 8 0 01-8 8Z"
       />
       <path
         fill="blue"
-        stroke="black"
-        stroke-miterlimit="10"
-        d="M64.5 109.5
+        d="M8.5 106.5
            a8 8 0 01-8-8v-40
            a8 8 0 0116 0v40
            a8 8 0 01-8 8Z"
       />
       <path
         fill="blue"
-        stroke="black"
-        stroke-miterlimit="10"
-        d="M120.5 74.5
+        d="M64.5 86.5
+           a8 8 0 01-8-8v-40
+           a8 8 0 0116 0v40
+           a8 8 0 01-8 8Z"
+      />
+      <path
+        fill="blue"
+        d="M120.5 106.5
+           a8 8 0 01-8-8v-40
+           a8 8 0 0116 0v40
+           a8 8 0 01-8 8Z"
+      />
+      <path
+        fill="blue"
+        d="M168.5 86.5
            a8 8 0 01-8-8v-40
            a8 8 0 0116 0v40
            a8 8 0 01-8 8Z"
@@ -86,19 +119,19 @@
     </symbol>
   </defs>
 
-  <!-- Use symbol #f (combined shape + cloud), same position as original -->
+  <!-- Use the combined moon + clouds symbol (#f) -->
   <use
     xlink:href="#f"
-    width="351"
-    height="246"
-    transform="translate(80 121)"
+    width="363"
+    height="288"
+    transform="translate(68 109)"
   />
 
-  <!-- Use symbol #i (three shapes), same position as original -->
+  <!-- Use the three small shapes (#i) -->
   <use
     xlink:href="#i"
-    width="129"
+    width="229"
     height="110"
-    transform="translate(191.5 343.5)"
+    transform="translate(140 343.5)"
   />
 </svg>

@@ -22,7 +22,7 @@
         fill="yellow"
         stroke="red"
         stroke-miterlimit="10"
-        stroke-width="6"
+        stroke-width="12"
       />
       <!-- Sun rays: was stroke="#fbbf24", now black -->
       <path

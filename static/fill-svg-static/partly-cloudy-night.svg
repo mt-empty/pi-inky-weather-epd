@@ -4,8 +4,8 @@
   xmlns:xlink="http://www.w3.org/1999/xlink"
 >
   <defs>
-    <!-- Symbol #d (originally gradient fill + stroke) -->
-    <symbol id="d" viewBox="0 0 172 172">
+    <!-- Symbol #d: Moon -->
+    <symbol id="d" viewBox="0 0 196 196">
       <path
         fill="blue"
         stroke="black"
@@ -22,13 +22,13 @@
       />
     </symbol>
 
-    <!-- Symbol #e (originally gradient fill) -->
-    <symbol id="e" viewBox="0 0 350 222">
+    <!-- Symbol #e: Cloud -->
+    <symbol id="e" viewBox="-5 0 360 222">
       <path
         fill="white"
         stroke="black"
         stroke-miterlimit="10"
-        stroke-width="6"
+        stroke-width="10"
         d="m291 107-2.5.1
            A83.9 83.9 0 00135.6 43
            A56 56 0 0051 91
@@ -39,29 +39,52 @@
       />
     </symbol>
 
-    <!-- Symbol #c: combination of #d and #e -->
-    <symbol id="c" viewBox="0 0 351 246">
-      <!-- Blue shape -->
-      <use
-        xlink:href="#d"
-        width="172"
-        height="172"
+    <symbol id="ee" viewBox="-5 0 360 222">
+      <path
+        fill="white"
+        stroke="black"
+        stroke-miterlimit="10"
+        stroke-width="12"
+        d="m291 107-2.5.1
+           A83.9 83.9 0 00135.6 43
+           A56 56 0 0051 91
+           a56.6 56.6 0 00.8 9
+           A60 60 0 0063 219
+           l4-.2v.2h224
+           a56 56 0 000-112Z"
       />
-      <!-- White cloud (shifted down by 24px) -->
+    </symbol>
+
+    <!-- Symbol #c: Combined moon (#d) + clouds (#e, #ee) -->
+    <symbol id="c" viewBox="0 -30 363 288">
+      <!-- Moon -->
+      <use
+        width="350"
+        height="280"
+        xlink:href="#d" 
+        transform="translate(0,-30)" 
+      />
+      <!-- Clouds -->
+      <use
+        xlink:href="#ee"
+        width="170"
+        height="222"
+        transform="translate(190 6)"
+      />
       <use
         xlink:href="#e"
-        width="350"
+        width="220"
         height="222"
-        transform="translate(1 24)"
+        transform="translate(13 76)"
       />
     </symbol>
   </defs>
 
-  <!-- Final usage, same position as original -->
+  <!-- Final usage of the combined symbol (#c) -->
   <use
     xlink:href="#c"
-    width="351"
-    height="246"
-    transform="translate(80 121)"
+    width="363"
+    height="288"
+    transform="translate(68 109)"
   />
 </svg>
