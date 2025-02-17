@@ -4,9 +4,9 @@
   xmlns:xlink="http://www.w3.org/1999/xlink"
 >
   <defs>
-    <!-- Symbol #g: sun -->
-    <symbol id="g" viewBox="0 0 196 196">
-      <!-- Sun circle: now orange fill + black stroke -->
+    <!-- Symbol #d: Sun -->
+    <symbol id="d" viewBox="0 0 196 196">
+      <!-- Sun center (originally gradient fill + orange stroke) -->
       <circle
         cx="98"
         cy="98"
@@ -16,14 +16,15 @@
         stroke-miterlimit="10"
         stroke-width="4"
       />
-      <!-- Sun rays: black stroke -->
+      <!-- Sun rays (was #fbbf24 stroke, now black) -->
       <path
         fill="none"
-        stroke="black"
+        stroke="yellow"
         stroke-linecap="round"
         stroke-miterlimit="10"
         stroke-width="12"
-        d="M98 31.4V6m0 184v-25.4
+        d="M98 31.4V6
+           m0 184v-25.4
            M145.1 51l18-17.9
            M33 163l18-17.9
            M51 51 33 33
@@ -33,14 +34,14 @@
       />
     </symbol>
 
-    <!-- Symbol #h: cloud -->
-    <symbol id="h" viewBox="0 0 350 222">
-      <!-- Cloud: now white fill + black stroke -->
+    <!-- Symbol #e: Cloud -->
+    <symbol id="e" viewBox="-5 0 360 222">
+      <!-- Originally gradient fill, now white fill + black stroke -->
       <path
         fill="white"
         stroke="black"
         stroke-miterlimit="10"
-        stroke-width="6"
+        stroke-width="10"
         d="m291 107-2.5.1
            A83.9 83.9 0 00135.6 43
            A56 56 0 0051 91
@@ -51,14 +52,44 @@
       />
     </symbol>
 
-    <!-- Symbol #f: combined sun + cloud -->
-    <symbol id="f" viewBox="0 0 363 258">
-      <use xlink:href="#g" width="196" height="196" />
+    <symbol id="ee" viewBox="-5 0 360 222">
+      <!-- Originally gradient fill, now white fill + black stroke -->
+      <path
+        fill="white"
+        stroke="black"
+        stroke-miterlimit="10"
+        stroke-width="12"
+        d="m291 107-2.5.1
+           A83.9 83.9 0 00135.6 43
+           A56 56 0 0051 91
+           a56.6 56.6 0 00.8 9
+           A60 60 0 0063 219
+           l4-.2v.2h224
+           a56 56 0 000-112Z"
+      />
+    </symbol>
+
+    <!-- Symbol #c: Combined sun (#d) + cloud (#e) -->
+    <symbol id="c" viewBox="0 -30 363 288">
+      <!-- Sun -->
       <use
-        xlink:href="#h"
         width="350"
+        height="280"
+       xlink:href="#d" 
+       transform="translate(0,-30)" 
+       />
+      <!-- Cloud (shifted down 36px) -->
+      <use
+        xlink:href="#ee"
+        width="170"
         height="222"
-        transform="translate(13 36)"
+        transform="translate(190 6)"
+      />
+      <use
+        xlink:href="#e"
+        width="220"
+        height="222"
+        transform="translate(13 76)"
       />
     </symbol>
 
@@ -94,11 +125,11 @@
     </symbol>
   </defs>
 
-  <!-- Use the sun+cloud symbol -->
+  <!-- Final usage of the combined symbol (#c) -->
   <use
-    xlink:href="#f"
+    xlink:href="#c"
     width="363"
-    height="258"
+    height="288"
     transform="translate(68 109)"
   />
 

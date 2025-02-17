@@ -3,36 +3,39 @@
   viewBox="0 0 512 512"
   xmlns:xlink="http://www.w3.org/1999/xlink"
 >
-  <defs>
-    <!-- Single symbol with black strokes -->
-    <symbol id="c" viewBox="0 0 348 240">
-      <path
-        fill="none"
-        stroke="black"
-        stroke-linecap="round"
-        stroke-miterlimit="10"
-        stroke-width="24"
-        d="M267.2 24.3A40 40 0 11296 92H12"
-      />
-      <path
-        fill="none"
-        stroke="black"
-        stroke-linecap="round"
-        stroke-miterlimit="10"
-        stroke-width="24"
-        d="M151.2 215.7A40 40 0 10180 148H12"
-      />
-    </symbol>
-  </defs>
-
-  <!-- Use the symbol, as in the original -->
-  <use
-    xlink:href="#c"
-    width="348"
-    height="240"
+  <!-- We have three separate paths, each using the same stroke style -->
+  <path
+    fill="none"
+    stroke="#6f6fe8"
+    opacity="80%"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="20"
+    d="M267.2 24.3A40 40 0 11296 92H132"
+    transform="translate(0 70)"
+  />
+  <path
+    fill="none"
+    stroke="#6f6fe8"
+    opacity="80%"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="20"
+    d="M267.2 24.3A40 40 0 11296 92H12"
     transform="translate(120 120)"
   />
-  <!-- Text "km/h", originally fill="#374251", now fill="black" -->
+  <path
+    fill="none"
+    stroke="#6f6fe8"
+    opacity="80%"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="20"
+    d="M267.2 24.3A40 40 0 11296 92H62"
+    transform="translate(70 350) scale(1, -1)"
+  />
+
+  <!-- Text "km/h" -->
   <text
     x="252"
     y="452"
