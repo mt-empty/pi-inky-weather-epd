@@ -14,7 +14,7 @@
         fill="yellow"
         stroke="black"
         stroke-miterlimit="10"
-        stroke-width="6"
+        stroke-width="8"
       />
       <!-- Rays: was stroke="#fbbf24", now black -->
       <path

@@ -97,8 +97,6 @@
     <symbol id="i" viewBox="0 0 129 110">
       <path
         fill="blue"
-        stroke="black"
-        stroke-miterlimit="10"
         d="M8.5 56.5
            a8 8 0 01-8-8v-40
            a8 8 0 0116 0v40
@@ -106,8 +104,6 @@
       />
       <path
         fill="blue"
-        stroke="black"
-        stroke-miterlimit="10"
         d="M64.5 109.5
            a8 8 0 01-8-8v-40
            a8 8 0 0116 0v40
@@ -115,8 +111,6 @@
       />
       <path
         fill="blue"
-        stroke="black"
-        stroke-miterlimit="10"
         d="M120.5 74.5
            a8 8 0 01-8-8v-40
            a8 8 0 0116 0v40

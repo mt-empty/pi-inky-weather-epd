@@ -1,103 +1,74 @@
 <svg
   xmlns="http://www.w3.org/2000/svg"
-  xmlns:xlink="http://www.w3.org/1999/xlink"
   viewBox="0 0 512 512"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
 >
   <defs>
     <linearGradient
-      id="a"
-      x1="52.7"
-      x2="133.4"
-      y1="9.6"
-      y2="149.3"
-      gradientUnits="userSpaceOnUse"
+      id="cloudGradient"
+      x1="0"
+      y1="0"
+      x2="0"
+      y2="1"
+      gradientUnits="objectBoundingBox"
     >
-      <stop offset="0" stop-color="#9ca3af" />
-      <stop offset=".5" stop-color="#9ca3af" />
-      <stop offset="1" stop-color="#6b7280" />
-    </linearGradient>
-    <linearGradient
-      id="b"
-      x1="99.5"
-      x2="232.6"
-      y1="30.7"
-      y2="261.4"
-      gradientUnits="userSpaceOnUse"
-    >
-      <stop offset="0" stop-color="#6b7280" />
-      <stop offset=".5" stop-color="#6b7280" />
+      <stop offset="0" stop-color="white" />
+      <stop offset=".9" stop-color="#6b7280" />
       <stop offset="1" stop-color="#4b5563" />
     </linearGradient>
-    <linearGradient
-      id="c"
-      x1="34.7"
-      x2="119.2"
-      y1="18.6"
-      y2="165"
-      gradientUnits="userSpaceOnUse"
-    >
-      <stop offset="0" stop-color="#86c3db" />
-      <stop offset=".5" stop-color="#86c3db" />
-      <stop offset="1" stop-color="#5eafcf" />
-    </linearGradient>
-    <linearGradient
-      id="d"
-      x1="1381.3"
-      x2="1399.5"
-      y1="-1144.7"
-      y2="-1097.4"
-      gradientTransform="rotate(-9 8002.567 8233.063)"
-      gradientUnits="userSpaceOnUse"
-    >
-      <stop offset="0" stop-color="#0b65ed" />
-      <stop offset=".5" stop-color="#0a5ad4" />
-      <stop offset="1" stop-color="#0950bc" />
-    </linearGradient>
-    <linearGradient
-      xlink:href="#d"
-      id="e"
-      x1="1428.4"
-      x2="1446.6"
-      y1="-1084.7"
-      y2="-1037.4"
-      gradientTransform="rotate(-9 8009.537 8233.037)"
-    />
-    <linearGradient
-      xlink:href="#d"
-      id="f"
-      x1="1489.3"
-      x2="1507.5"
-      y1="-1111.6"
-      y2="-1064.3"
-      gradientTransform="rotate(-9 8016.566 8233.078)"
-    />
+    <!-- Symbol #h (was a gradient-filled shape) -->
     <symbol id="h" viewBox="0 0 172 172">
       <path
-        fill="url(#c)"
-        stroke="#72b9d5"
+        fill="blue"
+        stroke="black"
         stroke-linecap="round"
         stroke-linejoin="round"
         stroke-width="4"
-        d="M160.6 107.4a84.8 84.8 0 01-85.4-84.3A83.3 83.3 0 0178 2 84.7 84.7 0 002 85.7 84.8 84.8 0 0087.4 170a85.2 85.2 0 0082.6-63.1 88 88 0 01-9.4.5Z"
+        d="M160.6 107.4
+           a84.8 84.8 0 01-85.4-84.3
+           A83.3 83.3 0 0178 2
+           A84.7 84.7 0 002 85.7
+           A84.8 84.8 0 0087.4 170
+           a85.2 85.2 0 0082.6-63.1
+           a88 88 0 01-9.4.5Z"
       />
     </symbol>
-    <symbol id="j" viewBox="0 0 200.3 126.1">
+
+    <!-- Symbol #j (smaller cloud), was gradient-filled -->
+    <symbol id="j" viewBox="0 0 210.3 126.1">
       <path
-        fill="url(#a)"
-        stroke="#848b98"
-        stroke-miterlimit="10"
-        d="M.5 93.2a32.4 32.4 0 0032.4 32.4h129.8v-.1l2.3.1a34.8 34.8 0 006.5-68.9 32.4 32.4 0 00-48.5-33 48.6 48.6 0 00-88.6 37.1h-1.5A32.4 32.4 0 00.5 93.1Z"
-      />
-    </symbol>
-    <symbol id="k" viewBox="0 0 350 222">
-      <path
-        fill="url(#b)"
-        stroke="#5b6472"
+        fill="url(#cloudGradient)"
+        stroke="black"
         stroke-miterlimit="10"
         stroke-width="6"
-        d="m291 107-2.5.1A83.9 83.9 0 00135.6 43 56 56 0 0051 91a56.6 56.6 0 00.8 9A60 60 0 0063 219l4-.2v.2h224a56 56 0 000-112Z"
+        d="M.5 93.2
+           a32.4 32.4 0 0032.4 32.4
+           h129.8v-.1l2.3.1
+           a34.8 34.8 0 006.5-68.9
+           32.4 32.4 0 00-48.5-33
+           48.6 48.6 0 00-88.6 37.1
+           h-1.5A32.4 32.4 0 00.5 93.1Z"
       />
     </symbol>
+
+    <!-- Symbol #k (bigger cloud), was gradient-filled -->
+    <symbol id="k" viewBox="0 0 350 223">
+      <path
+        fill="url(#cloudGradient)"
+        stroke="black"
+        stroke-miterlimit="10"
+        stroke-width="6"
+        d="m291 107-2.5.1
+           A83.9 83.9 0 00135.6 43
+           A56 56 0 0051 91
+           a56.6 56.6 0 00.8 9
+           A60 60 0 0063 219
+           l4-.2v.2h224
+           a56 56 0 000-112Z"
+      />
+    </symbol>
+
+    <!-- Symbol #i combines the smaller and bigger clouds -->
     <symbol id="i" viewBox="0 0 398 222">
       <use
         xlink:href="#j"
@@ -105,10 +76,22 @@
         height="126.1"
         transform="translate(198 27)"
       />
-      <use xlink:href="#k" width="350" height="222" />
+      <use
+        xlink:href="#k"
+        width="350"
+        height="222"
+      />
     </symbol>
+
+    <!-- Symbol #g combines #h (blue shape) + #i (clouds) -->
     <symbol id="g" viewBox="0 0 398.8 246">
-      <use xlink:href="#h" width="172" height="172" />
+      <!-- Blue shape (formerly gradient) -->
+      <use
+        xlink:href="#h"
+        width="172"
+        height="172"
+      />
+      <!-- Clouds, shifted down 24px -->
       <use
         xlink:href="#i"
         width="398"
@@ -116,37 +99,60 @@
         transform="translate(.84 24)"
       />
     </symbol>
-    <symbol id="l" viewBox="0 0 129 110">
+
+    <!-- Symbol #l (three small shapes), was gradient-filled -->
+    <symbol id="l" viewBox="0 0 129 109">
       <path
-        fill="url(#d)"
-        stroke="#0a5ad4"
-        stroke-miterlimit="10"
-        d="M8.5 56.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z"
+        fill="blue"
+        d="M-41.5 86.5
+           a8 8 0 01-8-8v-40
+           a8 8 0 0116 0v40
+           a8 8 0 01-8 8Z"
       />
       <path
-        fill="url(#e)"
-        stroke="#0a5ad4"
-        stroke-miterlimit="10"
-        d="M64.5 109.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z"
+        fill="blue"
+        d="M8.5 106.5
+           a8 8 0 01-8-8v-40
+           a8 8 0 0116 0v40
+           a8 8 0 01-8 8Z"
       />
       <path
-        fill="url(#f)"
-        stroke="#0a5ad4"
-        stroke-miterlimit="10"
-        d="M120.5 74.5a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z"
+        fill="blue"
+        d="M64.5 86.5
+           a8 8 0 01-8-8v-40
+           a8 8 0 0116 0v40
+           a8 8 0 01-8 8Z"
+      />
+      <path
+        fill="blue"
+        d="M120.5 106.5
+           a8 8 0 01-8-8v-40
+           a8 8 0 0116 0v40
+           a8 8 0 01-8 8Z"
+      />
+      <path
+        fill="blue"
+        d="M168.5 86.5
+           a8 8 0 01-8-8v-40
+           a8 8 0 0116 0v40
+           a8 8 0 01-8 8Z"
       />
     </symbol>
   </defs>
+
+  <!-- Use #g (combined clouds + blue shape), same position as original -->
   <use
     xlink:href="#g"
     width="398.8"
     height="246"
     transform="translate(68 121)"
   />
+
+  <!-- Use #l (three shapes), same position as original -->
   <use
     xlink:href="#l"
-    width="129"
+    width="229"
     height="110"
-    transform="translate(191.5 343.5)"
+    transform="translate(140 343.5)"
   />
 </svg>
