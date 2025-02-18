@@ -18,12 +18,12 @@
         <stop offset="100%" style="stop-color:blue;stop-opacity:1" />
       </linearGradient> -->
     </symbol>
-    <path id="wave1" d="M 0 20 Q 25 40, 50 20 T 100 20 T 150 20" fill="none" stroke="black" stroke-width="15" stroke-linecap="round"/>
-    <path id="wave2" d="M 0 60 Q 25 80, 50 60 T 100 60" fill="none" stroke="black" stroke-width="15" stroke-linecap="round"/>
-    <path id="wave3" d="M 120 60 Q 145 80, 170 60 T 200 60" fill="none" stroke="black" stroke-width="15" stroke-linecap="round"/>
-    <path id="wave4" d="M 0 100 Q 25 120, 50 100 T 100 100 T 150 100" fill="none" stroke="black" stroke-width="15" stroke-linecap="round"/>
-    <path id="wave5" d="M 170 100 Q 185 120, 200 100" fill="none" stroke="black" stroke-width="15" stroke-linecap="round"/>
-    <path id="wave6" d="M 20 140 Q 45 160, 70 140 T 120 140 T 170 140" fill="none" stroke="black" stroke-width="15" stroke-linecap="round"/>
+    <path id="wave1" d="M 0 20 Q 25 40, 50 20 T 100 20 T 150 20" fill="none" stroke="red" stroke-width="15" stroke-linecap="round"/>
+    <path id="wave2" d="M 0 60 Q 25 80, 50 60 T 100 60" fill="none" stroke="red" stroke-width="15" stroke-linecap="round"/>
+    <path id="wave3" d="M 120 60 Q 145 80, 170 60 T 200 60" fill="none" stroke="red" stroke-width="15" stroke-linecap="round"/>
+    <path id="wave4" d="M 0 100 Q 25 120, 50 100 T 100 100 T 150 100" fill="none" stroke="red" stroke-width="15" stroke-linecap="round"/>
+    <path id="wave5" d="M 170 100 Q 185 120, 200 100" fill="none" stroke="red" stroke-width="15" stroke-linecap="round"/>
+    <path id="wave6" d="M 20 140 Q 45 160, 70 140 T 120 140 T 170 140" fill="none" stroke="red" stroke-width="15" stroke-linecap="round"/>
   </defs>
   <g transform="translate(0 20)">
     <g transform="translate(60 0)">
