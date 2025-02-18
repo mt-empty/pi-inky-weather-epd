@@ -40,7 +40,7 @@
     </symbol>
 
     <!-- Symbol #k (bigger cloud), was gradient-filled -->
-    <symbol id="k" viewBox="0 0 350 222">
+    <symbol id="k" viewBox="0 0 350 223">
       <path
         fill="white"
         stroke="black"
@@ -90,29 +90,24 @@
 
     <!-- Symbol #l (three small shapes), was gradient-filled -->
     <symbol id="l" viewBox="0 0 129 109">
+
       <path
         fill="blue"
-        stroke="black"
-        stroke-miterlimit="10"
-        d="M8.5 28.5
+        d="M8.5 58.5
            a8 8 0 01-8-8v-12
            a8 8 0 0116 0v12
            a8 8 0 01-8 8Z"
       />
       <path
         fill="blue"
-        stroke="black"
-        stroke-miterlimit="10"
-        d="M64.5 108.5
+        d="M64.5 88.5
            a8 8 0 01-8-8v-12
            a8 8 0 0116 0v12
            a8 8 0 01-8 8Z"
       />
       <path
         fill="blue"
-        stroke="black"
-        stroke-miterlimit="10"
-        d="M120.5 58.5
+        d="M120.5 68.5
            a8 8 0 01-8-8v-12
            a8 8 0 0116 0v12
            a8 8 0 01-8 8Z"

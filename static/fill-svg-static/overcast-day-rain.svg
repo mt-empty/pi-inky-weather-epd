@@ -15,9 +15,10 @@
         stroke-miterlimit="10"
         stroke-width="4"
       />
+      <!-- Sun rays -->
       <path
         fill="none"
-        stroke="black"
+        stroke="yellow"
         stroke-linecap="round"
         stroke-miterlimit="10"
         stroke-width="12"
@@ -50,7 +51,7 @@
     </symbol>
 
     <!-- Bigger cloud (#k), originally light gradient fill; now white fill + black stroke -->
-    <symbol id="k" viewBox="0 0 350 222">
+    <symbol id="k" viewBox="0 0 350 223">
       <path
         fill="white"
         stroke="black"
@@ -66,7 +67,7 @@
       />
     </symbol>
 
-    <!-- Combined clouds (#i) uses #j and #k -->
+    <!-- Combined clouds (#i) uses #j (small cloud) and #k (big cloud) -->
     <symbol id="i" viewBox="0 0 398 222">
       <use
         xlink:href="#j"
@@ -100,22 +101,16 @@
     <symbol id="l" viewBox="0 0 129 110">
       <path
         fill="blue"
-        stroke="black"
-        stroke-miterlimit="10"
         d="M8.5 56.5
            a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z"
       />
       <path
         fill="blue"
-        stroke="black"
-        stroke-miterlimit="10"
         d="M64.5 109.5
            a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z"
       />
       <path
         fill="blue"
-        stroke="black"
-        stroke-miterlimit="10"
         d="M120.5 74.5
            a8 8 0 01-8-8v-40a8 8 0 0116 0v40a8 8 0 01-8 8Z"
       />
@@ -134,7 +129,7 @@
   <use
     xlink:href="#l"
     width="129"
-    height="110"
-    transform="translate(191.5 343.5)"
+    height="109"
+    transform="translate(191.5 347.5)"
   />
 </svg>

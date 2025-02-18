@@ -19,7 +19,7 @@
       <!-- Rays (was stroke="#fbbf24", now black) -->
       <path
         fill="none"
-        stroke="black"
+        stroke="yellow"
         stroke-linecap="round"
         stroke-miterlimit="10"
         stroke-width="12"
@@ -52,7 +52,7 @@
     </symbol>
 
     <!-- Symbol #h: Larger cloud -->
-    <symbol id="h" viewBox="0 0 350 222">
+    <symbol id="h" viewBox="0 0 350 223">
       <!-- Was gradient fill, now white fill + black stroke -->
       <path
         fill="white"
