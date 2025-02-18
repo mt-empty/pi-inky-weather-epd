@@ -1,6 +1,6 @@
 [package]
 name = "pi-inky-weather-epd"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 authors = ["MT"]
 description = "A weather display application for the Raspberry Pi using an EPD (e-paper display)."
@@ -31,4 +31,4 @@ thiserror = "2.0.11"
 # dev dependencies
 [dev-dependencies]
 usvg = "0.44"
-cross = "0.2.5" # needed for ci/cd
+cross = "0.2.5" # needed for ci/cd to compile for different architectures

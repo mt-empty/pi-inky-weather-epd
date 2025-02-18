@@ -10,7 +10,6 @@ use semver::Version;
 use serde::Deserialize;
 use zip::ZipArchive;
 
-const BINARY_BASE_DIR: &str = "./archives"; // TODO: Change this to a more appropriate location
 const LAST_CHECKED_FILE_NAME: &str = "last_checked";
 
 #[cfg(target_arch = "arm")]
@@ -141,9 +140,7 @@ fn download_and_extract_release(
         ));
     }
 
-    let binary_base_dir = get_base_dir_path()?.join(BINARY_BASE_DIR);
-
-    fs::create_dir_all(&binary_base_dir).context("Failed to create binary base directory")?;
+    let binary_base_dir = get_base_dir_path()?;
 
     let archive_bytes = response
         .bytes()
@@ -158,7 +155,10 @@ fn download_and_extract_release(
         archive
             .extract(&binary_base_dir)
             .context("Could not decompress downloaded ZIP archive")?;
-        println!("Successfully updated application to version");
+        println!(
+            "Successfully updated application to version {}",
+            latest_version
+        );
     }
 
     Ok(())
@@ -187,6 +187,7 @@ fn get_base_dir_path() -> Result<PathBuf> {
 /// Returns an error if the last checked timestamp cannot be read or written,
 /// if the timestamp cannot be parsed, or if the update process fails.
 pub fn update_app() -> Result<(), anyhow::Error> {
+    println!("Checking for updates...");
     // create a file to store the last time we checked for an update
     let last_checked_path = get_base_dir_path()?.join(LAST_CHECKED_FILE_NAME);
     if !Path::new(&last_checked_path).exists() {
@@ -217,7 +218,7 @@ pub fn update_app() -> Result<(), anyhow::Error> {
             fs::write(&last_checked_path, now_utc.to_rfc3339())?;
         } else {
             println!(
-                "Only {:.1} days have passed since last check.",
+                "{:.1} days have passed since last check.",
                 elapsed.num_days()
             );
         }

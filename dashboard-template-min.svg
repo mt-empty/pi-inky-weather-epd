@@ -50,11 +50,11 @@
 
         <text  text-anchor="middle" font-size="18" fill="black">
             <tspan x="230" y="160" dominant-baseline="middle">
-                <tspan dy="-8px">Feels</tspan>
-                <tspan dy="16px" dx="-46.6px">Like</tspan>
+                <tspan dy="-8">Feels</tspan>
+                <tspan dy="16" dx="-46.6">Like</tspan>
             </tspan>
             <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle"
-                font-size="55" fill="{feels_like_colour}" dx="10" dy="-1.6px">
+                font-size="55" fill="{feels_like_colour}" dx="10" dy="-1.6">
                 {current_feels_like}
                 <!-- Tspan doesn't work well with the degree symbol ° for some fonts!-->
                 <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan> 
