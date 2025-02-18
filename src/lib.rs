@@ -300,7 +300,7 @@ impl DailyForecastGraph {
             let label_x = y_axis_x - 10.0;
             let label_str = format!("{:.1}", y_val);
             let font_size = if j == 0 || j == self.y_left_ticks {
-                20
+                28
             } else {
                 17
             };
@@ -523,6 +523,8 @@ enum RainChanceName {
 
 #[derive(Deserialize, Debug, Display)]
 enum RainAmountName {
+    #[strum(to_string = "")]
+    None,
     #[strum(to_string = "-drizzle")]
     Drizzle,
     #[strum(to_string = "-rain")]
@@ -596,10 +598,13 @@ trait Icon {
     /// # Returns
     ///
     /// * A `String` representing the name corresponding to the rain amount.
-    fn rain_amount_to_name(amount: u32) -> String {
+    fn rain_amount_to_name(mut amount: u32, is_hourly: bool) -> String {
         // TODO: this should be moved to a more appropriate place
+        if is_hourly {
+            amount *= 24;
+        }
         match amount {
-            0..=2 => "".to_string(),
+            0..=2 => RainAmountName::None.to_string(),
             3..=20 => RainAmountName::Drizzle.to_string(),
             21.. => RainAmountName::Rain.to_string(),
         }
@@ -659,7 +664,7 @@ impl Icon for UV {
 
 impl Icon for DailyEntry {
     fn get_icon_name(&self) -> String {
-        // TODO: this might generate invalid icon names, like clear day drzzile/rain
+        // TODO: this might generate invalid icon names, like clear-day/night-drzzile/rain
         let temp = format!(
             "{}{}{}.svg",
             DailyEntry::rain_chance_to_name(self.rain.as_ref().unwrap().chance.unwrap_or(0)),
@@ -671,7 +676,8 @@ impl Icon for DailyEntry {
                     .amount
                     .min
                     .unwrap_or(0.0)
-                    .round() as u32
+                    .round() as u32,
+                false
             )
         );
         temp
@@ -696,7 +702,10 @@ impl Icon for HourlyForecast {
             } else {
                 DayNight::Day.to_string()
             },
-            HourlyForecast::rain_amount_to_name(self.rain.amount.min.unwrap_or(0.0).round() as u32)
+            HourlyForecast::rain_amount_to_name(
+                self.rain.amount.min.unwrap_or(0.0).round() as u32,
+                true
+            )
         );
         temp
     }
@@ -1224,12 +1233,12 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
 }
 
 pub fn run_weather_dashboard() -> Result<(), anyhow::Error> {
+    if CONFIG.release.auto_update {
+        update_app()?;
+    };
     generate_weather_dashboard()?;
     if !CONFIG.debugging.disable_png_output && !CONFIG.debugging.disable_drawing_on_epd {
         invoke_pimironi_image_script()?;
     }
-    if CONFIG.release.auto_update {
-        update_app()?;
-    };
     Ok(())
 }

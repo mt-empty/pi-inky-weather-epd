@@ -5,18 +5,22 @@ auto_update = false
 update_interval_days = 7
 
 
+## Extremes
+# Babinda, QLD: "rhzv2d" # wettest place in Australia
+# Marble Bar, NSW: "qgph8w" # hottest place in Australia
+# Tasmanian heights, TAS: "r283sf" # coldest place in Tasmania 
+
+## Major Cities
+# Darwin: "qvv117"
+# Sydney: "r3gx2f"
+# Melbourne: "r1r0fs"
+# Brisbane: "r7hgd6"
+# Perth: "r28ekz"
+# Adelaide: "r1f93c"
+# Hobart: "r22u0d"
+# Canberra: "r3dp32"
 [api]
-# darwin = "qvv117"
-# sydney = "r3gx2f"
-# melbourne = "r1r0fs"
-# brisbane = "r7hgd6"
-# perth = "r28ekz"
-# adelaide = "r1f93c"
-# hobart = "r22u0d"
-# canberra = "r3dp32"
-# tasmania-cold = "r283sf"
-# new-south-wales-hot = "qgph8w"
-location = "r283sf" # uses GeoHash, must be 6 characters
+location = "r1r0fs" # uses GeoHash, must be 6 characters
 
 # supproted colors = [black, white, green, blue, red, yellow, orange]
 [colours]
