@@ -43,7 +43,7 @@
   <symbol id="arc-pair" viewBox="0 0 138 96">
     <path
       fill="none"
-      stroke="black"
+      stroke="#6f6fe8"
       stroke-linecap="round"
       stroke-miterlimit="10"
       stroke-width="12"
@@ -51,7 +51,7 @@
     />
     <path
       fill="none"
-      stroke="black"
+      stroke="#6f6fe8"
       stroke-linecap="round"
       stroke-miterlimit="10"
       stroke-width="12"

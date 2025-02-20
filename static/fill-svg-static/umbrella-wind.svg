@@ -4,7 +4,7 @@
   xmlns:xlink="http://www.w3.org/1999/xlink"
 >
   <!-- First path: was stroke="url(#c)", now solid black stroke -->
-  <symbol id="umberella" viewBox="23 67 400 400">
+  <symbol id="umberella" viewBox="23 87 430 370">
   <path
     fill="none"
     stroke="black"
@@ -44,7 +44,7 @@
   <symbol id="arc-pair" viewBox="50 0 258 396">
     <path
       fill="none"
-      stroke="black"
+      stroke="#6f6fe8"
       stroke-linecap="round"
       stroke-miterlimit="10"
       stroke-width="12"
@@ -52,7 +52,7 @@
     />
     <path
       fill="none"
-      stroke="black"
+      stroke="#6f6fe8"
       stroke-linecap="round"
       stroke-miterlimit="10"
       stroke-width="12"
@@ -63,10 +63,12 @@
   <!-- Use the arc symbol -->
   <use
     xlink:href="#arc-pair"
-    transform="translate(62.5 201)"
+    transform="translate(62.5 161)"
   />
   <use
     xlink:href="#umberella"
+    width="550"
+    transform="translate(-5 -15)"
   />
   <!-- Text "km/h", originally fill="#374251", now fill="black" -->
   <text

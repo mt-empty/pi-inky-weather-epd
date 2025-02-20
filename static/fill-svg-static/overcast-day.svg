@@ -58,7 +58,7 @@
         fill="white"
         stroke="black"
         stroke-miterlimit="10"
-        stroke-width="6"
+        stroke-width="7"
         d="m291 107-2.5.1
            A83.9 83.9 0 00135.6 43
            A56 56 0 0051 91
@@ -73,31 +73,32 @@
     <symbol id="f" viewBox="0 0 398 222">
       <use
         xlink:href="#g"
-        width="200.3"
+        width="180.3"
         height="126.1"
-        transform="translate(198 27)"
+        transform="translate(168 27)"
       />
       <use
         xlink:href="#h"
-        width="350"
+        width="280"
         height="222"
       />
     </symbol>
 
     <!-- Symbol #d: Full weather icon (sun + combined clouds) -->
-    <symbol id="d" viewBox="0 0 410.8 258">
+    <symbol id="d" viewBox="0 0 410.8 258" style="overflow: visible">
       <!-- Sun -->
       <use
         xlink:href="#e"
-        width="196"
-        height="196"
+        width="250"
+        height="250"
+        transform="translate(0 -40)"
       />
       <!-- Clouds (shifted down) -->
       <use
         xlink:href="#f"
         width="398"
         height="222"
-        transform="translate(12.84 36)"
+        transform="translate(12.84 46)"
       />
     </symbol>
   </defs>

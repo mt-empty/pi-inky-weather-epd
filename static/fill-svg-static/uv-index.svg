@@ -15,7 +15,7 @@
         fill="yellow"
         stroke="black"
         stroke-miterlimit="10"
-        stroke-width="6"
+        stroke-width="8"
       />
 
   <!-- 12 Rays at 30-degree increments -->
