@@ -67,7 +67,7 @@ jobs:
           mkdir -p artifact
           cp ${{ github.workspace }}/target/${{ matrix.target }}/release/pi-inky-weather-epd artifact/
           cp ${{ github.workspace }}/dashboard-template-min.svg artifact/
-          cp ${{ github.workspace }}/config.toml artifact/
+          cp ${{ github.workspace }}/config/default.toml artifact/
           cp -r ${{ github.workspace }}/static artifact/
 
       - name: Upload artifact

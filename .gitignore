@@ -22,3 +22,4 @@ Cargo.lock
 
 other
 bin/act
+config/local.toml

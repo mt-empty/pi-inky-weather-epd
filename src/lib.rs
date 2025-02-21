@@ -1,10 +1,10 @@
 // mod apis;
 mod bom;
 mod chart;
-mod config;
 pub mod context;
 mod errors;
 mod pimironi_image_py;
+mod settings;
 mod update;
 mod utils;
 
@@ -18,12 +18,12 @@ use anyhow::Error;
 use bom::*;
 use chart::{catmull_bezier, Point};
 use chrono::{Datelike, Timelike};
-use config::DashboardConfig;
 use context::Context;
 use errors::*;
 use lazy_static::lazy_static;
 use pimironi_image_py::invoke_pimironi_image_script;
 use serde::Deserialize;
+use settings::DashboardSettings;
 use std::io::Write;
 use std::{fs, path::PathBuf};
 use strum_macros::Display;
@@ -34,8 +34,8 @@ pub use utils::*;
 pub const NOT_AVAILABLE_ICON: &str = "not-available.svg";
 
 lazy_static! {
-    pub static ref CONFIG: DashboardConfig =
-        load_dashboard_config().expect("Failed to load config");
+    pub static ref CONFIG: DashboardSettings =
+        DashboardSettings::new().expect("Failed to load config");
 }
 
 #[derive(Clone, Debug)]
@@ -298,12 +298,12 @@ impl DailyForecastGraph {
 
             // Label: placed to the left of the y-axis
             let label_x = y_axis_x - 10.0;
-            let label_str = format!("{:.1}", y_val);
-            let font_size = if j == 0 || j == self.y_left_ticks {
-                28
-            } else {
-                17
-            };
+            let mut label_str = format!("{:.1}", y_val);
+            let mut font_size = 17;
+            if j == 0 || j == self.y_left_ticks {
+                label_str = format!("{:.0}", y_val);
+                font_size = 35;
+            }
             y_left_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}"  fill="{colour}" font-size="{font_size}" text-anchor="end" dy="4">{text}</text>"#,
                 x = label_x,

@@ -1,0 +1,41 @@
+[release]
+release_info_url = "https://api.github.com/repos/mt-empty/pi-inky-weather-epd/releases/latest"
+download_base_url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/download"
+auto_update = true
+update_interval_days = 7
+
+[api]
+location = "r1r0fs" # uses GeoHash, must be 6 characters
+
+# supproted colours for 7.3 inky display
+# [black, white, green, blue, red, yellow, orange]
+[colours]
+background_colour = "white"
+text_colour = "black"
+x_axis_colour = "black"
+y_left_axis_colour = "red"
+y_right_axis_colour = "blue"
+temp_colour = "red"
+feels_like_colour = "green"
+rain_colour = "blue"
+
+[render_options]
+saturation = 1.0 # display colour saturation
+temp_unit = "C"
+use_moon_phase_instead_of_clear_night = true
+# this controls the placement of the x-axis when the temperature is below zero
+x_axis_always_at_min = false
+
+[misc]
+weather_data_store_path = "./src/apis/bom/samples/"
+template_path = "dashboard-template-min.svg"
+modified_template_name = "dashboard.svg"
+generated_png_name = "dashboard.png"
+svg_icons_directory = "static/fill-svg-static/"
+python_script_path = "/home/dietpi/Pimoroni/inky/examples/7color/image.py"
+python_path = "/home/dietpi/env/bin/python3"
+
+[debugging]
+disable_network_requests = false # if true, the weather data will be loaded from a cached file instead of the API, make you ran the application at least once with this set to false 
+disable_png_output = false
+disable_drawing_on_epd = false 

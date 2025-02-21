@@ -31,9 +31,9 @@ Get 6 character hash from https://geohash.softeng.co
 [255, 20, 147] # Deep Pink
 [255, 140, 0],    # Orange
 
-# [255, 248, 220, 255], // Cornsilk
-# [255, 250, 205, 255], // Lemon Chiffon
-# [255, 20, 147, 255],  // DeepPink
+[255, 248, 220, 255], // Cornsilk
+[255, 250, 205, 255], // Lemon Chiffon
+[255, 20, 147, 255],  // DeepPink
 
 
 
@@ -42,3 +42,11 @@ EPD used: Inky Impression 7.3 https://shop.pimoroni.com/products/inky-impression
 Actual Panel: Waveshare display https://www.waveshare.com/7.3inch-e-paper-hat-f.htm
 
 Panel documentation: https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)_Manual#Overview
+
+
+## Config
+
+You can override the default config by creating a file at
+```bash
+ ~/.config/pi-inky-weather-epd.toml
+ ```

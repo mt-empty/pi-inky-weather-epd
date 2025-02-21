@@ -4,8 +4,6 @@ use chrono::Local;
 use chrono::NaiveDate;
 use chrono::NaiveDateTime;
 use chrono::TimeZone;
-use config::Config;
-use config::File;
 use resvg::tiny_skia;
 use resvg::usvg;
 use serde::Deserialize;
@@ -13,9 +11,6 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use usvg::fontdb;
-
-use crate::config::DashboardConfig;
-const CONFIG_NAME: &str = "config.toml";
 
 /// Checks if the given path has write permissions.
 ///
@@ -239,19 +234,4 @@ where
     NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%SZ")
         .map(|dt| Local.from_utc_datetime(&dt).naive_local())
         .map_err(serde::de::Error::custom)
-}
-
-/// Loads the dashboard configuration from the `config.toml` file.
-///
-/// # Returns
-///
-/// * `Result<DashboardConfig, Error>` - The deserialized `DashboardConfig` or an error.
-pub fn load_dashboard_config() -> Result<DashboardConfig, Error> {
-    let root = std::env::current_dir()?;
-    let config_path = root.join(CONFIG_NAME);
-    let settings = Config::builder()
-        .add_source(File::with_name(config_path.to_str().unwrap()))
-        .build()?;
-
-    settings.try_deserialize().map_err(Error::msg)
 }
