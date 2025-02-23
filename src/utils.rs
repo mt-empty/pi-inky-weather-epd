@@ -78,7 +78,7 @@ pub fn convert_svg_to_png(input_path: &str, output_path: &str) -> Result<(), Err
 pub fn load_fonts(font_db: &mut fontdb::Database) {
     font_db.load_system_fonts();
 
-    // print urrent path
+    // print current path
     let current_path = std::env::current_dir().unwrap();
 
     let font_files = [
@@ -166,7 +166,7 @@ pub fn get_total_between_dates<T>(
 ///
 /// * `data` - A slice of data items.
 /// * `start_date` - The start date as `NaiveDateTime`.
-/// * `end_date` - The end date as `NaiveDateTime`.
+/// * `end_date` - The end date as `NaiveDateTime`, not inclusive.
 /// * `get_value` - A function to extract the value from a data item.
 /// * `get_time` - A function to extract the time from a data item.
 ///

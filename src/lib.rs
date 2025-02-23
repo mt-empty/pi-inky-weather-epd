@@ -120,7 +120,7 @@ impl UVIndexCategory {
         }
     }
 
-    pub fn to_color(self) -> &'static str {
+    pub fn to_colour(self) -> &'static str {
         match self {
             UVIndexCategory::None => "transparent",
             UVIndexCategory::Low => "green",
@@ -344,12 +344,15 @@ impl DailyForecastGraph {
             ));
 
             let x_guideline_len = self.height;
-            x_axis_guideline_path.push_str(&format!(
-                r#" M {} {} v -{} m 0 2 v -2"#,
-                xs, x_guideline_len, x_guideline_len
-            ));
-
+            // do not draw guideline if it overlaps with tomorrow's line
+            if x_val != (24.0 - current_hour) {
+                x_axis_guideline_path.push_str(&format!(
+                    r#" M {} {} v -{} m 0 2 v -2"#,
+                    xs, x_guideline_len, x_guideline_len
+                ));
+            }
             // Label: placed below the x-axis line
+            let label_x = xs;
             let label_y = self.height + 20.0;
             let hour = (current_hour + x_val) % 24.0;
             let period = if hour < 12.0 { "am" } else { "pm" };
@@ -362,7 +365,6 @@ impl DailyForecastGraph {
             };
             let label_str = format!("{:.0}{}", display_hour, period);
 
-            let label_x = xs;
             x_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}" fill="{colour}" font-size="17" text-anchor="middle">{text}</text>"#,
                 x = label_x,
@@ -371,7 +373,33 @@ impl DailyForecastGraph {
                 text = label_str
             ));
         }
+
+        // Add tomorrow day name vertically in the graph just like the guidelines
+        if current_hour != 0.0 {
+            x_labels.push_str(self.draw_tomorrow_line(map_x(24.0 - current_hour)).as_str());
+        }
         x_labels
+    }
+
+    fn draw_tomorrow_line(&self, x_coor: f64) -> String {
+        let tomorrow_day_name = chrono::Local::now()
+            .date_naive()
+            .checked_add_days(chrono::Days::new(1))
+            .map(|d| d.format("%A").to_string())
+            .unwrap_or_else(|| "Tomorrow".to_string());
+
+        format!(
+            r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
+                   <text x="{x_text}" y="{y_text}" fill="{colour}" font-size="17" font-style="italic"  transform="rotate(-90, {rotate_x_text}, {rotate_y_text})" text-anchor="start">{tomorrow_day_name}</text>"#,
+            x = x_coor,
+            chart_height = self.height,
+            x_text = x_coor + 10.0,
+            y_text = self.height / 2.0,
+            rotate_x_text = x_coor + 10.0 - 30.0,
+            rotate_y_text = (self.height / 2.0) - 35.0,
+            colour = CONFIG.colours.text_colour,
+            tomorrow_day_name = tomorrow_day_name
+        )
     }
 
     fn initialize_x_y_bounds(&mut self) {
@@ -406,10 +434,10 @@ impl DailyForecastGraph {
 
         for (i, &uv) in uv_data.iter().enumerate() {
             let offset = (i as f64 / 23.0) * 100.0;
-            let color = UVIndexCategory::from_u8(uv as u8).to_color();
+            let colour = UVIndexCategory::from_u8(uv as u8).to_colour();
             gradient.push_str(&format!(
                 r#"<stop offset="{:.2}%" stop-color="{}"/>"#,
-                offset, color
+                offset, colour
             ));
         }
 
@@ -554,10 +582,10 @@ enum DayNight {
 ///
 /// - `rain_amount_to_name(amount: u32) -> String`
 ///
-///   Converts a given rain amount (in millimeters) to a corresponding name.
+///   Converts a given rain amount (in millimetres) to a corresponding name.
 ///   This method should not be part of this trait and needs to be refactored.
 ///
-///   - `amount: u32` - The amount of rain in millimeters.
+///   - `amount: u32` - The amount of rain in millimetres.
 ///   - Returns a `String` representing the rain amount name:
 ///     - `""` for 0 to 2 mm
 ///     - `"Drizzle"` for 3 to 20 mm
@@ -589,7 +617,7 @@ trait Icon {
         )
     }
 
-    /// Converts a given rain amount (in millimeters) to a corresponding name.
+    /// Converts a given rain amount (in millimetres) to a corresponding name.
     ///
     /// # Arguments
     ///
@@ -610,7 +638,7 @@ trait Icon {
         }
     }
 
-    /// Converts a given rain chance (in pecentage) to a corresponding name as a `String`.
+    /// Converts a given rain chance (in percentage) to a corresponding name as a `String`.
     ///
     /// # Arguments
     ///
@@ -787,36 +815,40 @@ fn fetch_data<T: for<'de> Deserialize<'de>>(
     }
 }
 
-fn fetch_daily_forecast_data() -> Result<FetchOutcome<DailyForcastResponse>, Error> {
+fn fetch_daily_forecast_data() -> Result<FetchOutcome<DailyForecastResponse>, Error> {
     let file_path =
         std::path::Path::new(&CONFIG.misc.weather_data_store_path).join("daily_forecast.json");
     fetch_data(&DAILY_FORECAST_ENDPOINT, &file_path)
 }
 
-fn fetch_hourly_forecast_data() -> Result<FetchOutcome<HourlyForcastResponse>, Error> {
+fn fetch_hourly_forecast_data() -> Result<FetchOutcome<HourlyForecastResponse>, Error> {
     let file_path =
         std::path::Path::new(&CONFIG.misc.weather_data_store_path).join("hourly_forecast.json");
     fetch_data(&HOURLY_FORECAST_ENDPOINT, &file_path)
 }
 
 fn update_current_hour_data(current_hour: &HourlyForecast, context: &mut Context) {
-    let mut curret_icon = current_hour.get_icon_path();
+    let mut current_hour_weather_icon = current_hour.get_icon_path();
     if CONFIG.render_options.use_moon_phase_instead_of_clear_night
-        && curret_icon.ends_with(&format!("{}{}.svg", RainChanceName::Clear, DayNight::Night))
+        && current_hour_weather_icon.ends_with(&format!(
+            "{}{}.svg",
+            RainChanceName::Clear,
+            DayNight::Night
+        ))
     {
         println!("'use_moon_phase_instead_of_clear_night' is set to true, using moon phase icon instead of clear night");
-        curret_icon = get_moon_phase_icon_path().to_string();
+        current_hour_weather_icon = get_moon_phase_icon_path().to_string();
     }
-    context.current_temp = current_hour.temp.to_string();
-    context.current_icon = curret_icon;
-    context.current_feels_like = current_hour.temp_feels_like.to_string();
-    context.current_wind_speed = current_hour.wind.speed_kilometre.to_string();
-    context.current_wind_icon = current_hour.wind.get_icon_path();
-    context.current_uv_index = current_hour.uv.to_string();
-    context.current_relative_humidity = current_hour.relative_humidity.to_string();
-    context.current_relative_humidity_icon = current_hour.relative_humidity.get_icon_path();
+    context.current_hour_temp = current_hour.temp.to_string();
+    context.current_hour_weather_icon = current_hour_weather_icon;
+    context.current_hour_feels_like = current_hour.temp_feels_like.to_string();
+    context.current_hour_wind_speed = current_hour.wind.speed_kilometre.to_string();
+    context.current_hour_wind_icon = current_hour.wind.get_icon_path();
+    context.current_hour_uv_index = current_hour.uv.to_string();
+    context.current_hour_relative_humidity = current_hour.relative_humidity.to_string();
+    context.current_hour_relative_humidity_icon = current_hour.relative_humidity.get_icon_path();
     context.current_day_name = chrono::Local::now().format("%A, %d %b").to_string();
-    context.current_rain_amount = (current_hour.rain.amount.min.unwrap_or(0.0)
+    context.current_hour_rain_amount = (current_hour.rain.amount.min.unwrap_or(0.0)
         + current_hour.rain.amount.min.unwrap_or(0.0))
     .to_string();
     context.rain_measure_icon = current_hour.rain.amount.get_icon_path();
@@ -836,7 +868,7 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
     let current_date = chrono::Local::now().date_naive();
     let mut i = 1;
 
-    println!("Daily forcast");
+    println!("Daily forecast");
     for day in daily_forecast_data {
         if let Some(naive_date) = day.date {
             if naive_date.date() < current_date {
@@ -995,23 +1027,23 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
             }
         },
     );
-    let first_date = match first_date {
+    let forecast_window_start = match first_date {
         Some(date) => date,
         None => {
             handle_errors(
                 context,
                 DashboardError::NoInternet {
-                    details: "No hourly forecast data available, Could Not find a date later than the current datee".to_string(),
+                    details: "No hourly forecast data available, Could Not find a date later than the current date".to_string(),
                 },
             );
             return Ok(());
         }
     };
 
-    let end_date = first_date + chrono::Duration::hours(24);
+    let forecast_window_end = forecast_window_start + chrono::Duration::hours(24);
 
-    // println!("First date: {:?}", first_date);
-    // println!("End date: {:?}", end_date);
+    println!("forecast_window_start: {:?}", forecast_window_start);
+    println!("forecast_window_end: {:?}", forecast_window_end);
 
     let mut x = 0.0;
 
@@ -1019,7 +1051,9 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
 
     hourly_forecast_data
         .iter()
-        .filter(|forecast| forecast.time >= first_date && forecast.time < end_date)
+        .filter(|forecast| {
+            forecast.time >= forecast_window_start && forecast.time < forecast_window_end
+        })
         .for_each(|forecast| {
             if x == 0.0 {
                 // update current hour
@@ -1054,7 +1088,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
             },
         );
 
-    let day_start = first_date
+    let day_start = forecast_window_start
         .with_hour(0)
         .unwrap()
         .with_minute(0)
@@ -1064,8 +1098,8 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
 
     let day_end = day_start + chrono::Duration::days(1);
 
-    println!("Day start: {:?}", day_start);
-    println!("Day end: {:?}", day_end);
+    // println!("day_start: {:?}", day_start);
+    // println!("day_end: {:?}", day_end);
 
     context.graph_height = graph.height.to_string();
     context.graph_width = graph.width.to_string();
@@ -1075,44 +1109,90 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
     context.uv_index = hourly_forecast_data[0].uv.to_string();
     context.uv_index_icon = current_uv.get_icon_path().to_string();
     context.wind_speed = hourly_forecast_data[0].wind.speed_kilometre.to_string();
-    context.max_wind_gust_today = find_max_item_between_dates(
+
+    let max_wind_today = find_max_item_between_dates(
         &hourly_forecast_data,
-        &day_start,
+        &forecast_window_start,
         &day_end,
         |item| item.wind.gust_speed_kilometre.unwrap_or(0.0),
         |item| &item.time,
-    )
-    .to_string();
-    // There is a discrepancy in max uv between hourly forecast and daily forecast
-    context.uv_max_today = find_max_item_between_dates(
+    );
+
+    let max_wind_tomorrow = find_max_item_between_dates(
         &hourly_forecast_data,
-        &day_start,
+        &day_end,
+        &forecast_window_end,
+        |item| item.wind.gust_speed_kilometre.unwrap_or(0.0),
+        |item| &item.time,
+    );
+
+    if max_wind_today > max_wind_tomorrow {
+        context.max_gust_speed = max_wind_today.to_string();
+    } else {
+        context.max_gust_speed = max_wind_tomorrow.to_string();
+        context.max_gust_speed_font_style = "italic".to_string();
+    }
+
+    let max_uv_index = find_max_item_between_dates(
+        &hourly_forecast_data,
+        &forecast_window_start,
         &day_end,
         |item| item.uv,
         |item| &item.time,
-    )
-    .to_string();
-    context.max_relative_humidity_today = find_max_item_between_dates(
+    );
+
+    let max_uv_index_tomorrow = find_max_item_between_dates(
         &hourly_forecast_data,
-        &day_start,
+        &day_end,
+        &forecast_window_end,
+        |item| item.uv,
+        |item| &item.time,
+    );
+
+    if max_uv_index > max_uv_index_tomorrow {
+        context.max_uv_index = max_uv_index.to_string();
+    } else {
+        context.max_uv_index = max_uv_index_tomorrow.to_string();
+        context.max_uv_index_font_style = "italic".to_string();
+    }
+
+    let max_relative_humidity = find_max_item_between_dates(
+        &hourly_forecast_data,
+        &forecast_window_start,
         &day_end,
         |item| item.relative_humidity,
         |item| &item.time,
-    )
-    .to_string();
+    );
+
+    let max_relative_humidity_tomorrow = find_max_item_between_dates(
+        &hourly_forecast_data,
+        &day_end,
+        &forecast_window_end,
+        |item| item.relative_humidity,
+        |item| &item.time,
+    );
+
+    if max_relative_humidity > max_relative_humidity_tomorrow {
+        context.max_relative_humidity = max_relative_humidity.to_string();
+    } else {
+        context.max_relative_humidity = max_relative_humidity_tomorrow.to_string();
+        context.max_relative_humidity_font_style = "italic".to_string();
+    }
 
     context.total_rain_today = (get_total_between_dates(
         &hourly_forecast_data,
-        &day_start,
-        &day_end,
-        |item| (item.rain.amount.min.unwrap_or(0.0) + item.rain.amount.max.unwrap_or(0.0)) / 2.0,
+        &forecast_window_start,
+        &forecast_window_end,
+        |item: &HourlyForecast| {
+            (item.rain.amount.min.unwrap_or(0.0) + item.rain.amount.max.unwrap_or(0.0)) / 2.0
+        },
         |item| &item.time,
     ) as usize)
         .to_string();
 
     context.wind_icon = hourly_forecast_data[0].wind.get_icon_path();
 
-    let axis_data_path = graph.create_axis_with_labels(first_date.hour() as f64);
+    let axis_data_path = graph.create_axis_with_labels(forecast_window_start.hour() as f64);
 
     context.x_axis_path = axis_data_path.x_axis_path;
     context.y_left_axis_path = axis_data_path.y_left_axis_path;

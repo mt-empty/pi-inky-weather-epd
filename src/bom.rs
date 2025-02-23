@@ -148,13 +148,13 @@ pub struct HourlyForecast {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct HourlyForcastResponse {
+pub struct HourlyForecastResponse {
     pub metadata: HourlyMetadata,
     pub data: Vec<HourlyForecast>,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct DailyForcastResponse {
+pub struct DailyForecastResponse {
     pub metadata: DailyMetadata,
     pub data: Vec<DailyEntry>,
 }

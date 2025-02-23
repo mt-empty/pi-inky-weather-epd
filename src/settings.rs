@@ -84,13 +84,6 @@ pub struct DashboardSettings {
 /// * `render_options` - Render options.
 /// * `debugging` - Debugging settings.
 ///
-/// # Examples
-///
-/// ```
-/// let settings = DashboardSettings::new().unwrap();
-/// println!("{:?}", settings);
-/// ```
-///
 /// # Errors
 ///
 /// Returns an error if the configuration cannot be loaded.

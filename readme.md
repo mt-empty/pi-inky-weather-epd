@@ -50,3 +50,11 @@ You can override the default config by creating a file at
 ```bash
  ~/.config/pi-inky-weather-epd.toml
  ```
+
+
+## Development
+
+Your local config should go into `config/local.toml`, this file is not tracked
+```bash
+cp config/development.toml config/local.toml
+```

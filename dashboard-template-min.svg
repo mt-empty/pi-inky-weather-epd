@@ -1,6 +1,8 @@
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
 
-    <!-- Do not use `dx` or `dy`, because svg to png conversion is fails to render these accuratly -->
+    <!-- tspan doesn't work well with the degree symbol ° for some fonts!-->
+    <!-- Avoid using tspan with text-anchor, `dx` or `dy`, resvg doesn't handle it properly -->
+    <!-- see https://github.com/linebender/resvg/issues/583 -->
 
     <defs>
         <pattern id="dots" patternUnits="userSpaceOnUse" width="10" height="10">
@@ -16,133 +18,102 @@
             <path d="M 0 0 L 10 10 M 10 0 L 0 10" stroke="{rain_colour}" stroke-width="1" />
         </pattern>
     </defs>
-    <style>
-        @font-face \{
-            font-family: 'Roboto';
-            src: url('static/fonts/Roboto-Regular.ttf') format('truetype');
-        }
-        @font-face \{
-            font-family: 'Roboto-Regular-Dashed';
-            src: url('static/fonts/Roboto-Regular-Dashed.ttf') format('truetype');
-        }
-
-        .line \{
-            stroke: black;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
-    </style>
-
 
     <rect width="100%" height="100%" fill="{background_colour}" />
 
     <!-- Current Day Information -->
-    <svg x="0" y="0">
-        <text x="270" y="50" font-size="35" fill="{text_colour}">{current_day_name} </text>
-        <image x="0" y="0" width="200" height="180" href="{current_icon}" />
-        <text x="260" y="110" dominant-baseline="middle" font-size="70" fill="{temp_colour}">
-            <tspan text-anchor="middle">
-            {current_temp}
-            </tspan>
-            <tspan baseline-shift="15" dx="-20" font-size="35">°{temp_unit}</tspan>
+    <!-- Do not modify the x position of current_hour_temp and current_hour_feels_like, see above issue at the start of the file -->
+    <text x="270" y="50" font-size="35" fill="{text_colour}">{current_day_name} </text>
+    <image x="0" y="0" width="200" height="180" href="{current_hour_weather_icon}" />
+    <text x="276" y="128" font-size="70" fill="{temp_colour}" text-anchor="middle">
+        {current_hour_temp}
+        <tspan baseline-shift="27" dx="-20" font-size="33">°{temp_unit}</tspan>
+    </text>
+
+    <text x="256" y="158" text-anchor="middle" font-size="18" fill="{text_colour}">
+        <tspan>Feels</tspan>
+        <tspan dy="15.5" dx="-46.6">Like</tspan>
+        <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="{feels_like_colour}"
+            dx="10" dy="-7">
+            {current_hour_feels_like}
+            <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan>
+        </tspan>
+    </text>
+
+
+    <!-- Warning Message -->
+    <svg x="600" y="0" width="200" height="100" text-anchor="middle" visibility="{warning_visibility}">
+        <image x="63" y="-10" width="74" height="74" href="{warning_icon}" />
+        <text x="100" y="60" width="200" font-size="12">
+            {warning_message}
         </text>
-
-        <text  text-anchor="middle" font-size="18" fill="black">
-            <tspan x="230" y="160" dominant-baseline="middle">
-                <tspan dy="-8">Feels</tspan>
-                <tspan dy="16" dx="-46.6">Like</tspan>
-            </tspan>
-            <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle"
-                font-size="55" fill="{feels_like_colour}" dx="10" dy="-1.6">
-                {current_feels_like}
-                <!-- Tspan doesn't work well with the degree symbol ° for some fonts!-->
-                <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan> 
-            </tspan>
-        </text>
-
-
-        <!-- Warning Message -->
-        <svg x="600" y="0" width="200" height="100"  text-anchor="middle"  visibility="{warning_visibility}">
-            <image x="63" y="-10" width="74" height="74"  href="{warning_icon}" />
-            <text x="100" y="60" width="200" font-size="12">
-                {warning_message}
-            </text>
-        </svg>
-
     </svg>
 
     <!-- Sunset/Sunrise Information -->
     <svg x="30" y="145" label="rain">
         <image x="0" y="0" width="75" height="75" href="{sunrise_icon}" />
-        <text x="12" y="65" text-anchor="start" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{sunrise_time}</text>
+        <text x="12" y="70" text-anchor="start" font-size="20" fill="{text_colour}">{sunrise_time}</text>
 
         <image x="70" y="0" width="75" height="75" href="{sunset_icon}" />
-        <text x="83" y="65" text-anchor="start" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{sunset_time}</text>
+        <text x="83" y="70" text-anchor="start" font-size="20" fill="{text_colour}">{sunset_time}</text>
     </svg>
 
 
     <!-- vertical lines with artistic variations -->
-    <path class="line" d="M95 240 C90 220, 95 320, 95 470" />
-    <path class="line" d="M150 240 C155 220, 145 320, 150 470" />
+    <svg class="line">
+        <path d="M95 240 C90 220, 95 320, 95 470" />
+        <path d="M150 240 C155 220, 145 320, 150 470" />
 
-    <!-- horizontal lines with artistic variations -->
-    <path class="line" d="M40 260 C150 261, 250 258, 185 260" />
-    <path class="line" d="M40 330 C150 325, 250 335, 185 330" />
-    <path class="line" d="M40 400 C150 402, 250 399, 185 400" />
+        <!-- horizontal lines with artistic variations -->
+        <path d="M40 260 C150 261, 250 258, 185 260" />
+        <path d="M40 330 C150 325, 250 335, 185 330" />
+        <path d="M40 400 C150 402, 250 399, 185 400" />
+    </svg>
 
     <!-- row header-->
     <svg x="15" y="210" label="UV-index" text-anchor="start">
-        <text x="20" y="37.5" dominant-baseline="middle" font-size="20" fill="black">Today
+        <text x="20" y="43.5" fill="{text_colour}" font-size="20" >Metric
         </text>
 
-        <text x="85" y="37.5" dominant-baseline="middle" font-size="20" fill="black">Now
+        <text x="85" y="43.5" fill="{text_colour}" font-size="20" >Now
         </text>
-        <text x="140" y="37.5" dominant-baseline="middle" font-size="20" fill="black">Max
+        <text x="140" y="43.5" fill="{text_colour}" font-size="20" >Max
+            <tspan baseline-shift="super" font-size="12" dx="-3">24</tspan>
         </text>
     </svg>
 
     <!-- UV Index -->
     <svg x="20" y="260" label="UV-index" text-anchor="middle">
         <image width="75" height="75" href="{uv_index_icon}" />
-        <text x="100" y="37.5" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{current_uv_index}
+        <text x="100" y="45.5" font-size="30" fill="{text_colour}">{current_hour_uv_index}
         </text>
-        <text x="155" y="37.5" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{uv_max_today}
+        <text x="155" y="45.5" font-size="30" fill="{text_colour}" font-style="{max_uv_index_font_style}">{max_uv_index}
         </text>
     </svg>
 
     <!-- Wind Information -->
     <svg x="20" y="330" label="wind" text-anchor="middle">
-        <image width="75" height="75" href="{current_wind_icon}" />
-        <text x="100" y="37.5" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{current_wind_speed}
+        <image width="75" height="75" href="{current_hour_wind_icon}" />
+        <text x="100" y="45.5" font-size="30" fill="{text_colour}">{current_hour_wind_speed}
         </text>
-        <text x="155" y="37.5" dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{max_wind_gust_today}
+        <text x="155" y="45.5" font-size="30" fill="{text_colour}" font-style="{max_gust_speed_font_style}">{max_gust_speed}
         </text>
     </svg>
 
     <!-- Relative Humidity -->
     <svg x="20" y="400" label="relative_humidity" text-anchor="middle">
-        <image width="75" height="75" href="{current_relative_humidity_icon}" />
-        <text x="100" y="37.5"  dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{current_relative_humidity}
+        <image width="75" height="75" href="{current_hour_relative_humidity_icon}" />
+        <text x="100" y="45.5" font-size="30" fill="{text_colour}">{current_hour_relative_humidity}
         </text>
-        <text x="155" y="37.5"  dominant-baseline="middle" font-size="30"
-            fill="{text_colour}">{max_relative_humidity_today}
+        <text x="155" y="45.5" font-size="30" fill="{text_colour}" font-style="{max_relative_humidity_font_style}">{max_relative_humidity}
         </text>
     </svg>
 
     <!-- Forecast for the next 6 days -->
     <svg x="300" y="30">
-        <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{day2_name}</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="{text_colour}">{day2_name}</text>
         <image x="12" y="50" width="75" height="100" href="{day2_icon}" />
-        <text y="150" dominant-baseline="middle" font-size="20" fill="{text_colour}">
+        <text y="155" font-size="20" fill="{text_colour}">
             <tspan x="52" text-anchor="end">{day2_maxtemp}°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
             <tspan x="52" text-anchor="start">{day2_mintemp}°</tspan>
@@ -150,10 +121,9 @@
     </svg>
 
     <svg x="380" y="30">
-        <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{day3_name}</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="{text_colour}">{day3_name}</text>
         <image x="12" y="50" width="75" height="100" href="{day3_icon}" />
-        <text y="150" dominant-baseline="middle" font-size="20" fill="{text_colour}">
+        <text y="155" font-size="20" fill="{text_colour}">
             <tspan x="52" text-anchor="end">{day3_maxtemp}°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
             <tspan x="52" text-anchor="start">{day3_mintemp}°</tspan>
@@ -161,10 +131,9 @@
     </svg>
 
     <svg x="460" y="30">
-        <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{day4_name}</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="{text_colour}">{day4_name}</text>
         <image x="12" y="50" width="75" height="100" href="{day4_icon}" />
-        <text y="150" dominant-baseline="middle" font-size="20" fill="{text_colour}">
+        <text y="155" font-size="20" fill="{text_colour}">
             <tspan x="52" text-anchor="end">{day4_maxtemp}°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
             <tspan x="52" text-anchor="start">{day4_mintemp}°</tspan>
@@ -172,10 +141,9 @@
     </svg>
 
     <svg x="540" y="30">
-        <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{day5_name}</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="{text_colour}">{day5_name}</text>
         <image x="12" y="50" width="75" height="100" href="{day5_icon}" />
-        <text y="150" dominant-baseline="middle" font-size="20" fill="{text_colour}">
+        <text y="155" font-size="20" fill="{text_colour}">
             <tspan x="52" text-anchor="end">{day5_maxtemp}°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
             <tspan x="52" text-anchor="start">{day5_mintemp}°</tspan>
@@ -183,10 +151,9 @@
     </svg>
 
     <svg x="620" y="30">
-        <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{day6_name}</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="{text_colour}">{day6_name}</text>
         <image x="12" y="50" width="75" height="100" href="{day6_icon}" />
-        <text y="150" dominant-baseline="middle" font-size="20" fill="{text_colour}">
+        <text y="155" font-size="20" fill="{text_colour}">
             <tspan x="52" text-anchor="end">{day6_maxtemp}°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
             <tspan x="52" text-anchor="start">{day6_mintemp}°</tspan>
@@ -194,10 +161,9 @@
     </svg>
 
     <svg x="700" y="30">
-        <text x="50" y="60" text-anchor="middle" dominant-baseline="middle" font-size="20"
-            fill="{text_colour}">{day7_name}</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="{text_colour}">{day7_name}</text>
         <image x="12" y="50" width="75" height="100" href="{day7_icon}" />
-        <text y="150" dominant-baseline="middle" font-size="20" fill="{text_colour}">
+        <text y="155" font-size="20" fill="{text_colour}">
             <tspan x="52" text-anchor="end">{day7_maxtemp}°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
             <tspan x="52" text-anchor="start">{day7_mintemp}°</tspan>
@@ -205,12 +171,12 @@
     </svg>
 
     <!-- Graph for hourly forecast -->
-    <svg x="230" y="160" width="560" height="350" viewBox="-50 0 690 300" preserveAspectRatio="xMidYMid meet" style="overflow: visible;">
-        <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{x_axis_path}" fill="none"
-             />
+    <svg x="230" y="160" width="560" height="350" viewBox="-50 0 690 300" preserveAspectRatio="xMidYMid meet"
+        style="overflow: visible;">
+        <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{x_axis_path}" fill="none" />
         <!-- X axis Guidelines -->
-        <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="1" d="{x_axis_guideline_path}" fill="none" stroke-dasharray="5,10"
-             />
+        <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="1" d="{x_axis_guideline_path}" fill="none"
+            stroke-dasharray="5,10" />
         <!-- X Labels -->
         {x_labels}
         <!-- Y Labels -->
@@ -221,18 +187,35 @@
             d="{temp_curve_data}" stroke-width="3.0" fill="none" />
         <path stroke="{feels_like_colour}" stroke-linejoin="round" stroke-dasharray="5,5"
             transform="translate(0, 300) scale(1, -1)" d="{feel_like_curve_data}" stroke-width="3.0" fill="none" />
-        <path transform="translate(0, 300) scale(1, -1)" d="{rain_curve_data}" fill="blue" fill-opacity="25%" />
+        <path transform="translate(0, 300) scale(1, -1)" d="{rain_curve_data}" fill="{rain_colour}" fill-opacity="25%" />
         <defs>
-        <linearGradient id="UVGradient" gradientUnits="objectBoundingBox"
-                x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient id="UVGradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%">
                 {uv_gradient}
             </linearGradient>
         </defs>
-        <rect x="0" y="-14" width="600" height="8" fill="url(#UVGradient)"  />
-        <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{x_axis_path}" fill="none"
-             />
+        <rect x="0" y="-14" width="600" height="8" fill="url(#UVGradient)" />
+        <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{x_axis_path}" fill="none" />
         <path stroke="{y_left_axis_colour}" stroke-linejoin="10 6" stroke-width="2" d="{y_left_axis_path}" />
         <path stroke="{y_right_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{y_right_axis_path}"
             fill="none" />
     </svg>
+    <!-- These are needed render svg in browser/ide -->
+    <style>
+        @font-face \{
+        font-family: 'Roboto';
+        src: url('static/fonts/Roboto-Regular.ttf') format('truetype');
+        }
+
+        @font-face \{ 
+        font-family: 'Roboto-Regular-Dashed';
+        src: url('static/fonts/Roboto-Regular-Dashed.ttf') format('truetype');
+        }
+
+        .line \{ 
+        stroke: {text_colour};
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        }
+    </style>
 </svg>
