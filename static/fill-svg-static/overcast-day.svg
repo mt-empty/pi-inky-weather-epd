@@ -85,7 +85,7 @@
     </symbol>
 
     <!-- Symbol #d: Full weather icon (sun + combined clouds) -->
-    <symbol id="d" viewBox="0 0 410.8 258" style="overflow: visible">
+    <symbol id="d" viewBox="0 0 398.8 246" style="overflow: visible">
       <!-- Sun -->
       <use
         xlink:href="#e"

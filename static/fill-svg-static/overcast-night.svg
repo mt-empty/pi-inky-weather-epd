@@ -39,13 +39,14 @@
       />
     </symbol>
 
-    <!-- Symbol #h (larger cloud, originally gradient fill) -->
+    <!-- Symbol #h: Larger cloud -->
     <symbol id="h" viewBox="0 0 350 223">
+      <!-- Was gradient fill, now white fill + black stroke -->
       <path
         fill="white"
         stroke="black"
         stroke-miterlimit="10"
-        stroke-width="6"
+        stroke-width="7"
         d="m291 107-2.5.1
            A83.9 83.9 0 00135.6 43
            A56 56 0 0051 91
@@ -56,17 +57,17 @@
       />
     </symbol>
 
-    <!-- Symbol #f (combines small + large clouds) -->
+    <!-- Symbol #f: Combined smaller cloud (#g) + larger cloud (#h) -->
     <symbol id="f" viewBox="0 0 398 222">
       <use
         xlink:href="#g"
-        width="200.3"
+        width="180.3"
         height="126.1"
-        transform="translate(198 27)"
+        transform="translate(168 27)"
       />
       <use
         xlink:href="#h"
-        width="350"
+        width="280"
         height="222"
       />
     </symbol>
@@ -84,7 +85,7 @@
         xlink:href="#f"
         width="398"
         height="222"
-        transform="translate(.84 24)"
+        transform="translate(12.84 46)"
       />
     </symbol>
   </defs>
@@ -92,8 +93,8 @@
   <!-- Final usage of #d, same translation as original -->
   <use
     xlink:href="#d"
-    width="398.8"
-    height="246"
-    transform="translate(68 121)"
+    width="410.8"
+    height="258"
+    transform="translate(56 109)"
   />
 </svg>
