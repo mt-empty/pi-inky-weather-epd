@@ -1,3 +1,4 @@
+use std::env;
 use std::io::{Cursor, ErrorKind};
 use std::path::PathBuf;
 use std::{fs, path::Path};
@@ -29,6 +30,8 @@ const TARGET_ARTIFACT: &str = "unknown";
 struct GithubRelease {
     tag_name: String,
 }
+
+// TODO: use self_update crate once this is merged https://github.com/jaemk/self_update/pull/147
 
 /// Fetches the latest release from the GitHub repository and updates the application if a newer version is available.
 ///
@@ -105,6 +108,26 @@ fn parse_latest_version(release_info: &GithubRelease) -> Result<Version, anyhow:
     Ok(latest_version)
 }
 
+/// Renames the current executable by appending the `.old` suffix.
+/// This is done before updating the application to the latest version.
+///
+/// # Errors
+///
+/// Returns an error if the current executable path cannot be determined,
+/// if the new executable path cannot be determined, or if the rename operation fails.
+fn rename_current_executable() -> Result<(), std::io::Error> {
+    let exe = env::current_exe()?;
+    let mut new_exe = exe.clone();
+    new_exe.set_file_name(format!(
+        "{}.old",
+        exe.file_stem()
+            .and_then(|x| x.to_str())
+            .unwrap_or("pi-inky-weather-epd")
+    ));
+    fs::rename(&exe, &new_exe)?;
+    Ok(())
+}
+
 /// Downloads and extracts the latest release from the GitHub repository.
 ///
 /// # Arguments
@@ -152,6 +175,9 @@ fn download_and_extract_release(
     if has_write_permission(PathBuf::from(&binary_base_dir))
         .context("Failed to check write permissions for binary base directory")?
     {
+        // rename the current executable
+        rename_current_executable()?;
+
         archive
             .extract(&binary_base_dir)
             .context("Could not decompress downloaded ZIP archive")?;
@@ -160,6 +186,9 @@ fn download_and_extract_release(
             latest_version
         );
     }
+
+    // delete the zip file
+    fs::remove_file(binary_base_dir.join(format!("{}.zip", TARGET_ARTIFACT)))?;
 
     Ok(())
 }
@@ -214,7 +243,6 @@ pub fn update_app() -> Result<(), anyhow::Error> {
             );
             fetch_latest_release()?;
 
-            // (Optionally) update the timestamp after performing the action
             fs::write(&last_checked_path, now_utc.to_rfc3339())?;
         } else {
             println!(

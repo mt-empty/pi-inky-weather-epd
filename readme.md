@@ -52,6 +52,12 @@ You can override the default config by creating a file at
  ```
 
 
+## Executing on PI
+
+```bash
+0 * * * * cd /home/dietpi/arm-unknown-linux-gnueabihf && sudo ./pi-inky-weather-epd
+```
+
 ## Development
 
 Your local config should go into `config/local.toml`, this file is not tracked
