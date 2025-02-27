@@ -1,5 +1,5 @@
 use std::env;
-use std::io::{Cursor, ErrorKind};
+use std::io::{ErrorKind, Seek, SeekFrom};
 use std::path::PathBuf;
 use std::{fs, path::Path};
 
@@ -9,6 +9,7 @@ use anyhow::{Context, Error, Result};
 use chrono::{DateTime, Duration, Utc};
 use semver::Version;
 use serde::Deserialize;
+use tempfile::NamedTempFile;
 use zip::ZipArchive;
 
 const LAST_CHECKED_FILE_NAME: &str = "last_checked";
@@ -151,11 +152,12 @@ fn download_and_extract_release(
         latest_version,
         TARGET_ARTIFACT
     );
-    let response = client
-        .get(download_url)
+
+    let mut response = client
+        .get(&download_url)
         .header(reqwest::header::USER_AGENT, header_value)
         .send()
-        .context("Failed to download ZIP archive")?;
+        .context("Failed to send request for ZIP archive")?;
     if !response.status().is_success() {
         return Err(anyhow::anyhow!(
             "Failed to download ZIP archive: HTTP {}",
@@ -163,32 +165,41 @@ fn download_and_extract_release(
         ));
     }
 
+    let mut temp_zip =
+        NamedTempFile::new().context("Failed to create a temporary file for the ZIP archive")?;
+
+    response
+        .copy_to(&mut temp_zip)
+        .context("Failed to write ZIP archive into temporary file")?;
+
+    // Reset the file cursor so we can read from the start.
+    temp_zip
+        .as_file_mut()
+        .seek(SeekFrom::Start(0))
+        .context("Failed to seek to start of the temporary ZIP file")?;
+
+    // Open a ZipArchive on the temporary file.
+    let mut archive =
+        ZipArchive::new(temp_zip.as_file()).context("Could not read downloaded ZIP archive")?;
+
     let binary_base_dir = get_base_dir_path()?;
-
-    let archive_bytes = response
-        .bytes()
-        .context("Could not read bytes from downloaded ZIP archive")?
-        .to_vec();
-    let mut archive = ZipArchive::new(Cursor::new(archive_bytes))
-        .context("Could not read downloaded ZIP archive")?;
-
-    if has_write_permission(PathBuf::from(&binary_base_dir))
+    if has_write_permission(binary_base_dir.clone())
         .context("Failed to check write permissions for binary base directory")?
     {
-        // rename the current executable
-        rename_current_executable()?;
+        // Rename the current executable to *.old before extracting.
+        rename_current_executable()
+            .context("Failed to rename current executable before extracting")?;
 
+        // Extract the downloaded archive into the binary base directory.
         archive
-            .extract(&binary_base_dir)
+            .extract(binary_base_dir)
             .context("Could not decompress downloaded ZIP archive")?;
+
         println!(
             "Successfully updated application to version {}",
             latest_version
         );
     }
-
-    // delete the zip file
-    fs::remove_file(binary_base_dir.join(format!("{}.zip", TARGET_ARTIFACT)))?;
 
     Ok(())
 }

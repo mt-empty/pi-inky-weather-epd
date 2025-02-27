@@ -72,8 +72,8 @@
 
     <!-- row header-->
     <svg x="15" y="210" label="UV-index" text-anchor="start">
-        <text x="20" y="43.5" fill="{text_colour}" font-size="20" >Metric
-        </text>
+        <!-- <text x="20" y="43.5" fill="{text_colour}" font-size="20" >Metric
+        </text> -->
 
         <text x="85" y="43.5" fill="{text_colour}" font-size="20" >Now
         </text>

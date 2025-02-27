@@ -23,3 +23,5 @@ Cargo.lock
 other
 bin/act
 config/local.toml
+cached_bom_data
+test_update

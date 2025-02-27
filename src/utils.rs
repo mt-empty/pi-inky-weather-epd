@@ -82,7 +82,8 @@ pub fn load_fonts(font_db: &mut fontdb::Database) {
     let current_path = std::env::current_dir().unwrap();
 
     let font_files = [
-        "static/fonts/Roboto-Regular.ttf",
+        "static/fonts/Roboto-VariableFont_wdth,wght.ttf",
+        "static/fonts/Roboto-Italic-VariableFont_wdth,wght.ttf",
         "static/fonts/Roboto-Regular-Dashed.ttf",
     ];
 

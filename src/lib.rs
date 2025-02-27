@@ -1313,12 +1313,12 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
 }
 
 pub fn run_weather_dashboard() -> Result<(), anyhow::Error> {
-    if CONFIG.release.auto_update {
-        update_app()?;
-    };
     generate_weather_dashboard()?;
     if !CONFIG.debugging.disable_png_output && !CONFIG.debugging.disable_drawing_on_epd {
         invoke_pimironi_image_script()?;
     }
+    if CONFIG.release.auto_update {
+        update_app()?;
+    };
     Ok(())
 }
