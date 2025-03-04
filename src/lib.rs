@@ -32,6 +32,7 @@ use update::update_app;
 pub use utils::*;
 
 pub const NOT_AVAILABLE_ICON: &str = "not-available.svg";
+pub const DEFAULT_AXIS_LABEL_FONT_SIZE: usize = 19;
 
 lazy_static! {
     pub static ref CONFIG: DashboardSettings =
@@ -263,11 +264,11 @@ impl DailyForecastGraph {
             let label_x = y_right_axis_x + 10.0;
             let label_str = format!("{:.0}%", y_val);
             y_right_labels.push_str(&format!(
-                r#"<text x="{x}" y="{y}" fill="{colour}"  font-size="17" text-anchor="start" dy="4">{text}</text>"#,
+                r#"<text x="{x}" y="{y}" fill="{colour}"  font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" text-anchor="start" dy="4">{text}</text>"#,
                 x = label_x,
                 y = ys,
                 colour = CONFIG.colours.text_colour,
-                text = label_str
+                text = label_str,
             ));
         }
         y_right_labels
@@ -298,14 +299,14 @@ impl DailyForecastGraph {
 
             // Label: placed to the left of the y-axis
             let label_x = y_axis_x - 10.0;
-            let mut label_str = format!("{:.1}", y_val);
-            let mut font_size = 17;
+            let mut label_str = format!("{:.1}°", y_val);
+            let mut font_size = DEFAULT_AXIS_LABEL_FONT_SIZE;
             if j == 0 || j == self.y_left_ticks {
-                label_str = format!("{:.0}", y_val);
+                label_str = format!("{:.0}°", y_val);
                 font_size = 35;
             }
             y_left_labels.push_str(&format!(
-                r#"<text x="{x}" y="{y}"  fill="{colour}" font-size="{font_size}" text-anchor="end" dy="4">{text}</text>"#,
+                r#"<text x="{x}" y="{y}"  fill="{colour}" font-size="{font_size}" text-anchor="end" dx="8" dy="4">{text}</text>"#,
                 x = label_x,
                 y = ys,
                 colour = CONFIG.colours.text_colour,
@@ -366,7 +367,7 @@ impl DailyForecastGraph {
             let label_str = format!("{:.0}{}", display_hour, period);
 
             x_labels.push_str(&format!(
-                r#"<text x="{x}" y="{y}" fill="{colour}" font-size="17" text-anchor="middle">{text}</text>"#,
+                r#"<text x="{x}" y="{y}" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" text-anchor="middle">{text}</text>"#,
                 x = label_x,
                 y = label_y,
                 colour = CONFIG.colours.text_colour,
@@ -390,7 +391,7 @@ impl DailyForecastGraph {
 
         format!(
             r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
-                   <text x="{x_text}" y="{y_text}" fill="{colour}" font-size="17" font-style="italic"  transform="rotate(-90, {rotate_x_text}, {rotate_y_text})" text-anchor="start">{tomorrow_day_name}</text>"#,
+                   <text x="{x_text}" y="{y_text}" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" font-style="italic"  transform="rotate(-90, {rotate_x_text}, {rotate_y_text})" text-anchor="start">{tomorrow_day_name}</text>"#,
             x = x_coor,
             chart_height = self.height,
             x_text = x_coor + 10.0,
@@ -1302,6 +1303,7 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
         convert_svg_to_png(
             &CONFIG.misc.modified_template_name,
             &CONFIG.misc.modified_template_name.replace(".svg", ".png"),
+            2.0,
         )?;
 
         println!(

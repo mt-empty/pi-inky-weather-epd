@@ -178,14 +178,14 @@ fn download_and_extract_release(
         .seek(SeekFrom::Start(0))
         .context("Failed to seek to start of the temporary ZIP file")?;
 
-    // Open a ZipArchive on the temporary file.
-    let mut archive =
-        ZipArchive::new(temp_zip.as_file()).context("Could not read downloaded ZIP archive")?;
-
     let binary_base_dir = get_base_dir_path()?;
     if has_write_permission(binary_base_dir.clone())
         .context("Failed to check write permissions for binary base directory")?
     {
+        // Open a ZipArchive on the temporary file.
+        let mut archive =
+            ZipArchive::new(temp_zip.as_file()).context("Could not read downloaded ZIP archive")?;
+
         // Rename the current executable to *.old before extracting.
         rename_current_executable()
             .context("Failed to rename current executable before extracting")?;

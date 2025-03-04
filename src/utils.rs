@@ -33,11 +33,16 @@ pub fn has_write_permission(path: PathBuf) -> Result<bool> {
 ///
 /// * `input_path` - Path to the input SVG file.
 /// * `output_path` - Path to save the output PNG file.
+/// * `scale_factor` - The scale factor to apply to the SVG.
 ///
 /// # Returns
 ///
 /// * `Result<(), Error>` - Ok(()) if successful, or an error message.
-pub fn convert_svg_to_png(input_path: &str, output_path: &str) -> Result<(), Error> {
+pub fn convert_svg_to_png(
+    input_path: &str,
+    output_path: &str,
+    scale_factor: f32,
+) -> Result<(), Error> {
     // Read the SVG file
     let svg_data = fs::read_to_string(input_path)
         .map_err(|e| Error::msg(format!("Failed to read SVG file: {}", e)))?;
@@ -54,13 +59,18 @@ pub fn convert_svg_to_png(input_path: &str, output_path: &str) -> Result<(), Err
     let tree = usvg::Tree::from_str(&svg_data, &opts)
         .map_err(|e| Error::msg(format!("Failed to parse SVG: {}", e)))?;
 
-    // Create a canvas
+    // Create a higher resolution canvas
     let pixmap_size = tree.size().to_int_size();
-    let mut pixmap = tiny_skia::Pixmap::new(pixmap_size.width(), pixmap_size.height())
+    let width = (pixmap_size.width() as f32 * scale_factor) as u32;
+    let height = (pixmap_size.height() as f32 * scale_factor) as u32;
+    let mut pixmap = tiny_skia::Pixmap::new(width, height)
         .ok_or_else(|| Error::msg("Failed to create pixmap"))?;
 
-    // Render SVG onto the canvas
-    resvg::render(&tree, tiny_skia::Transform::default(), &mut pixmap.as_mut());
+    // Create a transform that scales the SVG
+    let transform = tiny_skia::Transform::from_scale(scale_factor, scale_factor);
+
+    // Render SVG onto the canvas with scaling
+    resvg::render(&tree, transform, &mut pixmap.as_mut());
 
     // Save the PNG file
     pixmap

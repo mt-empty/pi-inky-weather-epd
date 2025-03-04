@@ -19,7 +19,7 @@
       fill="red"
       stroke="black"
       stroke-miterlimit="10"
-      stroke-width="4"
+      stroke-width="6"
       d="M442.8 240c-37.5 37.4-105.9 29.8-152.7-17s-54.5-115.3-17-152.8l4.9 13.1
         a71.2 71.2 0 0041.7 41l11.6 4 2.3 7.3
         a70.8 70.8 0 0043.8 43.8l7.3 2.4 4 11.5
@@ -32,7 +32,7 @@
       stroke="black"
       stroke-linecap="round"
       stroke-linejoin="round"
-      stroke-width="2"
+      stroke-width="6"
       d="M384.6 181.8c-33.1 42.6-94.5 41.1-94.5 41.1
         s-1.5-61.4 41.1-94.6"
     />
@@ -40,29 +40,49 @@
   <defs>
     <!-- Symbol #e (two arcs), originally using gradients #a and #b -->
   <symbol id="arc-pair" viewBox="50 0 258 396">
-      <path
-        fill="none"
-        stroke="#6f6fe8"
-        stroke-linecap="round"
-        stroke-miterlimit="10"
-        stroke-width="12"
-        d="M105.2 10.8A15.6 15.6 0 11116.4 37H6"
-      />
-      <path
-        fill="none"
-        stroke="#6f6fe8"
-        stroke-linecap="round"
-        stroke-miterlimit="10"
-        stroke-width="12"
-        d="M60.7 85.2A15.6 15.6 0 1071.9 59H6.6"
-      />
+    <path
+      fill="none"
+      stroke="#6f6fe8"
+      stroke-linecap="round"
+      stroke-miterlimit="10"
+      stroke-width="12"
+      d="M105.2 10.8 A15.6 15.6 0 11116.4 37 H51"
+    transform="translate(-45 36)"
+    />
+    <path
+      fill="none"
+      stroke="#6f6fe8"
+      stroke-linecap="round"
+      stroke-miterlimit="10"
+      stroke-width="12"
+      d="M105.2 10.8 A15.6 15.6 0 11116.4 37 H6"
+    transform="translate(0 66)"
+    />
+    <path
+      fill="none"
+      stroke="#6f6fe8"
+      stroke-linecap="round"
+      stroke-miterlimit="10"
+      stroke-width="12"
+      d="M105.2 10.8A15.6 15.6 0 11116.4 37H6"
+    transform="translate(0 165) scale(1, -1)"
+    />
+    <path
+      fill="none"
+      stroke="#6f6fe8"
+      stroke-linecap="round"
+      stroke-miterlimit="10"
+      stroke-width="12"
+      d="M60.7 85.2A15.6 15.6 0 1071.9 59H6"
+    transform="translate(0 100)"
+    />
     </symbol>
   </defs>
 
   <!-- Use the symbol #e (two arcs), originally gradient strokes, now black -->
   <use
     xlink:href="#arc-pair"
-    transform="translate(62.5 161)"
+    transform="translate(62.5 31)"
   />
   <use
     xlink:href="#umberella"

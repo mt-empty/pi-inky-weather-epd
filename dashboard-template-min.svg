@@ -25,12 +25,15 @@
     <!-- Do not modify the x position of current_hour_temp and current_hour_feels_like, see above issue at the start of the file -->
     <text x="270" y="50" font-size="35" fill="{text_colour}">{current_day_name} </text>
     <image x="0" y="0" width="200" height="180" href="{current_hour_weather_icon}" />
-    <text x="276" y="128" font-size="70" fill="{temp_colour}" text-anchor="middle">
+
+
+    <!-- Current temperature and Feels Like temperature -->
+    <text x="266" y="128" font-size="70" fill="{temp_colour}" text-anchor="middle">
         {current_hour_temp}
         <tspan baseline-shift="27" dx="-20" font-size="33">°{temp_unit}</tspan>
     </text>
 
-    <text x="256" y="158" text-anchor="middle" font-size="18" fill="{text_colour}">
+    <text x="246" y="158" text-anchor="middle" font-size="18" fill="{text_colour}">
         <tspan>Feels</tspan>
         <tspan dy="15.5" dx="-46.6">Like</tspan>
         <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="{feels_like_colour}"
@@ -39,7 +42,6 @@
             <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan>
         </tspan>
     </text>
-
 
     <!-- Warning Message -->
     <svg x="600" y="0" width="200" height="100" text-anchor="middle" visibility="{warning_visibility}">
@@ -58,59 +60,65 @@
         <text x="83" y="70" text-anchor="start" font-size="20" fill="{text_colour}">{sunset_time}</text>
     </svg>
 
+    <g transform="translate(-15, 0)">
 
-    <!-- vertical lines with artistic variations -->
-    <svg class="line">
-        <path d="M95 240 C90 220, 95 320, 95 470" />
-        <path d="M150 240 C155 220, 145 320, 150 470" />
+        <!-- vertical lines with artistic variations -->
+        <svg class="line">
+            <path d="M95 240 C90 220, 95 320, 95 470" />
+            <path d="M150 240 C155 220, 145 320, 150 470" />
 
-        <!-- horizontal lines with artistic variations -->
-        <path d="M40 260 C150 261, 250 258, 185 260" />
-        <path d="M40 330 C150 325, 250 335, 185 330" />
-        <path d="M40 400 C150 402, 250 399, 185 400" />
-    </svg>
+            <!-- horizontal lines with artistic variations -->
+            <path d="M40 260 C150 261, 250 258, 185 260" />
+            <path d="M40 330 C150 325, 250 335, 185 330" />
+            <path d="M40 400 C150 402, 250 399, 185 400" />
+        </svg>
 
-    <!-- row header-->
-    <svg x="15" y="210" label="UV-index" text-anchor="start">
-        <!-- <text x="20" y="43.5" fill="{text_colour}" font-size="20" >Metric
-        </text> -->
+        <!-- row header-->
+        <svg x="15" y="210" label="UV-index" text-anchor="start">
+            <text x="16" y="43.5" fill="{text_colour}" font-size="20">Metric
+            </text>
 
-        <text x="85" y="43.5" fill="{text_colour}" font-size="20" >Now
-        </text>
-        <text x="140" y="43.5" fill="{text_colour}" font-size="20" >Max
-            <tspan baseline-shift="super" font-size="12" dx="-3">24</tspan>
-        </text>
-    </svg>
+            <text x="85" y="43.5" fill="{text_colour}" font-size="20">Now
+            </text>
+            <text x="140" y="43.5" fill="{text_colour}" font-size="20">Max
+                <tspan baseline-shift="super" font-size="17" dx="-3">24</tspan>
+            </text>
+        </svg>
 
-    <!-- UV Index -->
-    <svg x="20" y="260" label="UV-index" text-anchor="middle">
-        <image width="75" height="75" href="{uv_index_icon}" />
-        <text x="100" y="45.5" font-size="30" fill="{text_colour}">{current_hour_uv_index}
-        </text>
-        <text x="155" y="45.5" font-size="30" fill="{text_colour}" font-style="{max_uv_index_font_style}">{max_uv_index}
-        </text>
-    </svg>
+        <!-- UV Index -->
+        <svg x="20" y="260" label="UV-index" text-anchor="middle">
+            <image width="75" height="75" href="{uv_index_icon}" />
+            <text x="100" y="45.5" font-size="30" fill="{text_colour}">{current_hour_uv_index}
+            </text>
+            <text x="155" y="45.5" font-size="30" fill="{text_colour}"
+                font-style="{max_uv_index_font_style}">{max_uv_index}
+            </text>
+        </svg>
 
-    <!-- Wind Information -->
-    <svg x="20" y="330" label="wind" text-anchor="middle">
-        <image width="75" height="75" href="{current_hour_wind_icon}" />
-        <text x="100" y="45.5" font-size="30" fill="{text_colour}">{current_hour_wind_speed}
-        </text>
-        <text x="155" y="45.5" font-size="30" fill="{text_colour}" font-style="{max_gust_speed_font_style}">{max_gust_speed}
-        </text>
-    </svg>
+        <!-- Wind Information -->
+        <svg x="20" y="330" label="wind" text-anchor="middle">
+            <image width="75" height="75" href="{current_hour_wind_icon}" />
+            <text x="100" y="45.5" font-size="30" fill="{text_colour}">{current_hour_wind_speed}
+            </text>
+            <text x="155" y="45.5" font-size="30" fill="{text_colour}"
+                font-style="{max_gust_speed_font_style}">{max_gust_speed}
+            </text>
+        </svg>
 
-    <!-- Relative Humidity -->
-    <svg x="20" y="400" label="relative_humidity" text-anchor="middle">
-        <image width="75" height="75" href="{current_hour_relative_humidity_icon}" />
-        <text x="100" y="45.5" font-size="30" fill="{text_colour}">{current_hour_relative_humidity}
-        </text>
-        <text x="155" y="45.5" font-size="30" fill="{text_colour}" font-style="{max_relative_humidity_font_style}">{max_relative_humidity}
-        </text>
-    </svg>
+        <!-- Relative Humidity -->
+        <svg x="20" y="400" label="relative_humidity" text-anchor="middle">
+            <image width="75" height="75" href="{current_hour_relative_humidity_icon}" />
+            <text x="100" y="45.5" font-size="30" fill="{text_colour}">{current_hour_relative_humidity}
+            </text>
+            <text x="155" y="45.5" font-size="30" fill="{text_colour}"
+                font-style="{max_relative_humidity_font_style}">{max_relative_humidity}
+            </text>
+        </svg>
+    </g>
+
 
     <!-- Forecast for the next 6 days -->
-    <svg x="300" y="30">
+    <svg x="292" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="{text_colour}">{day2_name}</text>
         <image x="12" y="50" width="75" height="100" href="{day2_icon}" />
         <text y="155" font-size="20" fill="{text_colour}">
@@ -120,7 +128,7 @@
         </text>
     </svg>
 
-    <svg x="380" y="30">
+    <svg x="373" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="{text_colour}">{day3_name}</text>
         <image x="12" y="50" width="75" height="100" href="{day3_icon}" />
         <text y="155" font-size="20" fill="{text_colour}">
@@ -130,7 +138,7 @@
         </text>
     </svg>
 
-    <svg x="460" y="30">
+    <svg x="454" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="{text_colour}">{day4_name}</text>
         <image x="12" y="50" width="75" height="100" href="{day4_icon}" />
         <text y="155" font-size="20" fill="{text_colour}">
@@ -140,7 +148,7 @@
         </text>
     </svg>
 
-    <svg x="540" y="30">
+    <svg x="535" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="{text_colour}">{day5_name}</text>
         <image x="12" y="50" width="75" height="100" href="{day5_icon}" />
         <text y="155" font-size="20" fill="{text_colour}">
@@ -150,7 +158,7 @@
         </text>
     </svg>
 
-    <svg x="620" y="30">
+    <svg x="616" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="{text_colour}">{day6_name}</text>
         <image x="12" y="50" width="75" height="100" href="{day6_icon}" />
         <text y="155" font-size="20" fill="{text_colour}">
@@ -160,7 +168,7 @@
         </text>
     </svg>
 
-    <svg x="700" y="30">
+    <svg x="697" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="{text_colour}">{day7_name}</text>
         <image x="12" y="50" width="75" height="100" href="{day7_icon}" />
         <text y="155" font-size="20" fill="{text_colour}">
@@ -171,7 +179,7 @@
     </svg>
 
     <!-- Graph for hourly forecast -->
-    <svg x="230" y="160" width="560" height="350" viewBox="-50 0 690 300" preserveAspectRatio="xMidYMid meet"
+    <svg x="220" y="160" width="560" height="350" viewBox="-50 0 690 300" preserveAspectRatio="xMidYMid meet"
         style="overflow: visible;">
         <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{x_axis_path}" fill="none" />
         <!-- X axis Guidelines -->
@@ -187,7 +195,8 @@
             d="{temp_curve_data}" stroke-width="3.0" fill="none" />
         <path stroke="{feels_like_colour}" stroke-linejoin="round" stroke-dasharray="5,5"
             transform="translate(0, 300) scale(1, -1)" d="{feel_like_curve_data}" stroke-width="3.0" fill="none" />
-        <path transform="translate(0, 300) scale(1, -1)" d="{rain_curve_data}" fill="{rain_colour}" fill-opacity="25%" />
+        <path transform="translate(0, 300) scale(1, -1)" d="{rain_curve_data}" fill="{rain_colour}"
+            fill-opacity="25%" />
         <defs>
             <linearGradient id="UVGradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%">
                 {uv_gradient}
@@ -195,27 +204,27 @@
         </defs>
         <rect x="0" y="-14" width="600" height="8" fill="url(#UVGradient)" />
         <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{x_axis_path}" fill="none" />
-        <path stroke="{y_left_axis_colour}" stroke-linejoin="10 6" stroke-width="2" d="{y_left_axis_path}" />
-        <path stroke="{y_right_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{y_right_axis_path}"
+        <path stroke="{y_left_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{y_left_axis_path}" />
+        <path stroke="{y_right_axis_colour}" stroke-linejoin="round" stroke-width="3" d="{y_right_axis_path}"
             fill="none" />
     </svg>
     <!-- These are needed render svg in browser/ide -->
     <style>
         @font-face \{
-        font-family: 'Roboto';
-        src: url('static/fonts/Roboto-Regular.ttf') format('truetype');
+            font-family: 'Roboto';
+            src: url('static/fonts/Roboto-Regular.ttf') format('truetype');
         }
 
         @font-face \{ 
-        font-family: 'Roboto-Regular-Dashed';
-        src: url('static/fonts/Roboto-Regular-Dashed.ttf') format('truetype');
+            font-family: 'Roboto-Regular-Dashed';
+            src: url('static/fonts/Roboto-Regular-Dashed.ttf') format('truetype');
         }
 
         .line \{ 
-        stroke: {text_colour};
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
+            stroke: {text_colour};
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
     </style>
 </svg>
