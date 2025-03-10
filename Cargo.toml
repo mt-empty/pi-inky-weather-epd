@@ -21,7 +21,7 @@ strum = "0.27"
 strum_macros = "0.27"
 config = "0.15"
 tinytemplate = "1.2"
-resvg = "0.44"
+resvg = "0.45"
 image = "0.25"
 openssl = { version = "0.10", features = ["vendored"] }
 zip = "2.2.2"
@@ -31,5 +31,5 @@ tempfile = "3.17.1"
 
 # dev dependencies
 [dev-dependencies]
-usvg = "0.44"
+usvg = "0.45"
 cross = "0.2.5" # needed for ci/cd to compile for different architectures
