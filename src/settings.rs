@@ -128,7 +128,6 @@ impl DashboardSettings {
             "location: {:?}",
             settings.get_string("api.location").unwrap()
         );
-
         // You can deserialize (and thus freeze) the entire configuration as
         settings.try_deserialize()
     }

@@ -16,7 +16,7 @@ mod utils;
 
 use anyhow::Error;
 use bom::*;
-use chart::{catmull_bezier, Point};
+use chart::{catmull_rom_to_bezier, Point};
 use chrono::{Datelike, Timelike};
 use context::Context;
 use errors::*;
@@ -426,7 +426,10 @@ impl DailyForecastGraph {
         //     "starting x: {}, ending x: {}",
         //     self.starting_x, self.ending_x
         // );
-        println!("Global Min y: {}, Max y: {}", self.min_y, self.max_y);
+        println!(
+            "24h forecast Global Min y: {}, Max y: {}",
+            self.min_y, self.max_y
+        );
     }
 
     fn draw_uv_gradient_over_time(&self, uv_data: [usize; 24]) -> String {
@@ -494,7 +497,7 @@ impl DailyForecastGraph {
 
             // Generate the SVG path data
             let path = if data.smooth {
-                catmull_bezier(points)
+                catmull_rom_to_bezier(points)
                     .iter()
                     .enumerate()
                     .map(|(i, val)| {
@@ -869,7 +872,6 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
     let current_date = chrono::Local::now().date_naive();
     let mut i = 1;
 
-    println!("Daily forecast");
     for day in daily_forecast_data {
         if let Some(naive_date) = day.date {
             if naive_date.date() < current_date {
@@ -893,7 +895,7 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
             .map_or("NA".to_string(), |date| date.format("%a").to_string());
 
         println!(
-            "{} - max {} min {} temp",
+            "{} - Max {} Min {}",
             day_name_value, max_temp_value, min_temp_value
         );
         match i {
@@ -1043,8 +1045,8 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
 
     let forecast_window_end = forecast_window_start + chrono::Duration::hours(24);
 
-    println!("forecast_window_start: {:?}", forecast_window_start);
-    println!("forecast_window_end: {:?}", forecast_window_end);
+    println!("24h forecast window start: {:?}", forecast_window_start);
+    println!("24h forecast window end: {:?}", forecast_window_end);
 
     let mut x = 0.0;
 
@@ -1237,6 +1239,7 @@ fn get_moon_phase_icon_path() -> String {
 }
 
 fn update_forecast_context(context: &mut Context) -> Result<(), Error> {
+    println!("Daily forecast");
     match update_daily_forecast_data(context) {
         Ok(context) => context,
         Err(e) => {
@@ -1244,6 +1247,7 @@ fn update_forecast_context(context: &mut Context) -> Result<(), Error> {
             return Err(e);
         }
     };
+    println!("Hourly forecast");
     match update_hourly_forecast_data(context) {
         Ok(context) => context,
         Err(e) => {
@@ -1268,10 +1272,6 @@ fn render_dashboard_template(context: &mut Context, dashboard_svg: String) -> Re
         Ok(rendered) => {
             let mut output = fs::File::create(CONFIG.misc.modified_template_name.clone())?;
             output.write_all(rendered.as_bytes())?;
-            println!(
-                "SVG has been modified and saved successfully at {}",
-                CONFIG.misc.modified_template_name
-            );
             Ok(())
         }
         Err(e) => {
@@ -1298,6 +1298,12 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
     update_forecast_context(&mut context)?;
 
     render_dashboard_template(&mut context, template_svg)?;
+    println!(
+        "SVG has been modified and saved successfully at {}",
+        current_dir
+            .join(&CONFIG.misc.modified_template_name)
+            .display()
+    );
 
     if !CONFIG.debugging.disable_png_output {
         convert_svg_to_png(
@@ -1308,7 +1314,9 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
 
         println!(
             "PNG has been generated successfully at {}",
-            CONFIG.misc.modified_template_name.replace(".svg", ".png")
+            current_dir
+                .join(CONFIG.misc.modified_template_name.replace(".svg", ".png"))
+                .display()
         );
     }
     Ok(())

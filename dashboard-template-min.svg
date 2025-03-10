@@ -5,6 +5,10 @@
     <!-- see https://github.com/linebender/resvg/issues/583 -->
 
     <defs>
+        <linearGradient id="fillGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="blue" stop-opacity="0.5" />
+            <stop offset="100%" stop-color="blue" stop-opacity="0.1" />
+        </linearGradient>
         <pattern id="dots" patternUnits="userSpaceOnUse" width="10" height="10">
             <circle cx="5" cy="5" r="2" fill="{rain_colour}" />
         </pattern>
@@ -52,7 +56,7 @@
     </svg>
 
     <!-- Sunset/Sunrise Information -->
-    <svg x="30" y="145" label="rain">
+    <svg x="30" y="150" label="rain">
         <image x="0" y="0" width="75" height="75" href="{sunrise_icon}" />
         <text x="12" y="70" text-anchor="start" font-size="20" fill="{text_colour}">{sunrise_time}</text>
 
