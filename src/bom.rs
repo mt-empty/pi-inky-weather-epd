@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 use crate::{utils, CONFIG};
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
 use serde::Deserialize;
-use utils::*;
 
 const WEATHER_PROVIDER: &str = "https://api.weather.bom.gov.au/v1/locations";
 lazy_static! {
@@ -28,19 +27,15 @@ pub struct Wind {
 
 #[derive(Deserialize, Debug)]
 pub struct Temp {
-    #[serde(deserialize_with = "deserialize_naive_date")]
-    pub time: NaiveDateTime,
+    pub time: DateTime<Utc>,
     pub value: f64,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct HourlyMetadata {
-    #[serde(deserialize_with = "deserialize_naive_date")]
-    pub response_timestamp: NaiveDateTime,
-    #[serde(deserialize_with = "deserialize_naive_date")]
-    pub issue_time: NaiveDateTime,
-    #[serde(default, deserialize_with = "deserialize_optional_naive_date")]
-    pub observation_time: Option<NaiveDateTime>,
+    pub response_timestamp: DateTime<Utc>,
+    pub issue_time: DateTime<Utc>,
+    pub observation_time: Option<DateTime<Utc>>,
     pub copyright: String,
 }
 
@@ -66,19 +61,16 @@ pub struct Rain {
 #[derive(Deserialize, Debug)]
 pub struct UV {
     pub category: Option<String>,
-    #[serde(deserialize_with = "deserialize_optional_naive_date")]
-    pub end_time: Option<NaiveDateTime>,
+    pub end_time: Option<DateTime<Utc>>,
     pub max_index: Option<u32>,
-    #[serde(deserialize_with = "deserialize_optional_naive_date")]
-    pub start_time: Option<NaiveDateTime>,
+    // #[serde(deserialize_with = "deserialize_optional_naive_date")]
+    pub start_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Deserialize, Debug, Default, Copy, Clone)]
 pub struct Astronomical {
-    #[serde(deserialize_with = "deserialize_optional_naive_date")]
-    pub sunrise_time: Option<NaiveDateTime>,
-    #[serde(deserialize_with = "deserialize_optional_naive_date")]
-    pub sunset_time: Option<NaiveDateTime>,
+    pub sunrise_time: Option<DateTime<Utc>>,
+    pub sunset_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -102,8 +94,7 @@ pub struct DailyEntry {
     pub rain: Option<Rain>,
     pub uv: Option<UV>,
     pub astronomical: Option<Astronomical>,
-    #[serde(deserialize_with = "deserialize_optional_naive_date")]
-    pub date: Option<NaiveDateTime>,
+    pub date: Option<DateTime<Utc>>,
     pub temp_max: Option<f64>,
     pub temp_min: Option<f64>,
     pub extended_text: Option<String>,
@@ -117,12 +108,9 @@ pub struct DailyEntry {
 
 #[derive(Deserialize, Debug)]
 pub struct DailyMetadata {
-    #[serde(deserialize_with = "deserialize_naive_date")]
-    pub response_timestamp: NaiveDateTime,
-    #[serde(deserialize_with = "deserialize_naive_date")]
-    pub issue_time: NaiveDateTime,
-    #[serde(deserialize_with = "deserialize_naive_date")]
-    pub next_issue_time: NaiveDateTime,
+    pub response_timestamp: DateTime<Utc>,
+    pub issue_time: DateTime<Utc>,
+    pub next_issue_time: DateTime<Utc>,
     pub forecast_region: String,
     pub forecast_type: String,
     pub copyright: String,
@@ -138,13 +126,10 @@ pub struct HourlyForecast {
     pub relative_humidity: f64,
     pub uv: f64,
     pub icon_descriptor: String,
-    #[serde(deserialize_with = "deserialize_naive_date")]
-    pub next_three_hourly_forecast_period: NaiveDateTime,
-    #[serde(deserialize_with = "deserialize_naive_date")]
-    pub time: NaiveDateTime,
+    pub next_three_hourly_forecast_period: DateTime<Utc>,
+    pub time: DateTime<Utc>,
     pub is_night: bool,
-    #[serde(deserialize_with = "deserialize_naive_date")]
-    pub next_forecast_period: NaiveDateTime,
+    pub next_forecast_period: DateTime<Utc>,
 }
 
 #[derive(Deserialize, Debug)]

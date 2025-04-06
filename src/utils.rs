@@ -2,8 +2,8 @@ use anyhow::Error;
 use anyhow::Result;
 use chrono::Local;
 use chrono::NaiveDate;
-use chrono::NaiveDateTime;
 use chrono::TimeZone;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use resvg::tiny_skia;
 use resvg::usvg;
 use serde::Deserialize;
@@ -144,8 +144,8 @@ pub fn convert_utc_to_local_datetime(utc_time: &str) -> Result<NaiveDateTime, ch
 /// # Arguments
 ///
 /// * `data` - A slice of data items.
-/// * `start_date` - The start date as `NaiveDateTime`.
-/// * `end_date` - The end date as `NaiveDateTime`.
+/// * `start_date` - The start date as `DateTime<Utc>`.
+/// * `end_date` - The end date as `DateTime<Utc>`.
 /// * `get_value` - A function to extract the value from a data item.
 /// * `get_time` - A function to extract the time from a data item.
 ///
@@ -154,10 +154,10 @@ pub fn convert_utc_to_local_datetime(utc_time: &str) -> Result<NaiveDateTime, ch
 /// * `f64` - The total value between the specified dates.
 pub fn get_total_between_dates<T>(
     data: &[T],
-    start_date: &NaiveDateTime,
-    end_date: &NaiveDateTime,
+    start_date: &DateTime<Utc>,
+    end_date: &DateTime<Utc>,
     get_value: impl Fn(&T) -> f64,
-    get_time: impl Fn(&T) -> &NaiveDateTime,
+    get_time: impl Fn(&T) -> &DateTime<Utc>,
 ) -> f64 {
     data.iter()
         .filter_map(|item| {
@@ -176,8 +176,8 @@ pub fn get_total_between_dates<T>(
 /// # Arguments
 ///
 /// * `data` - A slice of data items.
-/// * `start_date` - The start date as `NaiveDateTime`.
-/// * `end_date` - The end date as `NaiveDateTime`, not inclusive.
+/// * `start_date` - The start date as `DateTime<Utc>`.
+/// * `end_date` - The end date as `DateTime<Utc>`, not inclusive.
 /// * `get_value` - A function to extract the value from a data item.
 /// * `get_time` - A function to extract the time from a data item.
 ///
@@ -186,10 +186,10 @@ pub fn get_total_between_dates<T>(
 /// * `f64` - The maximum value between the specified dates.
 pub fn find_max_item_between_dates<T>(
     data: &[T],
-    start_date: &NaiveDateTime,
-    end_date: &NaiveDateTime,
+    start_date: &DateTime<Utc>,
+    end_date: &DateTime<Utc>,
     get_value: impl Fn(&T) -> f64,
-    get_time: impl Fn(&T) -> &NaiveDateTime,
+    get_time: impl Fn(&T) -> &DateTime<Utc>,
 ) -> f64 {
     data.iter()
         .filter_map(|item| {

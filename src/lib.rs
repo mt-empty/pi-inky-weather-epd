@@ -384,7 +384,6 @@ impl DailyForecastGraph {
 
     fn draw_tomorrow_line(&self, x_coor: f64) -> String {
         let tomorrow_day_name = chrono::Local::now()
-            .date_naive()
             .checked_add_days(chrono::Days::new(1))
             .map(|d| d.format("%A").to_string())
             .unwrap_or_else(|| "Tomorrow".to_string());
@@ -780,7 +779,7 @@ fn fetch_data<T: for<'de> Deserialize<'de>>(
     if !file_path.exists() {
         fs::create_dir_all(file_path.parent().unwrap())?;
     }
-
+    // TODO: delegate the Config::debugging.disable_network_requests to a different function
     if !CONFIG.debugging.disable_network_requests {
         let client = reqwest::blocking::Client::new();
         let response = match client.get(endpoint).send() {
@@ -869,15 +868,15 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
         }
         Err(e) => return Err(e),
     };
-    let current_date = chrono::Local::now().date_naive();
+    let current_date = chrono::Utc::now();
     let mut i = 1;
 
     for day in daily_forecast_data {
         if let Some(naive_date) = day.date {
-            if naive_date.date() < current_date {
+            if naive_date < current_date {
                 // If the date is in the past, skip it
                 continue;
-            } else if naive_date.date() > current_date + chrono::Duration::days(7) {
+            } else if naive_date > current_date + chrono::Duration::days(7) {
                 // If the date is more than 7 days in the future, skip it
                 break;
             }
@@ -1009,8 +1008,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
         start_time: None,
     };
 
-    let current_date = chrono::Local::now()
-        .naive_local()
+    let current_date = chrono::Utc::now()
         .with_minute(0)
         .unwrap()
         .with_second(0)
@@ -1061,6 +1059,11 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
             if x == 0.0 {
                 // update current hour
                 update_current_hour_data(forecast, context);
+            } else if x >= 24.0 {
+                eprintln!(
+                    "Warning: More than 24 hours of hourly forecast data, this should not happen"
+                );
+                return;
             }
             // we won't push the actual hour right now
             // we can calculate it later
@@ -1195,7 +1198,8 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
 
     context.wind_icon = hourly_forecast_data[0].wind.get_icon_path();
 
-    let axis_data_path = graph.create_axis_with_labels(forecast_window_start.hour() as f64);
+    let forecast_window_start_local = forecast_window_start.with_timezone(&chrono::Local);
+    let axis_data_path = graph.create_axis_with_labels(forecast_window_start_local.hour() as f64);
 
     context.x_axis_path = axis_data_path.x_axis_path;
     context.y_left_axis_path = axis_data_path.y_left_axis_path;
@@ -1327,7 +1331,7 @@ pub fn run_weather_dashboard() -> Result<(), anyhow::Error> {
     if !CONFIG.debugging.disable_png_output && !CONFIG.debugging.disable_drawing_on_epd {
         invoke_pimironi_image_script()?;
     }
-    if CONFIG.release.auto_update {
+    if CONFIG.release.update_interval_days > 0 {
         update_app()?;
     };
     Ok(())
