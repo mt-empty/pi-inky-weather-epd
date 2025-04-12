@@ -1,35 +1,48 @@
+use super::validation::is_valid_colour;
 use serde::Deserialize;
 use std::env;
+use validator::Validate;
 
 use config::{Config, ConfigError, Environment, File};
 const CONFIG_DIR: &str = "./config";
 const DEFAULT_CONFIG_NAME: &str = "default";
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Validate, Deserialize)]
 #[allow(unused)]
 pub struct Release {
+    #[validate(url)]
     pub release_info_url: String,
+    #[validate(url)]
     pub download_base_url: String,
-    pub auto_update: bool,
+    #[validate(range(min = 0))]
     pub update_interval_days: i64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Validate, Deserialize)]
 #[allow(unused)]
 pub struct Api {
+    #[validate(length(min = 6, message = "Location must be at least 6 charachter hash code"))]
     pub location: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Validate, Deserialize)]
 #[allow(unused)]
 pub struct Colours {
+    #[validate(custom(function = "is_valid_colour"))]
     pub background_colour: String,
+    #[validate(custom(function = "is_valid_colour"))]
     pub text_colour: String,
+    #[validate(custom(function = "is_valid_colour"))]
     pub x_axis_colour: String,
+    #[validate(custom(function = "is_valid_colour"))]
     pub y_left_axis_colour: String,
+    #[validate(custom(function = "is_valid_colour"))]
     pub y_right_axis_colour: String,
+    #[validate(custom(function = "is_valid_colour"))]
     pub temp_colour: String,
+    #[validate(custom(function = "is_valid_colour"))]
     pub feels_like_colour: String,
+    #[validate(custom(function = "is_valid_colour"))]
     pub rain_colour: String,
 }
 
@@ -45,9 +58,10 @@ pub struct Misc {
     pub python_path: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Validate, Deserialize)]
 #[allow(unused)]
 pub struct RenderOptions {
+    #[validate(range(min = 0.0, max = 1.0))]
     pub saturation: f32,
     pub temp_unit: String,
     pub use_moon_phase_instead_of_clear_night: bool,

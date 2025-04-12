@@ -28,6 +28,8 @@ zip = "2.2.2"
 semver = "1.0.25"
 thiserror = "2.0.11"
 tempfile = "3.17.1"
+validator = { version = "0.20", features = ["derive"] }
+regex = { version = "1.11" }
 
 # dev dependencies
 [dev-dependencies]

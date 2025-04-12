@@ -1,6 +1,7 @@
 use thiserror::Error;
 
-use crate::{context::Context, Icon};
+use crate::dashboard::context::Context;
+use crate::weather::icons::Icon;
 
 #[derive(Error, Debug, Clone)]
 pub enum DashboardError {

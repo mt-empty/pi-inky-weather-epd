@@ -1,20 +1,6 @@
 #![allow(dead_code)]
-use crate::{utils, CONFIG};
 use chrono::{DateTime, Utc};
-use lazy_static::lazy_static;
 use serde::Deserialize;
-
-const WEATHER_PROVIDER: &str = "https://api.weather.bom.gov.au/v1/locations";
-lazy_static! {
-    pub static ref DAILY_FORECAST_ENDPOINT: String = format!(
-        "{}/{}/forecasts/daily",
-        WEATHER_PROVIDER, CONFIG.api.location
-    );
-    pub static ref HOURLY_FORECAST_ENDPOINT: String = format!(
-        "{}/{}/forecasts/hourly",
-        WEATHER_PROVIDER, CONFIG.api.location
-    );
-}
 
 #[derive(Deserialize, Debug)]
 pub struct Wind {
