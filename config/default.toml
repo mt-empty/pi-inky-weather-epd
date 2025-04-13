@@ -38,4 +38,3 @@ python_path = "/home/dietpi/env/bin/python3"
 [debugging]
 disable_network_requests = false # if true, the weather data will be loaded from a cached file instead of the API, make you ran the application at least once with this set to false 
 disable_png_output = false
-disable_drawing_on_epd = false 

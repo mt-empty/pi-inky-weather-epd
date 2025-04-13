@@ -73,7 +73,6 @@ pub struct RenderOptions {
 pub struct Debugging {
     pub disable_network_requests: bool,
     pub disable_png_output: bool,
-    pub disable_drawing_on_epd: bool,
 }
 
 #[derive(Debug, Deserialize)]
