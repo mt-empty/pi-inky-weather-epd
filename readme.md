@@ -4,61 +4,59 @@ This is a weather display powered by a Raspberry pi and a 7.3in 7 color E-Paper 
 
 ![alt text](./misc/dashboard.png)
 
+## Hardware
+- Raspberry Pi Zero W
+- 7.3in E-Paper display (Inky Impression 7.3)
+- 3D printed case (optional)
+
 ## Setup on Raspberry Pi 
 
-1. Get six character hash from https://geohash.softeng.co
-
-2. Manually install bersion **1.5.0** release of the inky library, refer to the official [documentation](https://github.com/pimoroni/inky?tab=readme-ov-file#install-stable-library-from-pypi-and-configure-manually)
-3. Download and extract the latest release from the [releases page](https://github.com/mt-empty/pi-inky-weather-epd/releases) for your architecture
-4. Create a config file at `~/.config/pi-inky-weather-epd.toml` with the following content:
-```toml
-[api]
-location = "<Six character hash>"
-
-[misc]
-python_script_path = "/home/dietpi/Pimoroni/inky/examples/7color/image.py" # this is located in the files created by the inky library
-python_path = "<The path to the python executable created by inky install script>" # should be in the environment created by the inky library
-```
-5. Create a cron job to run the script every hour 
-   
+1. Install the Inky library:
+   ```bash
+   curl https://get.pimoroni.com/inky | bash
    ```
-   0 * * * * cd <extracted directory location>arm-unknown-linux-gnueabihf && sudo ./pi-inky-weather-epd > <extracted directory location>/inky.log 2>&1
+   For detailed installation steps, refer to the official [documentation](https://github.com/pimoroni/inky?tab=readme-ov-file#install-stable-library-from-pypi-and-configure-manually).
+
+2. Download the latest release for your architecture from the [releases page](https://github.com/mt-empty/pi-inky-weather-epd/releases) and extract it:
+   ```bash
+   tar xvf pi-inky-weather-epd-*.tar.gz
+   ```
+3. Obtain a six-character geohash for your location from https://geohash.softeng.co
+
+4. Create a configuration file with your geohash:
+   ```bash
+   echo '[api]\nlocation = "YOUR_GEOHASH"' > ~/.config/pi-inky-weather-epd.toml
    ```
 
-### Troubleshooting
+5. Set up an hourly cron job to update the display:
+   ```bash
+   (crontab -l 2>/dev/null; echo "0 * * * * cd /path/to/extracted/files && ./pi-inky-weather-epd && sudo PYTHON_PATH IMAGE_SCRIPT_PATH dashboard.png SATURATION") | crontab -
+   ```
+   Replace:
+   - `/path/to/extracted/files` with your installation directory
+   - `PYTHON_PATH` with path to Python (e.g., `/usr/bin/python3`)
+   - `IMAGE_SCRIPT_PATH` with path to Inky's image.py (e.g., `/home/pi/Pimoroni/inky/examples/7color/image.py`)
+   - `SATURATION` with the desired saturation level (e.g., `1.0`), it it not recommended change this for current icons
 
-cd into the extracted directory and run the script manually to see if there are any errors
+   Example of complete cron command:
+   ```bash
+   0 * * * * cd /home/pi/pi-inky-weather-epd && ./pi-inky-weather-epd && sudo /home/dietpi/env/bin/python3 /home/dietpi/Pimoroni/inky/examples/7color/image.py dashboard.png 1.0
+   ```
 
-```bash
-cd <extracted directory location>arm-unknown-linux-gnueabihf
-sudo ./pi-inky-weather-epd
-```
+## Configuration
 
-### Config
-
-You can override the default config which are located at [./config/](./config/) by creating a file at:
+You can override the default configs located at [./config/](./config/) by creating a file at:
 ```bash
 ~/.config/pi-inky-weather-epd.toml
 ```
 
-### Dietpi distro only
+### Special Instructions for DietPi
 
-For **dietpi** distro, I had to set this config for the installion script to work:
+For **dietpi** distro, set this config for the installation script to work:
 ```
 include-system-site-packages = true
 ```
 I also had to modify the installation script to have pip3 point to the environment pip3 as opposed to the system pip3
-
-I also had to modify to manually install script to have pip3 point to environment pip3 as oppose to system pip3
-
-
-## TODO
-- [ ] Testing: create a script that auto generates some/all weather variations
-- [ ] Find out all the supported colors for the e-ink display
-  - [x] purple/whitish color?
-  - [x] Deep Pink
-  - [ ] Other? 
-
 
 ## Inky Impression 7.3
 
@@ -81,7 +79,7 @@ I also had to modify to manually install script to have pip3 point to environmen
 [255, 20, 147, 255],  // DeepPink
 ```
 
-### Documentation
+## Documentation
 
 - EPD used: Inky Impression 7.3 https://shop.pimoroni.com/products/inky-impression-7-3?variant=40512683376723
 - Actual Panel: Waveshare display https://www.waveshare.com/7.3inch-e-paper-hat-f.htm
@@ -89,15 +87,24 @@ I also had to modify to manually install script to have pip3 point to environmen
 - API: https://github.com/bremor/bureau_of_meteorology/blob/main/api%20doc/API.md
 - icons are based on: https://bas.dev/work/meteocons
 
+
+## TODO
+- [ ] Testing: create a script that auto generates some/all weather variations
+  - This script should simulate different weather conditions (e.g., sunny, rainy, cloudy) and generate corresponding images for testing the display.
+- [ ] Find out all the supported colors for the e-ink display
+  - [x] purple/whitish color?
+  - [x] Deep Pink
+  - [ ] Other? 
+
 ## Developing
 
-Your local config should go into `config/local.toml`, this file is not tracked
+Your local config should go into `config/local.toml`:
 ```bash
 cp config/development.toml config/local.toml
 cargo run
 ```
 
-### mDns
+### Using mDNS for Easy Access
 
 This is optional, but you can use **mDns** to access your pi by hostname instead of IP address.
 
@@ -114,7 +121,7 @@ The pi should now be discoverable by `<hostname>.local`
 ```
 Host pizero
   Hostname <hostname>.local
-  User <your username or the raspberry pi>
+  User <your username on the raspberry pi>
   IdentityFile <path to your private key>
   ServerAliveInterval 60
   ServerAliveCountMax 240
@@ -131,3 +138,15 @@ chmod +x ./misc/send-img-to-pi.sh
 cargo run
 ./misc/send-img-to-pi.sh
 ```
+
+## Troubleshooting
+
+Check the logs for any errors:
+```bash
+tail -f inky.log
+```
+Then `cd` into the extracted directory and run the cron script manually to see if there are any errors
+
+#### Issues with latest version of Inky 
+
+If you encounter issues with the latest version of Inky, try manually installing version **1.5.0** release of the inky library, refer to the official [documentation](https://github.com/pimoroni/inky?tab=readme-ov-file#install-stable-library-from-pypi-and-configure-manually)

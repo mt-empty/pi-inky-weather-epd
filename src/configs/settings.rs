@@ -59,8 +59,6 @@ pub struct Misc {
 #[derive(Debug, Validate, Deserialize)]
 #[allow(unused)]
 pub struct RenderOptions {
-    #[validate(range(min = 0.0, max = 1.0))]
-    pub saturation: f32,
     pub temp_unit: String,
     pub use_moon_phase_instead_of_clear_night: bool,
     pub x_axis_always_at_min: bool,

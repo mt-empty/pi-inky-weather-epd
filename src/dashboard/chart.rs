@@ -51,7 +51,6 @@ impl GraphData {
     }
 }
 pub struct DailyForecastGraph {
-    pub name: String,
     pub data: Vec<GraphData>,
     pub height: f64,
     pub width: f64,
@@ -69,7 +68,6 @@ pub struct DailyForecastGraph {
 impl Default for DailyForecastGraph {
     fn default() -> Self {
         Self {
-            name: "Hourly Forecast".to_string(),
             data: vec![],
             height: 300.0,
             width: 600.0,
