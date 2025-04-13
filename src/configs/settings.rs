@@ -49,13 +49,11 @@ pub struct Colours {
 #[derive(Debug, Deserialize)]
 #[allow(unused)]
 pub struct Misc {
-    pub weather_data_store_path: String,
+    pub weather_data_cache_path: String,
     pub template_path: String,
-    pub modified_template_name: String,
+    pub generated_svg_name: String,
     pub generated_png_name: String,
     pub svg_icons_directory: String,
-    pub python_script_path: String,
-    pub python_path: String,
 }
 
 #[derive(Debug, Validate, Deserialize)]

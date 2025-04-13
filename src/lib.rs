@@ -3,7 +3,6 @@ mod configs;
 pub mod constants;
 mod dashboard;
 mod errors;
-mod pimironi_image_py;
 mod update;
 mod utils;
 pub mod weather;
@@ -23,7 +22,6 @@ use chrono::Timelike;
 use dashboard::chart::{DailyForecastGraph, DataType, GraphData, GraphDataPath};
 use errors::*;
 use lazy_static::lazy_static;
-use pimironi_image_py::invoke_pimironi_image_script;
 use serde::Deserialize;
 use std::io::Write;
 use std::{fs, path::PathBuf};
@@ -115,13 +113,13 @@ fn fetch_data<T: for<'de> Deserialize<'de>>(
 
 fn fetch_daily_forecast_data() -> Result<FetchOutcome<DailyForecastResponse>, Error> {
     let file_path =
-        std::path::Path::new(&CONFIG.misc.weather_data_store_path).join("daily_forecast.json");
+        std::path::Path::new(&CONFIG.misc.weather_data_cache_path).join("daily_forecast.json");
     fetch_data(&DAILY_FORECAST_ENDPOINT, &file_path)
 }
 
 fn fetch_hourly_forecast_data() -> Result<FetchOutcome<HourlyForecastResponse>, Error> {
     let file_path =
-        std::path::Path::new(&CONFIG.misc.weather_data_store_path).join("hourly_forecast.json");
+        std::path::Path::new(&CONFIG.misc.weather_data_cache_path).join("hourly_forecast.json");
     fetch_data(&HOURLY_FORECAST_ENDPOINT, &file_path)
 }
 
@@ -532,7 +530,7 @@ fn render_dashboard_template(context: &mut Context, dashboard_svg: String) -> Re
     // Attempt to render the template
     match tt.render(tt_name, &context) {
         Ok(rendered) => {
-            let mut output = fs::File::create(CONFIG.misc.modified_template_name.clone())?;
+            let mut output = fs::File::create(&CONFIG.misc.generated_svg_name)?;
             output.write_all(rendered.as_bytes())?;
             Ok(())
         }
@@ -562,23 +560,19 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
     render_dashboard_template(&mut context, template_svg)?;
     println!(
         "SVG has been modified and saved successfully at {}",
-        current_dir
-            .join(&CONFIG.misc.modified_template_name)
-            .display()
+        current_dir.join(&CONFIG.misc.generated_svg_name).display()
     );
 
     if !CONFIG.debugging.disable_png_output {
         convert_svg_to_png(
-            &CONFIG.misc.modified_template_name,
-            &CONFIG.misc.modified_template_name.replace(".svg", ".png"),
+            &CONFIG.misc.generated_svg_name,
+            &CONFIG.misc.generated_png_name,
             2.0,
         )?;
 
         println!(
             "PNG has been generated successfully at {}",
-            current_dir
-                .join(CONFIG.misc.modified_template_name.replace(".svg", ".png"))
-                .display()
+            current_dir.join(&CONFIG.misc.generated_png_name).display()
         );
     }
     Ok(())
@@ -586,9 +580,6 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
 
 pub fn run_weather_dashboard() -> Result<(), anyhow::Error> {
     generate_weather_dashboard()?;
-    if !CONFIG.debugging.disable_png_output && !CONFIG.debugging.disable_drawing_on_epd {
-        invoke_pimironi_image_script()?;
-    }
     if CONFIG.release.update_interval_days > 0 {
         update_app()?;
     };

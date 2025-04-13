@@ -21,7 +21,7 @@ fn produced_svg_ok() {
     let result = generate_weather_dashboard();
     assert!(result.is_ok());
 
-    let svg_content = fs::read_to_string(CONFIG.misc.modified_template_name.clone())
+    let svg_content = fs::read_to_string(CONFIG.misc.generated_svg_name.clone())
         .expect("Failed to read SVG file");
     let svg_tree = usvg::Tree::from_str(&svg_content, &usvg::Options::default());
 
