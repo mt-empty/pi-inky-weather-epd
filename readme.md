@@ -53,7 +53,7 @@ I also had to modify to manually install script to have pip3 point to environmen
 
 
 ## TODO
-- [ ] create a script that auto generates some/all weather variations
+- [ ] Testing: create a script that auto generates some/all weather variations
 - [ ] Find out all the supported colors for the e-ink display
   - [x] purple/whitish color?
   - [x] Deep Pink
@@ -87,6 +87,7 @@ I also had to modify to manually install script to have pip3 point to environmen
 - Actual Panel: Waveshare display https://www.waveshare.com/7.3inch-e-paper-hat-f.htm
 - Panel documentation: https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)_Manual#Overview
 - API: https://github.com/bremor/bureau_of_meteorology/blob/main/api%20doc/API.md
+- icons are based on: https://bas.dev/work/meteocons
 
 ## Developing
 
@@ -99,6 +100,8 @@ cargo run
 ### mDns
 
 This is optional, but you can use **mDns** to access your pi by hostname instead of IP address.
+
+To do this, you need to install **avahi-daemon** on your pi. This is a service that allows you to discover devices on the network using their hostname.
 
 ```bash
 sudo apt-get install avahi-daemon
