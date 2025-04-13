@@ -1,5 +1,6 @@
 use std::env;
 use std::io::{ErrorKind, Seek, SeekFrom};
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::{fs, path::Path};
 
@@ -52,7 +53,7 @@ fn fetch_latest_release() -> Result<(), anyhow::Error> {
 
     if latest_version > current_version {
         println!("Newer version available: {}", latest_version);
-        download_and_extract_release(&client, &header_value, &latest_version)?;
+        download_and_extract_release(&client, &header_value, &latest_version, package_name)?;
     } else {
         println!("You're already using the latest version.");
     }
@@ -145,6 +146,7 @@ fn download_and_extract_release(
     client: &reqwest::blocking::Client,
     header_value: &str,
     latest_version: &semver::Version,
+    package_name: &str,
 ) -> Result<(), anyhow::Error> {
     let download_url = format!(
         "{}/v{}/{}.zip",
@@ -192,8 +194,14 @@ fn download_and_extract_release(
 
         // Extract the downloaded archive into the binary base directory.
         archive
-            .extract(binary_base_dir)
+            .extract(&binary_base_dir)
             .context("Could not decompress downloaded ZIP archive")?;
+
+        // Set executable permissions on the binary
+        let binary_path = &binary_base_dir.join(package_name);
+        let mut perms = fs::metadata(binary_path)?.permissions();
+        perms.set_mode(0o755); // rwxr-xr-x
+        fs::set_permissions(binary_path, perms).context("Failed to set executable permissions")?;
 
         println!(
             "Successfully updated application to version {}",

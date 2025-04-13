@@ -19,7 +19,7 @@ This is a weather display powered by a Raspberry pi and a 7.3in 7 color E-Paper 
 
 2. Download the latest release for your architecture from the [releases page](https://github.com/mt-empty/pi-inky-weather-epd/releases) and extract it:
    ```bash
-   tar xvf pi-inky-weather-epd-*.tar.gz
+   unzip <YOUR_DOWNLOAD_RELEASE>.tar.gz
    ```
 3. Obtain a six-character geohash for your location from https://geohash.softeng.co
 
