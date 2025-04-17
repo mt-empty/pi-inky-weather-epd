@@ -3,7 +3,7 @@ use strum_macros::Display;
 
 use crate::apis::bom::models::*;
 use crate::constants::NOT_AVAILABLE_ICON;
-use crate::weather::utils::get_moon_phase_icon_path;
+use crate::weather::utils::get_moon_phase_icon_name;
 use crate::CONFIG;
 
 #[derive(Deserialize, Debug, Display)]
@@ -209,7 +209,7 @@ impl Icon for HourlyForecast {
             && icon_name.ends_with(&format!("{}{}.svg", RainChanceName::Clear, DayNight::Night))
         {
             println!("'use_moon_phase_instead_of_clear_night' is set to true, using moon phase icon instead of clear night");
-            icon_name = get_moon_phase_icon_path().to_string();
+            icon_name = get_moon_phase_icon_name().to_string();
         }
 
         icon_name

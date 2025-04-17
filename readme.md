@@ -5,7 +5,7 @@ This is a weather display powered by a Raspberry pi and a 7.3in 7 color E-Paper 
 ![alt text](./misc/dashboard.png)
 
 ## Hardware
-- Raspberry Pi Zero W
+- Raspberry Pi (zero model requires soldering the GPIO Header)
 - 7.3in E-Paper display (Inky Impression 7.3)
 - 3D printed case (optional)
 
@@ -60,7 +60,7 @@ I also had to modify the installation script to have pip3 point to the environme
 
 ## Inky Impression 7.3
 
-### supported colors
+### supported colors at 1.0 Saturation
 
 ```
 [0, 0, 0],        # Black
@@ -73,6 +73,8 @@ I also had to modify the installation script to have pip3 point to the environme
 ```
 
 #### Trial and error found colors
+
+These colors where found by trail and error
 ```
 [255, 248, 220, 255], // Cornsilk
 [255, 250, 205, 255], // Lemon Chiffon
@@ -91,10 +93,6 @@ I also had to modify the installation script to have pip3 point to the environme
 ## TODO
 - [ ] Testing: create a script that auto generates some/all weather variations
   - This script should simulate different weather conditions (e.g., sunny, rainy, cloudy) and generate corresponding images for testing the display.
-- [ ] Find out all the supported colors for the e-ink display
-  - [x] purple/whitish color?
-  - [x] Deep Pink
-  - [ ] Other? 
 
 ## Developing
 

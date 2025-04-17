@@ -1,8 +1,6 @@
 use chrono::Datelike;
 
-use crate::CONFIG;
-
-pub fn get_moon_phase_icon_path() -> String {
+pub fn get_moon_phase_icon_name() -> String {
     let now = chrono::Local::now();
     let year = now.year();
     let month = now.month();
@@ -28,5 +26,5 @@ pub fn get_moon_phase_icon_path() -> String {
         _ => "moon-waning-crescent.svg",
     };
 
-    format!("{}{}", CONFIG.misc.svg_icons_directory, icon_name)
+    icon_name.to_string()
 }
