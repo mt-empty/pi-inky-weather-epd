@@ -21,7 +21,7 @@ pub struct Release {
 #[derive(Debug, Validate, Deserialize)]
 #[allow(unused)]
 pub struct Api {
-    #[validate(length(min = 6, message = "Location must be at least 6 charachter hash code"))]
+    #[validate(length(min = 6, message = "Location must be at least 6 character hash code"))]
     pub location: String,
 }
 

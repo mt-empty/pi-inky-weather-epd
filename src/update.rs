@@ -1,19 +1,17 @@
-use std::env;
-use std::io::{ErrorKind, Seek, SeekFrom};
-use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
-use std::{fs, path::Path};
-
-use crate::utils::has_write_permission;
 use crate::CONFIG;
 use anyhow::{Context, Error, Result};
 use chrono::{DateTime, Duration, Utc};
 use semver::Version;
 use serde::Deserialize;
+use std::env;
+use std::io::{ErrorKind, Seek, SeekFrom};
+use std::path::PathBuf;
+use std::{fs, path::Path};
 use tempfile::NamedTempFile;
 use zip::ZipArchive;
 
 const LAST_CHECKED_FILE_NAME: &str = "last_checked";
+const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 
 #[cfg(target_arch = "arm")]
 const TARGET_ARTIFACT: &str = "arm-unknown-linux-gnueabihf";
@@ -43,17 +41,16 @@ struct GithubRelease {
 /// if the latest version cannot be parsed, or if the release cannot be downloaded and extracted.
 fn fetch_latest_release() -> Result<(), anyhow::Error> {
     let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
-    let package_name = env!("CARGO_PKG_NAME");
     println!("Current version: {}", current_version);
 
     let client = reqwest::blocking::Client::new();
-    let header_value = format!("{}/{}", package_name, current_version);
+    let header_value = format!("{}/{}", PACKAGE_NAME, current_version);
     let release_info = fetch_release_info(&client, &header_value)?;
     let latest_version = parse_latest_version(&release_info)?;
 
     if latest_version > current_version {
         println!("Newer version available: {}", latest_version);
-        download_and_extract_release(&client, &header_value, &latest_version, package_name)?;
+        download_and_extract_release(&client, &header_value, &latest_version)?;
     } else {
         println!("You're already using the latest version.");
     }
@@ -110,26 +107,6 @@ fn parse_latest_version(release_info: &GithubRelease) -> Result<Version, anyhow:
     Ok(latest_version)
 }
 
-/// Renames the current executable by appending the `.old` suffix.
-/// This is done before updating the application to the latest version.
-///
-/// # Errors
-///
-/// Returns an error if the current executable path cannot be determined,
-/// if the new executable path cannot be determined, or if the rename operation fails.
-fn rename_current_executable() -> Result<(), std::io::Error> {
-    let exe = env::current_exe()?;
-    let mut new_exe = exe.clone();
-    new_exe.set_file_name(format!(
-        "{}.old",
-        exe.file_stem()
-            .and_then(|x| x.to_str())
-            .unwrap_or("pi-inky-weather-epd")
-    ));
-    fs::rename(&exe, &new_exe)?;
-    Ok(())
-}
-
 /// Downloads and extracts the latest release from the GitHub repository.
 ///
 /// # Arguments
@@ -146,7 +123,6 @@ fn download_and_extract_release(
     client: &reqwest::blocking::Client,
     header_value: &str,
     latest_version: &semver::Version,
-    package_name: &str,
 ) -> Result<(), anyhow::Error> {
     let download_url = format!(
         "{}/v{}/{}.zip",
@@ -180,35 +156,38 @@ fn download_and_extract_release(
         .seek(SeekFrom::Start(0))
         .context("Failed to seek to start of the temporary ZIP file")?;
 
-    let binary_base_dir = get_base_dir_path()?;
-    if has_write_permission(binary_base_dir.clone())
-        .context("Failed to check write permissions for binary base directory")?
-    {
-        // Open a ZipArchive on the temporary file.
-        let mut archive =
-            ZipArchive::new(temp_zip.as_file()).context("Could not read downloaded ZIP archive")?;
+    let base_dir = get_base_dir_path()?;
+    let temp_dir =
+        tempfile::tempdir_in(base_dir.clone()).context("Failed to create a temporary directory")?;
 
-        // Rename the current executable to *.old before extracting.
-        rename_current_executable()
-            .context("Failed to rename current executable before extracting")?;
+    let bin_path = base_dir.join(PACKAGE_NAME);
+    let backup_link = base_dir.join(format!("{}.old", PACKAGE_NAME));
 
-        // Extract the downloaded archive into the binary base directory.
-        archive
-            .extract(&binary_base_dir)
-            .context("Could not decompress downloaded ZIP archive")?;
+    // Extract everything into temp_dir:
+    let mut archive = ZipArchive::new(temp_zip.as_file())?;
+    archive.extract(temp_dir.path())?;
 
-        // Set executable permissions on the binary
-        let binary_path = &binary_base_dir.join(package_name);
-        let mut perms = fs::metadata(binary_path)?.permissions();
-        perms.set_mode(0o755); // rwxr-xr-x
-        fs::set_permissions(binary_path, perms).context("Failed to set executable permissions")?;
-
-        println!(
-            "Successfully updated application to version {}",
-            latest_version
-        );
+    // Backup the old exe:
+    if bin_path.exists() {
+        fs::remove_file(&backup_link).ok();
+        fs::hard_link(&bin_path, &backup_link)?;
     }
 
+    // Atomically swap in new files:
+    for entry in fs::read_dir(temp_dir.path())? {
+        let from = entry?.path();
+        let to = base_dir.join(from.file_name().unwrap());
+        if to.exists() {
+            if to.is_dir() {
+                fs::remove_dir_all(&to)?;
+            } else {
+                fs::remove_file(&to)?;
+            }
+        }
+        fs::rename(&from, &to)?;
+    }
+
+    println!("Updated to version {}", latest_version);
     Ok(())
 }
 
@@ -237,7 +216,9 @@ fn get_base_dir_path() -> Result<PathBuf> {
 pub fn update_app() -> Result<(), anyhow::Error> {
     println!("Checking for updates...");
     // create a file to store the last time we checked for an update
-    let last_checked_path = get_base_dir_path()?.join(LAST_CHECKED_FILE_NAME);
+    let base_dir = get_base_dir_path()?;
+    let last_checked_path = base_dir.join(LAST_CHECKED_FILE_NAME);
+
     if !Path::new(&last_checked_path).exists() {
         // File doesn't exist; create it with the current timestamp
         let now_str = Utc::now().to_rfc3339();
@@ -265,9 +246,18 @@ pub fn update_app() -> Result<(), anyhow::Error> {
             fs::write(&last_checked_path, now_utc.to_rfc3339())?;
         } else {
             println!(
-                "{:.1} days have passed since last check.",
+                "{:.1} days have passed since last check, skipping update.",
                 elapsed.num_days()
             );
+            // We delete the backup link here because we couldn't delete it in the update function
+            // This is a workaround for the fact that we can't delete the file while it's in use.
+            let backup_link = base_dir.join(format!("{}.old", PACKAGE_NAME));
+            if backup_link.exists() {
+                println!("Backup link exists, restoring...");
+                fs::remove_file(&backup_link)?;
+            } else {
+                println!("No backup link found.");
+            }
         }
     }
     Ok(())

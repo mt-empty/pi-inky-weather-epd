@@ -8,24 +8,7 @@ use resvg::tiny_skia;
 use resvg::usvg;
 use serde::Deserialize;
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
 use usvg::fontdb;
-
-/// Checks if the given path has write permissions.
-///
-/// # Arguments
-///
-/// * `path` - A `PathBuf` representing the path to check.
-///
-/// # Returns
-///
-/// * `Result<bool>` - `true` if the path has write permissions, `false` otherwise.
-pub fn has_write_permission(path: PathBuf) -> Result<bool> {
-    let metadata = fs::metadata(path)?;
-    let permissions = metadata.permissions();
-    Ok(permissions.mode() & 0o200 != 0)
-}
 
 /// Converts an SVG file to a PNG file.
 ///
@@ -85,7 +68,7 @@ pub fn convert_svg_to_png(
 /// # Arguments
 ///
 /// * `font_db` - A mutable reference to a `fontdb::Database` to load fonts into.
-pub fn load_fonts(font_db: &mut fontdb::Database) {
+fn load_fonts(font_db: &mut fontdb::Database) {
     font_db.load_system_fonts();
 
     // print current path
