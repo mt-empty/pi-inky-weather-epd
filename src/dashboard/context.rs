@@ -1,4 +1,4 @@
-use crate::{CONFIG, NOT_AVAILABLE_ICON};
+use crate::{constants::NOT_AVAILABLE_ICON, CONFIG};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

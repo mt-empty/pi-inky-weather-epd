@@ -1,9 +1,9 @@
-use pi_inky_weather_epd::{generate_weather_dashboard, CONFIG};
+use pi_inky_weather_epd::{generate_weather_dashboard_wrapper, CONFIG};
 use std::fs;
 
 #[test]
 fn test_weather_dashboard_ok() {
-    let result = generate_weather_dashboard();
+    let result = generate_weather_dashboard_wrapper();
     assert!(result.is_ok());
 }
 
@@ -18,7 +18,7 @@ fn template_svg_ok() {
 
 #[test]
 fn produced_svg_ok() {
-    let result = generate_weather_dashboard();
+    let result = generate_weather_dashboard_wrapper();
     assert!(result.is_ok());
 
     let svg_content = fs::read_to_string(CONFIG.misc.generated_svg_name.clone())

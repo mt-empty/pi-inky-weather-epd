@@ -11,6 +11,7 @@ pub enum DashboardError {
     ApiError(String),
     #[error("Incomplete data:")]
     IncompleteData { details: String },
+    // TODO: to use this error, we need to call the update function before rendering the SVG
     #[error("Update failed: {0}")]
     UpdateFailed(String),
 }

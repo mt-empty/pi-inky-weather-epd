@@ -1,41 +1,18 @@
-mod apis;
-mod configs;
-pub mod constants;
-mod dashboard;
-mod errors;
-mod update;
-mod utils;
-pub mod weather;
-
-// #[cfg(debug_assertions)]
-// mod dev;
-
-// #[cfg(debug_assertions)]
-// use dev::create_striped_png;
-
 use crate::apis::bom::models::*;
-use crate::configs::settings::DashboardSettings;
-use crate::constants::*;
 use crate::dashboard::context::Context;
+use crate::{constants::*, dashboard, errors, utils, weather, CONFIG};
 use anyhow::Error;
 use chrono::Timelike;
 use dashboard::chart::{DailyForecastGraph, DataType, GraphData, GraphDataPath};
 use errors::*;
-use lazy_static::lazy_static;
 use serde::Deserialize;
 use std::io::Write;
 use std::{fs, path::PathBuf};
 use tinytemplate::{format_unescaped, TinyTemplate};
-use update::update_app;
 pub use utils::*;
 use weather::icons::*;
 
-lazy_static! {
-    pub static ref CONFIG: DashboardSettings =
-        DashboardSettings::new().expect("Failed to load config");
-}
-
-pub enum FetchOutcome<T> {
+enum FetchOutcome<T> {
     Fresh(T),
     Stale { data: T, error: DashboardError },
 }
@@ -570,13 +547,5 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
             current_dir.join(&CONFIG.misc.generated_png_name).display()
         );
     }
-    Ok(())
-}
-
-pub fn run_weather_dashboard() -> Result<(), anyhow::Error> {
-    generate_weather_dashboard()?;
-    if CONFIG.release.update_interval_days > 0 {
-        update_app()?;
-    };
     Ok(())
 }
