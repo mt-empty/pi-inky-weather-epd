@@ -26,8 +26,10 @@ This is a weather display powered by a Raspberry pi and a 7.3in 7 color E-Paper 
 
 4. Create a configuration file with your geohash:
    ```bash
-   echo '[api]\nlocation = "YOUR_GEOHASH"' > ~/.config/pi-inky-weather-epd.toml
+   echo -e '[api]\nlocation = "YOUR_GEOHASH"' > ~/.config/pi-inky-weather-epd.toml
    ```
+
+   See [./config/development.toml](./config/default.toml) for example cities and their geohashes.
 
 5. Set up an hourly cron job to update the display:
    ```bash
