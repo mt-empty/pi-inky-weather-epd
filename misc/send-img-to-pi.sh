@@ -19,4 +19,4 @@ INKY_SCRIPT="/home/dietpi/Pimoroni/inky/examples/7color/image.py"
 scp "${LOCAL_IMAGE}" "${REMOTE_HOST}:${REMOTE_IMAGE}"
 
 # Execute the remote command
-ssh "${REMOTE_HOST}" "sudo ${PYTHON_PATH} ${INKY_SCRIPT} ${REMOTE_IMAGE} ${SATURATION}"
+ssh "${REMOTE_HOST}" "sudo ${PYTHON_PATH} ${INKY_SCRIPT} --file ${REMOTE_IMAGE} --saturation ${SATURATION}"

@@ -5,6 +5,7 @@ use semver::Version;
 use serde::Deserialize;
 use std::env;
 use std::io::{ErrorKind, Seek, SeekFrom};
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::{fs, path::Path};
 use tempfile::NamedTempFile;
@@ -113,26 +114,18 @@ fn parse_latest_version(release_info: &GithubRelease) -> Result<Version, anyhow:
 ///
 /// * `client` - The HTTP client to use for the request.
 /// * `header_value` - The value to use for the User-Agent header.
-/// * `latest_version` - The latest version to download.
+/// * `download_url` - The URL to download the ZIP archive from.
 ///
 /// # Errors
 ///
-/// Returns an error if the download fails, if the ZIP archive cannot be read,
-/// if the binary base directory cannot be created, or if the archive cannot be extracted.
-fn download_and_extract_release(
+/// Returns an error if the download fails
+fn download_zip_archive(
     client: &reqwest::blocking::Client,
     header_value: &str,
-    latest_version: &semver::Version,
-) -> Result<(), anyhow::Error> {
-    let download_url = format!(
-        "{}/v{}/{}.zip",
-        CONFIG.release.download_base_url.as_str(),
-        latest_version,
-        TARGET_ARTIFACT
-    );
-
+    download_url: &str,
+) -> Result<NamedTempFile, anyhow::Error> {
     let mut response = client
-        .get(&download_url)
+        .get(download_url)
         .header(reqwest::header::USER_AGENT, header_value)
         .send()
         .context("Failed to send request for ZIP archive")?;
@@ -145,36 +138,63 @@ fn download_and_extract_release(
 
     let mut temp_zip =
         NamedTempFile::new().context("Failed to create a temporary file for the ZIP archive")?;
-
     response
         .copy_to(&mut temp_zip)
         .context("Failed to write ZIP archive into temporary file")?;
-
-    // Reset the file cursor so we can read from the start.
     temp_zip
         .as_file_mut()
         .seek(SeekFrom::Start(0))
         .context("Failed to seek to start of the temporary ZIP file")?;
 
-    let base_dir = get_base_dir_path()?;
-    let temp_dir =
-        tempfile::tempdir_in(base_dir.clone()).context("Failed to create a temporary directory")?;
+    Ok(temp_zip)
+}
 
-    let bin_path = base_dir.join(PACKAGE_NAME);
-    let backup_link = base_dir.join(format!("{}.old", PACKAGE_NAME));
-
-    // Extract everything into temp_dir:
-    let mut archive = ZipArchive::new(temp_zip.as_file())?;
-    archive.extract(temp_dir.path())?;
-
-    // Backup the old exe:
+/// Creates backup of existing binary.
+///
+/// # Arguments
+///
+/// * `bin_path` - The path to the existing binary.
+/// * `backup_link` - The path to the backup link.
+///
+/// # Errors
+///
+/// Returns an error if the backup link cannot be created or if the existing binary cannot be renamed.
+fn backup_existing_binary(bin_path: &Path, backup_link: &Path) -> Result<(), anyhow::Error> {
     if bin_path.exists() {
-        fs::remove_file(&backup_link).ok();
-        fs::hard_link(&bin_path, &backup_link)?;
+        let _ = fs::remove_file(backup_link);
+        fs::rename(bin_path, backup_link).context("Failed to rename old binary for backup")?;
     }
+    Ok(())
+}
 
-    // Atomically swap in new files:
-    for entry in fs::read_dir(temp_dir.path())? {
+/// Updates file permissions to make binary executable.
+///
+/// # Arguments
+///
+/// * `bin_path` - The path to the binary file.
+///
+/// # Errors
+///
+/// Returns an error if the file permissions cannot be set.
+fn set_executable_permissions(bin_path: &Path) -> Result<(), anyhow::Error> {
+    let mut perms = fs::metadata(bin_path)?.permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(bin_path, perms)?;
+    Ok(())
+}
+
+/// Swaps in new files from temporary directory to base directory.
+///
+/// # Arguments
+///
+/// * `temp_dir` - The path to the temporary directory.
+/// * `base_dir` - The path to the base directory.
+///
+/// # Errors
+///
+/// Returns an error if the file operations fail.
+fn swap_in_new_files(temp_dir: &Path, base_dir: &Path) -> Result<(), anyhow::Error> {
+    for entry in fs::read_dir(temp_dir)? {
         let from = entry?.path();
         let to = base_dir.join(from.file_name().unwrap());
         if to.exists() {
@@ -186,16 +206,53 @@ fn download_and_extract_release(
         }
         fs::rename(&from, &to)?;
     }
+    Ok(())
+}
+
+/// Downloads and extracts the latest release from the GitHub repository.
+///
+/// # Arguments
+///
+/// * `client` - The HTTP client to use for the request.
+/// * `header_value` - The value to use for the User-Agent header.
+/// * `latest_version` - The latest version of the application.
+///
+/// # Errors
+///
+/// Returns an error if the download fails, if the extraction fails, or if the file operations fail.
+fn download_and_extract_release(
+    client: &reqwest::blocking::Client,
+    header_value: &str,
+    latest_version: &semver::Version,
+) -> Result<(), anyhow::Error> {
+    let download_url = format!(
+        "{}/v{}/{}.zip",
+        CONFIG.release.download_base_url.as_str(),
+        latest_version,
+        TARGET_ARTIFACT
+    );
+
+    let temp_zip = download_zip_archive(client, header_value, &download_url)?;
+    let base_dir = get_base_dir_path()?;
+    let temp_dir =
+        tempfile::tempdir_in(&base_dir).context("Failed to create temporary directory")?;
+
+    let bin_path = base_dir.join(PACKAGE_NAME);
+    let backup_link = base_dir.join(format!("{}.old", PACKAGE_NAME));
+
+    // Extract archive
+    let mut archive = ZipArchive::new(temp_zip.as_file())?;
+    archive.extract(temp_dir.path())?;
+
+    backup_existing_binary(&bin_path, &backup_link)?;
+    swap_in_new_files(temp_dir.path(), &base_dir)?;
+    set_executable_permissions(&bin_path)?;
 
     println!("Updated to version {}", latest_version);
     Ok(())
 }
 
 /// Gets the base directory path of the current executable.
-///
-/// # Errors
-///
-/// Returns an error if the executable path cannot be determined.
 fn get_base_dir_path() -> Result<PathBuf> {
     let exe_path = std::env::current_exe()?;
     let base_dir = exe_path.parent().ok_or_else(|| {

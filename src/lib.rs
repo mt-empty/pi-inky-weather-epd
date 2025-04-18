@@ -239,14 +239,9 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
     }
 
     if i < 8 {
-        println!("Warning: Less than 7 days of daily forecast data, Using stale data");
-        handle_errors(
-            context,
-            DashboardError::NoInternet {
-                details: "Warning: Less than 7 days of daily forecast data, Using stale data"
-                    .to_string(),
-            },
-        );
+        let details =
+            "Warning: Less than 7 days of daily forecast data, Using Incomplete data".to_string();
+        handle_errors(context, DashboardError::IncompleteData { details });
     }
 
     Ok(())
@@ -313,7 +308,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
         None => {
             handle_errors(
                 context,
-                DashboardError::NoInternet {
+                DashboardError::IncompleteData {
                     details: "No hourly forecast data available, Could Not find a date later than the current date".to_string(),
                 },
             );

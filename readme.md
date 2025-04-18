@@ -20,6 +20,7 @@ This is a weather display powered by a Raspberry pi and a 7.3in 7 color E-Paper 
 2. Download the latest release for your architecture from the [releases page](https://github.com/mt-empty/pi-inky-weather-epd/releases) and extract it:
    ```bash
    unzip <YOUR_DOWNLOAD_RELEASE>.tar.gz
+   chmod +x pi-inky-weather-epd
    ```
 3. Obtain a six-character geohash for your location from https://geohash.softeng.co
 
@@ -30,7 +31,7 @@ This is a weather display powered by a Raspberry pi and a 7.3in 7 color E-Paper 
 
 5. Set up an hourly cron job to update the display:
    ```bash
-   (crontab -l 2>/dev/null; echo "0 * * * * cd /path/to/extracted/files && ./pi-inky-weather-epd && sudo PYTHON_PATH IMAGE_SCRIPT_PATH dashboard.png SATURATION") | crontab -
+   (crontab -l 2>/dev/null; echo "0 * * * * cd /path/to/extracted/files && ./pi-inky-weather-epd && sudo PYTHON_PATH IMAGE_SCRIPT_PATH --file dashboard.png --saturation SATURATION") | crontab -
    ```
    Replace:
    - `/path/to/extracted/files` with your installation directory
@@ -40,7 +41,7 @@ This is a weather display powered by a Raspberry pi and a 7.3in 7 color E-Paper 
 
    Example of complete cron command:
    ```bash
-   0 * * * * cd /home/pi/pi-inky-weather-epd && ./pi-inky-weather-epd && sudo /home/dietpi/env/bin/python3 /home/dietpi/Pimoroni/inky/examples/7color/image.py dashboard.png 1.0
+   0 * * * * cd /home/pi/pi-inky-weather-epd && ./pi-inky-weather-epd && sudo /home/dietpi/env/bin/python3 /home/dietpi/Pimoroni/inky/examples/7color/image.py --file dashboard.png --saturation 1.0
    ```
 
 ## Configuration
@@ -96,10 +97,22 @@ These colors where found by trail and error
 
 ## Developing
 
+Any Contributions are welcome!
+
+### Setup
+
 Your local config should go into `config/local.toml`:
 ```bash
 cp config/development.toml config/local.toml
 cargo run
+```
+
+### Compile for target release
+
+Example for Raspberry Pi Zero:
+
+```bash
+cross build --release --target arm-unknown-linux-gnueabihf 
 ```
 
 ### Using mDNS for Easy Access
