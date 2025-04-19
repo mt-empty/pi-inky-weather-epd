@@ -2,7 +2,7 @@ use crate::apis::bom::models::*;
 use crate::dashboard::context::Context;
 use crate::{constants::*, dashboard, errors, utils, weather, CONFIG};
 use anyhow::Error;
-use chrono::Timelike;
+use chrono::{DateTime, Local, Timelike, Utc};
 use dashboard::chart::{DailyForecastGraph, DataType, GraphData, GraphDataPath};
 use errors::*;
 use serde::Deserialize;
@@ -127,15 +127,29 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
         }
         Err(e) => return Err(e),
     };
-    let current_date = chrono::Utc::now();
-    let mut i = 1;
+
+    let local_date_truncated = Local::now()
+        .with_hour(0)
+        .unwrap()
+        .with_minute(0)
+        .unwrap()
+        .with_second(0)
+        .unwrap()
+        .with_nanosecond(0)
+        .unwrap();
+
+    println!("Local date truncated: {:?}", local_date_truncated);
+    let utc_converted_date: DateTime<Utc> = local_date_truncated.with_timezone(&Utc);
+
+    println!("UTC converted date  : {:?}", utc_converted_date);
+    let mut day_index: i32 = 1;
 
     for day in daily_forecast_data {
         if let Some(naive_date) = day.date {
-            if naive_date < current_date {
+            if naive_date < local_date_truncated {
                 // If the date is in the past, skip it
                 continue;
-            } else if naive_date > current_date + chrono::Duration::days(7) {
+            } else if naive_date > local_date_truncated + chrono::Duration::days(7) {
                 // If the date is more than 7 days in the future, skip it
                 break;
             }
@@ -156,7 +170,7 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
             "{} - Max {} Min {}",
             day_name_value, max_temp_value, min_temp_value
         );
-        match i {
+        match day_index {
             1 => {
                 context.sunrise_time = day
                     .astronomical
@@ -212,10 +226,10 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
             _ => {}
         }
 
-        i += 1;
+        day_index += 1;
     }
 
-    if i < 8 {
+    if day_index < 8 {
         let details =
             "Warning: Less than 7 days of daily forecast data, Using Incomplete data".to_string();
         handle_errors(context, DashboardError::IncompleteData { details });
@@ -268,7 +282,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
         .with_nanosecond(0)
         .unwrap();
 
-    println!("Current time: {:?}", current_date);
+    println!("Current UTC date          : {:?}", current_date);
     // we only want to display the next 24 hours
     let first_date = hourly_forecast_data.iter().find_map(
         // find the first time
@@ -295,8 +309,8 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
 
     let forecast_window_end = forecast_window_start + chrono::Duration::hours(24);
 
-    println!("24h forecast window start: {:?}", forecast_window_start);
-    println!("24h forecast window end: {:?}", forecast_window_end);
+    println!("24h forecast window start : {:?}", forecast_window_start);
+    println!("24h forecast window end   : {:?}", forecast_window_end);
 
     let mut x = 0.0;
 
@@ -471,7 +485,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
 }
 
 fn update_forecast_context(context: &mut Context) -> Result<(), Error> {
-    println!("Daily forecast");
+    println!("## Daily forecast ...");
     match update_daily_forecast_data(context) {
         Ok(context) => context,
         Err(e) => {
@@ -479,7 +493,7 @@ fn update_forecast_context(context: &mut Context) -> Result<(), Error> {
             return Err(e);
         }
     };
-    println!("Hourly forecast");
+    println!("## Hourly forecast ...");
     match update_hourly_forecast_data(context) {
         Ok(context) => context,
         Err(e) => {
@@ -529,6 +543,7 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
     };
     update_forecast_context(&mut context)?;
 
+    println!("## Rendering dashboard to SVG ...");
     render_dashboard_template(&mut context, template_svg)?;
     println!(
         "SVG has been modified and saved successfully at {}",
@@ -536,6 +551,7 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
     );
 
     if !CONFIG.debugging.disable_png_output {
+        println!("## Converting SVG to PNG ...");
         convert_svg_to_png(
             &CONFIG.misc.generated_svg_name,
             &CONFIG.misc.generated_png_name,

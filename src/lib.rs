@@ -22,8 +22,17 @@ use update::update_app;
 // use dev::create_striped_png;
 
 lazy_static! {
-    pub static ref CONFIG: DashboardSettings =
-        DashboardSettings::new().expect("Failed to load config");
+    #[derive(Debug)]
+    pub static ref CONFIG: DashboardSettings = match DashboardSettings::new() {
+        Ok(config) => {
+            println!("## Configuration: {:#?}", config);
+            config
+        },
+        Err(e) => {
+            eprintln!("Failed to load config: {}", e);
+            std::process::exit(1);
+        }
+    };
 }
 
 pub fn generate_weather_dashboard_wrapper() -> Result<(), Error> {
@@ -31,8 +40,11 @@ pub fn generate_weather_dashboard_wrapper() -> Result<(), Error> {
 }
 
 pub fn run_weather_dashboard() -> Result<(), anyhow::Error> {
+    println!("# Generating weather dashboard...");
     generate_weather_dashboard_wrapper()?;
+
     if CONFIG.release.update_interval_days > 0 {
+        println!("## Checking for updates...");
         update_app()?;
     };
     Ok(())
