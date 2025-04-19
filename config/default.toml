@@ -30,7 +30,8 @@ rain_colour = "blue"
 
 [render_options]
 temp_unit = "C"
-use_moon_phase_instead_of_clear_night = false
+# When the sky is clear, the moon phase icon will be used instead of the clear night icon
+use_moon_phase_instead_of_clear_night = true
 # this controls the placement of the x-axis when the temperature is below zero
 x_axis_always_at_min = true
 
