@@ -8,7 +8,6 @@ const CONFIG_DIR: &str = "./config";
 const DEFAULT_CONFIG_NAME: &str = "default";
 
 #[derive(Debug, Validate, Deserialize)]
-#[allow(unused)]
 pub struct Release {
     #[validate(url)]
     pub release_info_url: String,
@@ -19,14 +18,12 @@ pub struct Release {
 }
 
 #[derive(Debug, Validate, Deserialize)]
-#[allow(unused)]
 pub struct Api {
-    #[validate(length(min = 6, message = "Location must be at least 6 character hash code"))]
+    #[validate(length(equal = 6, message = "Location must be a 6 character hash code"))]
     pub location: String,
 }
 
 #[derive(Debug, Validate, Deserialize)]
-#[allow(unused)]
 pub struct Colours {
     #[validate(custom(function = "is_valid_colour"))]
     pub background_colour: String,
@@ -46,38 +43,42 @@ pub struct Colours {
     pub rain_colour: String,
 }
 
-#[derive(Debug, Deserialize)]
-#[allow(unused)]
+#[derive(Debug, Validate, Deserialize)]
 pub struct Misc {
     pub weather_data_cache_path: String,
     pub template_path: String,
+    #[validate(contains(pattern = ".svg", message = "SVG file must end with .svg"))]
     pub generated_svg_name: String,
+    #[validate(contains(pattern = ".png", message = "PNG file must end with .png"))]
     pub generated_png_name: String,
     pub svg_icons_directory: String,
 }
 
 #[derive(Debug, Validate, Deserialize)]
-#[allow(unused)]
 pub struct RenderOptions {
+    #[validate(length(equal = 1, message = "Temp unit must be either 'C', 'F' or 'K'"))]
     pub temp_unit: String,
     pub use_moon_phase_instead_of_clear_night: bool,
     pub x_axis_always_at_min: bool,
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(unused)]
 pub struct Debugging {
     pub disable_network_requests: bool,
     pub disable_png_output: bool,
 }
 
-#[derive(Debug, Deserialize)]
-#[allow(unused)]
+#[derive(Debug, Validate, Deserialize)]
 pub struct DashboardSettings {
+    #[validate(nested)]
     pub release: Release,
+    #[validate(nested)]
     pub api: Api,
+    #[validate(nested)]
     pub colours: Colours,
+    #[validate(nested)]
     pub misc: Misc,
+    #[validate(nested)]
     pub render_options: RenderOptions,
     pub debugging: Debugging,
 }
@@ -133,11 +134,18 @@ impl DashboardSettings {
             .add_source(Environment::with_prefix("app"))
             .build()?;
 
-        println!(
-            "location: {:?}",
-            settings.get_string("api.location").unwrap()
-        );
-        // You can deserialize (and thus freeze) the entire configuration as
-        settings.try_deserialize()
+        let final_settings: Result<DashboardSettings, ConfigError> = settings.try_deserialize();
+
+        // Validate the settings after deserializing
+        if let Ok(settings) = &final_settings {
+            if let Err(validation_errors) = settings.validate() {
+                return Err(ConfigError::Message(format!(
+                    "Configuration validation failed: {:?}",
+                    validation_errors
+                )));
+            }
+        }
+
+        final_settings
     }
 }
