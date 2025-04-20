@@ -27,7 +27,7 @@ pub struct Context {
     pub current_hour_uv_index: String,
     pub current_hour_relative_humidity: String,
     pub current_hour_relative_humidity_icon: String,
-    pub current_day_name: String,
+    pub current_day_date: String,
     pub current_hour_rain_amount: String,
     pub rain_measure_icon: String,
     pub graph_height: String,
@@ -117,7 +117,7 @@ impl Default for Context {
                 "{}{}",
                 CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON
             ),
-            current_day_name: "NA".to_string(),
+            current_day_date: "NA".to_string(),
             current_hour_rain_amount: "NA".to_string(),
             rain_measure_icon: format!("{}{}", CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON),
             graph_height: "300".to_string(),

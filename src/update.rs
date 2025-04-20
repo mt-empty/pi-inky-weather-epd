@@ -310,10 +310,8 @@ pub fn update_app() -> Result<(), anyhow::Error> {
             // This is a workaround for the fact that we can't delete the file while it's in use.
             let backup_link = base_dir.join(format!("{}.old", PACKAGE_NAME));
             if backup_link.exists() {
-                println!("Backup link exists, restoring...");
+                println!("Deleting old backup link: {}", backup_link.display());
                 fs::remove_file(&backup_link)?;
-            } else {
-                println!("No backup link found.");
             }
         }
     }

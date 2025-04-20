@@ -109,7 +109,7 @@ fn update_current_hour_data(current_hour: &HourlyForecast, context: &mut Context
     context.current_hour_uv_index = current_hour.uv.to_string();
     context.current_hour_relative_humidity = current_hour.relative_humidity.to_string();
     context.current_hour_relative_humidity_icon = current_hour.relative_humidity.get_icon_path();
-    context.current_day_name = chrono::Local::now().format("%A, %d %b").to_string();
+    context.current_day_date = chrono::Local::now().format("%A, %d %B").to_string();
     context.current_hour_rain_amount = (current_hour.rain.amount.min.unwrap_or(0.0)
         + current_hour.rain.amount.min.unwrap_or(0.0))
     .to_string();
@@ -128,6 +128,8 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
         Err(e) => return Err(e),
     };
 
+    // The date returned by Bom api is x:14 utc, which translates to x+1:00 AEST time,
+    // so we have to do some conversion
     let local_date_truncated = Local::now()
         .with_hour(0)
         .unwrap()
@@ -146,10 +148,10 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
 
     for day in daily_forecast_data {
         if let Some(naive_date) = day.date {
-            if naive_date < local_date_truncated {
+            if naive_date < utc_converted_date {
                 // If the date is in the past, skip it
                 continue;
-            } else if naive_date > local_date_truncated + chrono::Duration::days(7) {
+            } else if naive_date > utc_converted_date + chrono::Duration::days(7) {
                 // If the date is more than 7 days in the future, skip it
                 break;
             }
@@ -162,9 +164,13 @@ fn update_daily_forecast_data(context: &mut Context) -> Result<(), Error> {
             .temp_max
             .map_or("NA".to_string(), |temp| temp.to_string());
         let icon_value = day.get_icon_path();
-        let day_name_value = day
-            .date
-            .map_or("NA".to_string(), |date| date.format("%a").to_string());
+
+        // add a day here(or you can add AEST UTC delta), because of the way the API bom api returns the date
+        let day_name_value = day.date.map_or("NA".to_string(), |date| {
+            date.checked_add_signed(chrono::Duration::days(1))
+                .map(|d| d.format("%a").to_string())
+                .unwrap_or("NA".to_string())
+        });
 
         println!(
             "{} - Max {} Min {}",

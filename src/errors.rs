@@ -65,6 +65,8 @@ impl Description for DashboardError {
 
 pub fn handle_errors<E: Icon + Description + std::error::Error>(context: &mut Context, error: E) {
     context.warning_message = error.short_description().to_string();
+    // TODO: at the moment the last error will overwrite the previous ones, so need to
+    // display the errors in a list, front to back in cascading icons style
     context.warning_icon = error.get_icon_path().to_string();
     context.warning_visibility = "visible".to_string();
     eprintln!("Error: {}", error.long_description());
