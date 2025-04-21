@@ -101,7 +101,7 @@ fn fetch_hourly_forecast_data() -> Result<FetchOutcome<HourlyForecastResponse>, 
 }
 
 fn update_current_hour_data(current_hour: &HourlyForecast, context: &mut Context) {
-    context.current_hour_temp = current_hour.temp.to_string();
+    context.current_hour_actual_temp = current_hour.temp.to_string();
     context.current_hour_weather_icon = current_hour.get_icon_path();
     context.current_hour_feels_like = current_hour.temp_feels_like.to_string();
     context.current_hour_wind_speed = current_hour.wind.speed_kilometre.to_string();
@@ -386,7 +386,7 @@ fn update_hourly_forecast_data(context: &mut Context) -> Result<(), Error> {
 
     context.graph_height = graph.height.to_string();
     context.graph_width = graph.width.to_string();
-    context.temp_curve_data = temp_curve_data;
+    context.actual_temp_curve_data = temp_curve_data;
     context.feel_like_curve_data = feel_like_curve_data;
     context.rain_curve_data = rain_curve_data;
     context.uv_index = hourly_forecast_data[0].uv.to_string();
@@ -510,7 +510,7 @@ fn update_forecast_context(context: &mut Context) -> Result<(), Error> {
     Ok(())
 }
 
-fn render_dashboard_template(context: &mut Context, dashboard_svg: String) -> Result<(), Error> {
+fn render_dashboard_template(context: &Context, dashboard_svg: String) -> Result<(), Error> {
     let mut tt = TinyTemplate::new();
     let tt_name = "dashboard";
 
