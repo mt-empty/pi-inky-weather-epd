@@ -194,26 +194,8 @@ impl ContextBuilder {
         }
     }
 
-    pub fn with_current_hour_data(&mut self, current_hour: &HourlyForecast) -> &mut Self {
-        self.context.current_hour_actual_temp = current_hour.temp.to_string();
-        self.context.current_hour_weather_icon = current_hour.get_icon_path();
-        self.context.current_hour_feels_like = current_hour.temp_feels_like.to_string();
-        self.context.current_hour_wind_speed = current_hour.wind.speed_kilometre.to_string();
-        self.context.current_hour_wind_icon = current_hour.wind.get_icon_path();
-        self.context.current_hour_uv_index = current_hour.uv.to_string();
-        self.context.current_hour_relative_humidity = current_hour.relative_humidity.to_string();
-        self.context.current_hour_relative_humidity_icon =
-            current_hour.relative_humidity.get_icon_path();
-        self.context.current_day_date = chrono::Local::now().format("%A, %d %B").to_string();
-        self.context.current_hour_rain_amount = (current_hour.rain.amount.min.unwrap_or(0.0)
-            + current_hour.rain.amount.min.unwrap_or(0.0))
-        .to_string();
-        self.context.rain_measure_icon = current_hour.rain.amount.get_icon_path();
-        self
-    }
-
     pub fn with_daily_forecast_data(&mut self, daily_forecast_data: Vec<DailyEntry>) -> &mut Self {
-        // The date returned by Bom api is x:14 utc, which translates to x+1:00 AEST time,
+        // The date returned by Bom api is x:14 utc, which translates to x+10:00 AEST time,
         // so we have to do some conversion
         let local_date_truncated = Local::now()
             .with_hour(0)
@@ -344,7 +326,9 @@ impl ContextBuilder {
                     });
             }
         };
-        let mut uv_data = [0; 24];
+
+        println!("24h forecast window start : {:?}", forecast_window_start);
+        println!("24h forecast window end   : {:?}", forecast_window_end);
 
         let mut graph = HourlyForecastGraph {
             x_axis_always_at_min: CONFIG.render_options.x_axis_always_at_min,
@@ -358,7 +342,6 @@ impl ContextBuilder {
             forecast_window_start,
             forecast_window_end,
             &mut graph,
-            &mut uv_data,
         );
 
         let svg_result = graph.draw_graph().unwrap();
@@ -425,7 +408,7 @@ impl ContextBuilder {
         self.context.y_right_labels = axis_data_path.y_right_labels;
         self.context.x_axis_guideline_path = axis_data_path.x_axis_guideline_path;
 
-        self.context.uv_gradient = graph.draw_uv_gradient_over_time(uv_data);
+        self.context.uv_gradient = graph.draw_uv_gradient_over_time();
         self
     }
 
@@ -439,6 +422,7 @@ impl ContextBuilder {
             .unwrap()
             .with_nanosecond(0)
             .unwrap();
+        println!("Current UTC date          : {:?}", current_date);
 
         let first_date = hourly_forecast_data.iter().find_map(|forecast| {
             if forecast.time >= current_date {
@@ -462,7 +446,6 @@ impl ContextBuilder {
         forecast_window_start: chrono::DateTime<Utc>,
         forecast_window_end: chrono::DateTime<Utc>,
         graph: &mut HourlyForecastGraph,
-        uv_data: &mut [usize; 24],
     ) {
         let mut x = 0.0;
         hourly_forecast_data
@@ -489,9 +472,27 @@ impl ContextBuilder {
                         CurveType::RainChance(curve) => curve.add_point(x, forecast.rain.chance.unwrap_or(0).into()),
                     }
                 }
-                uv_data[x as usize] = forecast.uv as usize;
+                graph.uv_data[x as usize] = forecast.uv as usize;
                 x += 1.0;
             });
+    }
+
+    pub fn with_current_hour_data(&mut self, current_hour: &HourlyForecast) -> &mut Self {
+        self.context.current_hour_actual_temp = current_hour.temp.to_string();
+        self.context.current_hour_weather_icon = current_hour.get_icon_path();
+        self.context.current_hour_feels_like = current_hour.temp_feels_like.to_string();
+        self.context.current_hour_wind_speed = current_hour.wind.speed_kilometre.to_string();
+        self.context.current_hour_wind_icon = current_hour.wind.get_icon_path();
+        self.context.current_hour_uv_index = current_hour.uv.to_string();
+        self.context.current_hour_relative_humidity = current_hour.relative_humidity.to_string();
+        self.context.current_hour_relative_humidity_icon =
+            current_hour.relative_humidity.get_icon_path();
+        self.context.current_day_date = chrono::Local::now().format("%A, %d %B").to_string();
+        self.context.current_hour_rain_amount = (current_hour.rain.amount.min.unwrap_or(0.0)
+            + current_hour.rain.amount.min.unwrap_or(0.0))
+        .to_string();
+        self.context.rain_measure_icon = current_hour.rain.amount.get_icon_path();
+        self
     }
 
     fn extract_curve_data(svg_result: &[GraphDataPath]) -> (String, String, String) {

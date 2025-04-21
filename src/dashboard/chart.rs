@@ -67,6 +67,7 @@ impl GraphData {
 }
 pub struct HourlyForecastGraph {
     pub curves: Vec<CurveType>,
+    pub uv_data: [usize; 24],
     pub height: f64,
     pub width: f64,
     pub starting_x: f64,
@@ -80,6 +81,7 @@ pub struct HourlyForecastGraph {
     pub text_colour: String,
 }
 
+// TODO: use the builder pattern to create the graph
 impl Default for HourlyForecastGraph {
     fn default() -> Self {
         Self {
@@ -97,6 +99,7 @@ impl Default for HourlyForecastGraph {
                     smooth: false,
                 }),
             ],
+            uv_data: [0; 24],
             height: 300.0,
             width: 600.0,
             starting_x: 0.0,
@@ -517,11 +520,11 @@ impl HourlyForecastGraph {
         );
     }
 
-    pub fn draw_uv_gradient_over_time(&self, uv_data: [usize; 24]) -> String {
+    pub fn draw_uv_gradient_over_time(&self) -> String {
         // println!("UV data: {:?}", uv_data);
         let mut gradient = String::new();
 
-        for (i, &uv) in uv_data.iter().enumerate() {
+        for (i, &uv) in self.uv_data.iter().enumerate() {
             let offset = (i as f64 / 23.0) * 100.0;
             let colour = UVIndexCategory::from_u8(uv as u8).to_colour();
             gradient.push_str(&format!(
