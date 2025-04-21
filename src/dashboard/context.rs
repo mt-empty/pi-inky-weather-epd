@@ -10,12 +10,6 @@ use crate::{
 use chrono::{DateTime, Local, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 
-pub struct Temperature(isize);
-
-pub struct UVIndex(usize);
-
-pub struct WindSpeed(usize);
-
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Context {
     pub background_colour: String,
@@ -198,9 +192,7 @@ impl ContextBuilder {
         }
     }
 
-    // pub fn with_current_weather(mut self, config: &Config) -> Self {}
-
-    pub fn with_current_hour_data(mut self, current_hour: &HourlyForecast) -> Self {
+    pub fn with_current_hour_data(&mut self, current_hour: &HourlyForecast) -> &mut Self {
         self.context.current_hour_actual_temp = current_hour.temp.to_string();
         self.context.current_hour_weather_icon = current_hour.get_icon_path();
         self.context.current_hour_feels_like = current_hour.temp_feels_like.to_string();
@@ -218,7 +210,7 @@ impl ContextBuilder {
         self
     }
 
-    pub fn with_daily_forecast(mut self, daily_forecast_data: Vec<DailyEntry>) -> Self {
+    pub fn with_daily_forecast_data(&mut self, daily_forecast_data: Vec<DailyEntry>) -> &mut Self {
         // The date returned by Bom api is x:14 utc, which translates to x+1:00 AEST time,
         // so we have to do some conversion
         let local_date_truncated = Local::now()
@@ -336,7 +328,10 @@ impl ContextBuilder {
         }
     }
 
-    fn update_hourly_forecast_data(mut self, hourly_forecast_data: Vec<HourlyForecast>) -> Self {
+    pub fn with_hourly_forecast_data(
+        &mut self,
+        hourly_forecast_data: Vec<HourlyForecast>,
+    ) -> &mut Self {
         let mut temp_data = GraphData {
             graph_type: DataType::Temp,
             points: vec![],
@@ -401,20 +396,7 @@ impl ContextBuilder {
                 .for_each(|forecast| {
                     if x == 0.0 {
                         // update current hour
-                        self.context.current_hour_actual_temp = forecast.temp.to_string();
-                        self.context.current_hour_weather_icon = forecast.get_icon_path();
-                        self.context.current_hour_feels_like = forecast.temp_feels_like.to_string();
-                        self.context.current_hour_wind_speed = forecast.wind.speed_kilometre.to_string();
-                        self.context.current_hour_wind_icon = forecast.wind.get_icon_path();
-                        self.context.current_hour_uv_index = forecast.uv.to_string();
-                        self.context.current_hour_relative_humidity = forecast.relative_humidity.to_string();
-                        self.context.current_hour_relative_humidity_icon =
-                        forecast.relative_humidity.get_icon_path();
-                        self.context.current_day_date = chrono::Local::now().format("%A, %d %B").to_string();
-                        self.context.current_hour_rain_amount = (forecast.rain.amount.min.unwrap_or(0.0)
-                            + forecast.rain.amount.min.unwrap_or(0.0))
-                        .to_string();
-                        self.context.rain_measure_icon = forecast.rain.amount.get_icon_path();
+                        self.with_current_hour_data(forecast);
                     } else if x >= 24.0 {
                         eprintln!(
                         "Warning: More than 24 hours of hourly forecast data, this should not happen"
@@ -583,7 +565,7 @@ impl ContextBuilder {
         }
     }
 
-    pub fn set_errors<E: Icon + Description + std::error::Error>(mut self, error: E) -> Self {
+    pub fn set_errors<E: Icon + Description + std::error::Error>(&mut self, error: E) -> &mut Self {
         self.context.warning_message = error.short_description().to_string();
         // TODO: at the moment the last error will overwrite the previous ones, so need to
         // display the errors in a list, front to back in cascading icons style
