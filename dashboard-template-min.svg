@@ -27,13 +27,13 @@
 
     <!-- Current Day Information -->
     <!-- Do not modify the x position of current_hour_temp and current_hour_feels_like, see above issue at the start of the file -->
-    <text x="270" y="50" font-size="35" fill="{text_colour}">{current_day_name} </text>
+    <text x="270" y="50" font-size="35" fill="{text_colour}">{current_day_date} </text>
     <image x="0" y="0" width="200" height="180" href="{current_hour_weather_icon}" />
 
 
     <!-- Current temperature and Feels Like temperature -->
-    <text x="266" y="128" font-size="70" fill="{temp_colour}" text-anchor="middle">
-        {current_hour_temp}
+    <text x="266" y="128" font-size="70" fill="{actual_temp_colour}" text-anchor="middle">
+        {current_hour_actual_temp}
         <tspan baseline-shift="27" dx="-20" font-size="33">°{temp_unit}</tspan>
     </text>
 
@@ -48,7 +48,7 @@
     </text>
 
     <!-- Warning Message -->
-    <svg x="600" y="0" width="200" height="100" text-anchor="middle" visibility="{warning_visibility}">
+    <svg x="580" y="0" width="200" height="100" text-anchor="middle" visibility="{warning_visibility}">
         <image x="63" y="-10" width="74" height="74" href="{warning_icon}" />
         <text x="100" y="60" width="200" font-size="12">
             {warning_message}
@@ -84,8 +84,8 @@
 
             <text x="85" y="43.5" fill="{text_colour}" font-size="20">Now
             </text>
-            <text x="140" y="43.5" fill="{text_colour}" font-size="20">Max
-                <tspan baseline-shift="super" font-size="17" dx="-3">24h</tspan>
+            <text x="140" y="43.5" fill="{text_colour}" font-size="20" font-style="italic">Max
+                <tspan baseline-shift="super" font-size="17" dx="-3" font-style="italic">24h</tspan>
             </text>
         </svg>
 
@@ -195,8 +195,8 @@
         {y_left_labels}
         <!-- Y right Labels -->
         {y_right_labels}
-        <path stroke="{temp_colour}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
-            d="{temp_curve_data}" stroke-width="3.0" fill="none" />
+        <path stroke="{actual_temp_colour}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
+            d="{actual_temp_curve_data}" stroke-width="3.0" fill="none" />
         <path stroke="{feels_like_colour}" stroke-linejoin="round" stroke-dasharray="5,5"
             transform="translate(0, 300) scale(1, -1)" d="{feel_like_curve_data}" stroke-width="3.0" fill="none" />
         <path transform="translate(0, 300) scale(1, -1)" d="{rain_curve_data}" fill="{rain_colour}"

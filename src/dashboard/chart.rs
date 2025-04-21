@@ -32,17 +32,32 @@ impl Curve {
 }
 
 #[derive(Clone, Debug)]
-pub enum DataType {
-    Temp,
-    TempFeelLike,
-    Rain,
+pub struct GraphData {
+    pub points: Vec<Point>,
+    pub smooth: bool,
 }
 
 #[derive(Clone, Debug)]
-pub struct GraphData {
-    pub graph_type: DataType,
-    pub points: Vec<Point>,
-    pub smooth: bool,
+pub enum CurveType {
+    ActualTemp(GraphData),
+    TempFeelLike(GraphData),
+    RainChance(GraphData),
+}
+
+impl CurveType {
+    fn data(&self) -> &GraphData {
+        match self {
+            Self::ActualTemp(data) | Self::TempFeelLike(data) | Self::RainChance(data) => data,
+        }
+    }
+
+    pub fn get_points(&self) -> &Vec<Point> {
+        &self.data().points
+    }
+
+    pub fn get_smooth(&self) -> bool {
+        self.data().smooth
+    }
 }
 
 impl GraphData {
@@ -50,8 +65,8 @@ impl GraphData {
         self.points.push(Point { x, y })
     }
 }
-pub struct DailyForecastGraph {
-    pub data: Vec<GraphData>,
+pub struct HourlyForecastGraph {
+    pub curves: Vec<CurveType>,
     pub height: f64,
     pub width: f64,
     pub starting_x: f64,
@@ -65,10 +80,23 @@ pub struct DailyForecastGraph {
     pub text_colour: String,
 }
 
-impl Default for DailyForecastGraph {
+impl Default for HourlyForecastGraph {
     fn default() -> Self {
         Self {
-            data: vec![],
+            curves: vec![
+                CurveType::ActualTemp(GraphData {
+                    points: vec![],
+                    smooth: true,
+                }),
+                CurveType::TempFeelLike(GraphData {
+                    points: vec![],
+                    smooth: true,
+                }),
+                CurveType::RainChance(GraphData {
+                    points: vec![],
+                    smooth: false,
+                }),
+            ],
             height: 300.0,
             width: 600.0,
             starting_x: 0.0,
@@ -197,7 +225,7 @@ pub struct AxisPaths {
 }
 
 /// Create the axis paths and labels for the graph
-impl DailyForecastGraph {
+impl HourlyForecastGraph {
     pub fn create_axis_with_labels(&self, current_hour: f64) -> AxisPaths {
         let range_x = self.ending_x - self.starting_x + 1.0; // +1 because last hour is 23
         let range_y_left = self.max_y - self.min_y;
@@ -453,16 +481,24 @@ impl DailyForecastGraph {
     }
 
     fn initialize_x_y_bounds(&mut self) {
-        for data in &self.data {
-            let min_y_data = data.points.iter().map(|val| val.y).fold(f64::NAN, f64::min);
-            let max_y_data = data.points.iter().map(|val| val.y).fold(f64::NAN, f64::max);
+        for curve in &self.curves {
+            let min_y_data = curve
+                .get_points()
+                .iter()
+                .map(|val| val.y)
+                .fold(f64::NAN, f64::min);
+            let max_y_data = curve
+                .get_points()
+                .iter()
+                .map(|val| val.y)
+                .fold(f64::NAN, f64::max);
 
-            let starting_x_data = data.points.first().map(|val| val.x).unwrap_or(0.0);
-            let ending_x_data = data.points.last().map(|val| val.x).unwrap_or(0.0);
+            let starting_x_data = curve.get_points().first().map(|val| val.x).unwrap_or(0.0);
+            let ending_x_data = curve.get_points().last().map(|val| val.x).unwrap_or(0.0);
 
-            match data.graph_type {
-                DataType::Rain => {}
-                DataType::TempFeelLike | DataType::Temp => {
+            match curve {
+                CurveType::RainChance(_) => {}
+                CurveType::ActualTemp(_) | CurveType::TempFeelLike(_) => {
                     self.min_y = self.min_y.min(min_y_data);
                     self.max_y = self.max_y.max(max_y_data);
                 }
@@ -502,13 +538,13 @@ impl DailyForecastGraph {
         let mut data_path = vec![];
 
         self.initialize_x_y_bounds();
-        for data in &self.data {
+        for curve in &self.curves {
             // println!("Data: {:?}", data);
             // Calculate scaling factors for x and y to fit the graph within the given width and height
             let xfactor = self.width / self.ending_x;
-            let yfactor = match data.graph_type {
-                DataType::Rain => self.height / 100.0, // Rain data is in percentage
-                DataType::Temp | DataType::TempFeelLike => {
+            let yfactor = match curve {
+                CurveType::RainChance(_) => self.height / 100.0, // Rain data is in percentage
+                CurveType::ActualTemp(_) | CurveType::TempFeelLike(_) => {
                     if self.max_y >= 0.0 && self.min_y < 0.0 {
                         self.height / (self.max_y + self.min_y.abs())
                     } else if self.min_y < 0.0 {
@@ -524,14 +560,14 @@ impl DailyForecastGraph {
             // println!("X factor: {}, Y factor: {}", xfactor, yfactor);
 
             // Scale the points according to the calculated factors
-            let points: Vec<Point> = data
-                .points
+            let scaled_points: Vec<Point> = curve
+                .get_points()
                 .iter()
                 .map(|val| Point {
                     x: (val.x * xfactor), // x always start from 0 so no need to adjust the x value
-                    y: match data.graph_type {
-                        DataType::Rain => val.y * yfactor,
-                        DataType::Temp | DataType::TempFeelLike => {
+                    y: match curve {
+                        CurveType::RainChance(_) => val.y * yfactor,
+                        CurveType::ActualTemp(_) | CurveType::TempFeelLike(_) => {
                             // If the minimum y value is negative, we need to adjust the y value
                             // to ensure it's correctly placed on the graph
                             if self.min_y < 0.0 {
@@ -545,8 +581,8 @@ impl DailyForecastGraph {
                 .collect();
 
             // Generate the SVG path data
-            let path = if data.smooth {
-                catmull_rom_to_bezier(points)
+            let path = if curve.get_smooth() {
+                catmull_rom_to_bezier(scaled_points)
                     .iter()
                     .enumerate()
                     .map(|(i, val)| {
@@ -559,7 +595,7 @@ impl DailyForecastGraph {
                     .collect::<Vec<String>>()
                     .join("")
             } else {
-                points
+                scaled_points
                     .iter()
                     .enumerate()
                     .map(|(i, val)| {
@@ -573,14 +609,14 @@ impl DailyForecastGraph {
                     .join("")
             };
 
-            match data.graph_type {
-                DataType::Temp => {
+            match curve {
+                CurveType::ActualTemp(_) => {
                     data_path.push(GraphDataPath::Temp(path));
                 }
-                DataType::TempFeelLike => {
+                CurveType::TempFeelLike(_) => {
                     data_path.push(GraphDataPath::TempFeelLike(path));
                 }
-                DataType::Rain => {
+                CurveType::RainChance(_) => {
                     let bounding_area_path = format!("{} L {} 0 L 0 0Z", path, self.width);
                     data_path.push(GraphDataPath::Rain(bounding_area_path));
                 }
