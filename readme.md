@@ -1,8 +1,8 @@
 # Pi Inky Weather Display
 
-This is a weather display powered by a Raspberry pi and a 7.3in 7 color E-Paper (aka E-ink) display. Current and forecasted weather data is obtained from the Australian Bureau of Meteorology API.
+This is a weather display powered by a Raspberry Pi and a 7.3in 7 color E-Paper (aka E-ink) display. Current and forecasted weather data is obtained from the Australian Bureau of Meteorology API.
 
-![alt text](./misc/dashboard.png)
+![](./misc/dashboard.png)
 
 ## Hardware
 - Raspberry Pi (zero model requires soldering the GPIO Header)
@@ -39,7 +39,7 @@ This is a weather display powered by a Raspberry pi and a 7.3in 7 color E-Paper 
    - `/path/to/extracted/files` with your installation directory
    - `PYTHON_PATH` with path to Python (e.g., `/usr/bin/python3`)
    - `IMAGE_SCRIPT_PATH` with path to Inky's image.py (e.g., `/home/pi/Pimoroni/inky/examples/7color/image.py`)
-   - `SATURATION` with the desired saturation level (e.g., `1.0`), it it not recommended change this for current icons
+   - `SATURATION` with the desired saturation level (e.g., `1.0`), it is not recommended to change this for current icons
 
    Example of complete cron command:
    ```bash
@@ -53,17 +53,33 @@ You can override the default configs located at [./config/](./config/) by creati
 ~/.config/pi-inky-weather-epd.toml
 ```
 
-### Special Instructions for DietPi
+### Example configuration
 
-For **dietpi** distro, set this config for the installation script to work:
+Default configuration file:
+
+![](./misc/dashboard-default.png)
+
+
+
+```toml
+[render_options]
+# When the sky is clear, the moon phase icon will be used instead of the clear night icon
+use_moon_phase_instead_of_clear_night = false
 ```
-include-system-site-packages = true
+![](./misc/dashboard-without-moon-phase.png)
+
+
+```toml
+[render_options]
+# this controls the placement of the x-axis when the temperature is below zero
+x_axis_always_at_min = false
 ```
-I also had to modify the installation script to have pip3 point to the environment pip3 as opposed to the system pip3
+![](./misc/dashboard-x-axis-at-zero.png)
+
 
 ## Inky Impression 7.3
 
-### supported colors at 1.0 Saturation
+### Supported colors at 1.0 Saturation
 
 ```
 [0, 0, 0],        # Black
@@ -77,7 +93,7 @@ I also had to modify the installation script to have pip3 point to the environme
 
 #### Trial and error found colors
 
-These colors where found by trail and error
+These colors were found by trial and error:
 ```
 [255, 248, 220, 255], // Cornsilk
 [255, 250, 205, 255], // Lemon Chiffon
@@ -90,8 +106,7 @@ These colors where found by trail and error
 - Actual Panel: Waveshare display https://www.waveshare.com/7.3inch-e-paper-hat-f.htm
 - Panel documentation: https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)_Manual#Overview
 - API: https://github.com/bremor/bureau_of_meteorology/blob/main/api%20doc/API.md
-- icons are based on: https://bas.dev/work/meteocons
-
+- Icons are based on: https://bas.dev/work/meteocons
 
 ## TODO
 - [ ] Testing: create a script that auto generates some/all weather variations
@@ -163,3 +178,22 @@ Then `cd` into the extracted directory and run the cron script manually to see i
 #### Issues with latest version of Inky 
 
 If you encounter issues with the latest version of Inky, try manually installing version **1.5.0** release of the inky library, refer to the official [documentation](https://github.com/pimoroni/inky?tab=readme-ov-file#install-stable-library-from-pypi-and-configure-manually)
+
+### Special Instructions for DietPi
+
+For **DietPi** distro working with version **1.5**, you may need to set `include-system-site-packages = true` in your Python virtual environment.  
+To do this, after creating your virtual environment (e.g., with `python3 -m venv /path/to/env`), open the file:
+
+```
+/path/to/env/pyvenv.cfg
+```
+
+and add or set the following line:
+
+```
+include-system-site-packages = true
+```
+
+This allows the virtual environment to access system-wide Python packages, which may be required for the installation script to work.
+
+You may also need to modify the inky installation script so that `pip3` points to the the created environment's `pip3` instead of the system `pip3`.
