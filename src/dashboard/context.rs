@@ -1,10 +1,10 @@
 use crate::{
     apis::bom::models::{DailyEntry, HourlyForecast, UV},
-    constants::NOT_AVAILABLE_ICON,
+    constants::NOT_AVAILABLE_ICON_PATH,
     dashboard::chart::{GraphDataPath, HourlyForecastGraph},
     errors::{DashboardError, Description},
     utils::{find_max_item_between_dates, get_total_between_dates},
-    weather::icons::Icon,
+    weather::icons::{Icon, SunPositionIconName},
     CONFIG,
 };
 use chrono::{DateTime, Local, Timelike, Utc};
@@ -112,34 +112,25 @@ impl Default for Context {
             total_rain_today: "NA".to_string(),
             temp_unit: CONFIG.render_options.temp_unit.clone(),
             current_hour_actual_temp: "NA".to_string(),
-            current_hour_weather_icon: format!(
-                "{}{}",
-                CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON
-            ),
+            current_hour_weather_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             current_hour_feels_like: "NA".to_string(),
             current_hour_wind_speed: "NA".to_string(),
-            current_hour_wind_icon: format!(
-                "{}{}",
-                CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON
-            ),
+            current_hour_wind_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             current_hour_uv_index: "NA".to_string(),
             current_hour_relative_humidity: "NA".to_string(),
-            current_hour_relative_humidity_icon: format!(
-                "{}{}",
-                CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON
-            ),
+            current_hour_relative_humidity_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             current_day_date: "NA".to_string(),
             current_hour_rain_amount: "NA".to_string(),
-            rain_measure_icon: format!("{}{}", CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON),
+            rain_measure_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             graph_height: "300".to_string(),
             graph_width: "600".to_string(),
             actual_temp_curve_data: "".to_string(),
             feel_like_curve_data: "".to_string(),
             rain_curve_data: "".to_string(),
             uv_index: "NA".to_string(),
-            uv_index_icon: format!("{}{}", CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON),
+            uv_index_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             wind_speed: "NA".to_string(),
-            wind_icon: format!("{}{}", CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON),
+            wind_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             x_axis_path: "".to_string(),
             x_axis_guideline_path: "".to_string(),
             y_left_axis_path: "".to_string(),
@@ -150,34 +141,34 @@ impl Default for Context {
             uv_gradient: "".to_string(),
             day2_mintemp: "NA".to_string(),
             day2_maxtemp: "NA".to_string(),
-            day2_icon: format!("{}{}", CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON),
+            day2_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             day2_name: "NA".to_string(),
             day3_mintemp: "NA".to_string(),
             day3_maxtemp: "NA".to_string(),
-            day3_icon: format!("{}{}", CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON),
+            day3_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             day3_name: "NA".to_string(),
             day4_mintemp: "NA".to_string(),
             day4_maxtemp: "NA".to_string(),
-            day4_icon: format!("{}{}", CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON),
+            day4_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             day4_name: "NA".to_string(),
             day5_mintemp: "NA".to_string(),
             day5_maxtemp: "NA".to_string(),
-            day5_icon: format!("{}{}", CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON),
+            day5_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             day5_name: "NA".to_string(),
             day6_mintemp: "NA".to_string(),
             day6_maxtemp: "NA".to_string(),
-            day6_icon: format!("{}{}", CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON),
+            day6_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             day6_name: "NA".to_string(),
             day7_mintemp: "NA".to_string(),
             day7_maxtemp: "NA".to_string(),
-            day7_icon: format!("{}{}", CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON),
+            day7_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             day7_name: "NA".to_string(),
             sunrise_time: "NA".to_string(),
             sunset_time: "NA".to_string(),
-            sunset_icon: format!("{}sunset.svg", CONFIG.misc.svg_icons_directory),
-            sunrise_icon: format!("{}sunrise.svg", CONFIG.misc.svg_icons_directory),
+            sunset_icon: SunPositionIconName::Sunset.get_icon_path(),
+            sunrise_icon: SunPositionIconName::Sunrise.get_icon_path(),
             warning_message: "NA".to_string(),
-            warning_icon: format!("{}{}", CONFIG.misc.svg_icons_directory, NOT_AVAILABLE_ICON),
+            warning_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
             warning_visibility: "hidden".to_string(),
         }
     }
@@ -369,7 +360,7 @@ impl ContextBuilder {
         let current_uv = UV {
             category: None,
             end_time: None,
-            max_index: Some(hourly_forecast_data[0].uv as u32),
+            max_index: Some(hourly_forecast_data[0].uv),
             start_time: None,
         };
         self.context.uv_index_icon = current_uv.get_icon_path().to_string();
@@ -387,9 +378,7 @@ impl ContextBuilder {
             &hourly_forecast_data,
             &forecast_window_start,
             &forecast_window_end,
-            |item: &HourlyForecast| {
-                (item.rain.amount.min.unwrap_or(0.0) + item.rain.amount.max.unwrap_or(0.0)) / 2.0
-            },
+            |item: &HourlyForecast| item.rain.calculate_median_rain(),
             |item| &item.time,
         ) as usize)
             .to_string();
@@ -467,8 +456,8 @@ impl ContextBuilder {
                     // we push this index to make scaling graph easier
                 for curve_type in &mut graph.curves.iter_mut() {
                     match curve_type {
-                        CurveType::ActualTemp(curve) => curve.add_point(x, forecast.temp),
-                        CurveType::TempFeelLike(curve) => curve.add_point(x, forecast.temp_feels_like),
+                        CurveType::ActualTemp(curve) => curve.add_point(x, forecast.temp as f64),
+                        CurveType::TempFeelLike(curve) => curve.add_point(x, forecast.temp_feels_like as f64),
                         CurveType::RainChance(curve) => curve.add_point(x, forecast.rain.chance.unwrap_or(0).into()),
                     }
                 }
@@ -488,9 +477,8 @@ impl ContextBuilder {
         self.context.current_hour_relative_humidity_icon =
             current_hour.relative_humidity.get_icon_path();
         self.context.current_day_date = chrono::Local::now().format("%A, %d %B").to_string();
-        self.context.current_hour_rain_amount = (current_hour.rain.amount.min.unwrap_or(0.0)
-            + current_hour.rain.amount.min.unwrap_or(0.0))
-        .to_string();
+        self.context.current_hour_rain_amount =
+            current_hour.rain.calculate_median_rain().to_string();
         self.context.rain_measure_icon = current_hour.rain.amount.get_icon_path();
         self
     }
@@ -520,7 +508,7 @@ impl ContextBuilder {
             hourly_forecast_data,
             &forecast_window_start,
             &day_end,
-            |item| item.wind.gust_speed_kilometre.unwrap_or(0.0),
+            |item| item.wind.gust_speed_kilometre.unwrap_or(0),
             |item| &item.time,
         );
 
@@ -528,7 +516,7 @@ impl ContextBuilder {
             hourly_forecast_data,
             &day_end,
             &forecast_window_end,
-            |item| item.wind.gust_speed_kilometre.unwrap_or(0.0),
+            |item| item.wind.gust_speed_kilometre.unwrap_or(0),
             |item| &item.time,
         );
 

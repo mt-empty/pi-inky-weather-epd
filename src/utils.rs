@@ -134,18 +134,21 @@ pub fn convert_utc_to_local_datetime(utc_time: &str) -> Result<NaiveDateTime, ch
 ///
 /// # Returns
 ///
-/// * `f64` - The total value between the specified dates.
-pub fn get_total_between_dates<T>(
+/// * `V` - The total value between the specified dates.
+pub fn get_total_between_dates<T, V>(
     data: &[T],
     start_date: &DateTime<Utc>,
     end_date: &DateTime<Utc>,
-    get_value: impl Fn(&T) -> f64,
+    get_value: impl Fn(&T) -> V,
     get_time: impl Fn(&T) -> &DateTime<Utc>,
-) -> f64 {
+) -> V
+where
+    V: std::iter::Sum + Default,
+{
     data.iter()
         .filter_map(|item| {
-            let date = get_time(item);
-            if date >= start_date && date < end_date {
+            let item_date = get_time(item);
+            if item_date >= start_date && item_date < end_date {
                 Some(get_value(item))
             } else {
                 None
@@ -166,14 +169,18 @@ pub fn get_total_between_dates<T>(
 ///
 /// # Returns
 ///
-/// * `f64` - The maximum value between the specified dates.
-pub fn find_max_item_between_dates<T>(
+/// * `V` - The maximum value between the specified dates.
+pub fn find_max_item_between_dates<T, V>(
     data: &[T],
     start_date: &DateTime<Utc>,
     end_date: &DateTime<Utc>,
-    get_value: impl Fn(&T) -> f64,
+    get_value: impl Fn(&T) -> V,
     get_time: impl Fn(&T) -> &DateTime<Utc>,
-) -> f64 {
+) -> V
+where
+    V: PartialOrd + Copy + Default,
+{
+    // Use V::default() as the initial value for finding the maximum, it should be fine for numeric types here since they are all positive
     data.iter()
         .filter_map(|item| {
             let date = get_time(item);
@@ -183,7 +190,7 @@ pub fn find_max_item_between_dates<T>(
                 None
             }
         })
-        .fold(f64::NEG_INFINITY, f64::max)
+        .fold(V::default(), |acc, x| if x > acc { x } else { acc })
 }
 
 /// Deserializes an optional NaiveDateTime from a string.

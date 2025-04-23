@@ -1,9 +1,7 @@
-use anyhow::Error;
-use serde::Deserialize;
-
 use crate::constants::DEFAULT_AXIS_LABEL_FONT_SIZE;
+use anyhow::Error;
 
-#[derive(Deserialize, Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy)]
 pub struct Point {
     pub x: f64,
     pub y: f64,
@@ -15,7 +13,7 @@ impl Point {
     }
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Curve {
     pub c1: Point,
     pub c2: Point,

@@ -14,4 +14,8 @@ lazy_static! {
         "{}/{}/forecasts/hourly",
         WEATHER_PROVIDER, CONFIG.api.location
     );
+    pub static ref NOT_AVAILABLE_ICON_PATH: String = format!(
+        "{}{}",
+        CONFIG.misc.weather_data_cache_path, NOT_AVAILABLE_ICON
+    );
 }

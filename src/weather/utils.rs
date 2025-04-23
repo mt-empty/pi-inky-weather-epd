@@ -1,6 +1,28 @@
 use chrono::Datelike;
+use strum_macros::Display;
 
-pub fn get_moon_phase_icon_name() -> String {
+// Determine the moon phase icon based on the moon age
+#[derive(Debug, Display)]
+pub enum MoonPhaseIconName {
+    #[strum(to_string = "moon-new.svg")]
+    New,
+    #[strum(to_string = "moon-waxing-crescent.svg")]
+    WaxingCrescent,
+    #[strum(to_string = "moon-first-quarter.svg")]
+    FirstQuarter,
+    #[strum(to_string = "moon-waxing-gibbous.svg")]
+    WaxingGibbous,
+    #[strum(to_string = "moon-full.svg")]
+    Full,
+    #[strum(to_string = "moon-waning-gibbous.svg")]
+    WaningGibbous,
+    #[strum(to_string = "moon-last-quarter.svg")]
+    LastQuarter,
+    #[strum(to_string = "moon-waning-crescent.svg")]
+    WaningCrescent,
+}
+
+pub fn get_moon_phase_icon_name() -> MoonPhaseIconName {
     let now = chrono::Local::now();
     let year = now.year();
     let month = now.month();
@@ -15,16 +37,14 @@ pub fn get_moon_phase_icon_name() -> String {
     }
 
     // Determine the moon phase icon based on the moon age
-    let icon_name = match moon_age_days {
-        age if age < 1.84566 => "moon-new.svg",
-        age if age < 5.53699 => "moon-waxing-crescent.svg",
-        age if age < 9.22831 => "moon-first-quarter.svg",
-        age if age < 12.91963 => "moon-waxing-gibbous.svg",
-        age if age < 16.61096 => "moon-full.svg",
-        age if age < 20.30228 => "moon-waning-gibbous.svg",
-        age if age < 23.99361 => "moon-last-quarter.svg",
-        _ => "moon-waning-crescent.svg",
-    };
-
-    icon_name.to_string()
+    match moon_age_days {
+        age if age < 1.84566 => MoonPhaseIconName::New,
+        age if age < 5.53699 => MoonPhaseIconName::WaxingCrescent,
+        age if age < 9.22831 => MoonPhaseIconName::FirstQuarter,
+        age if age < 12.91963 => MoonPhaseIconName::WaxingGibbous,
+        age if age < 16.61096 => MoonPhaseIconName::Full,
+        age if age < 20.30228 => MoonPhaseIconName::WaningGibbous,
+        age if age < 23.99361 => MoonPhaseIconName::LastQuarter,
+        _ => MoonPhaseIconName::WaningCrescent,
+    }
 }

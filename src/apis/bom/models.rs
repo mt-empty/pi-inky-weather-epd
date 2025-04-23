@@ -4,17 +4,17 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct Wind {
-    pub speed_kilometre: f64,
-    pub speed_knot: f64,
+    pub speed_kilometre: u32,
+    pub speed_knot: u32,
     pub direction: String,
-    pub gust_speed_knot: Option<f64>,
-    pub gust_speed_kilometre: Option<f64>,
+    pub gust_speed_knot: Option<u32>,
+    pub gust_speed_kilometre: Option<u32>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Temp {
     pub time: DateTime<Utc>,
-    pub value: f64,
+    pub value: i32,
 }
 
 #[derive(Deserialize, Debug)]
@@ -27,10 +27,10 @@ pub struct HourlyMetadata {
 
 #[derive(Deserialize, Debug)]
 pub struct RainAmount {
-    pub min: Option<f64>,
-    pub max: Option<f64>,
-    pub lower_range: Option<f64>,
-    pub upper_range: Option<f64>,
+    pub min: Option<u32>,
+    pub max: Option<u32>,
+    pub lower_range: Option<u32>,
+    pub upper_range: Option<u32>,
     pub units: Option<String>,
 }
 
@@ -39,9 +39,9 @@ pub struct Rain {
     pub amount: RainAmount,
     pub chance: Option<u32>,
     pub chance_of_no_rain_category: Option<String>,
-    pub precipitation_amount_25_percent_chance: Option<f64>,
-    pub precipitation_amount_50_percent_chance: Option<f64>,
-    pub precipitation_amount_75_percent_chance: Option<f64>,
+    pub precipitation_amount_25_percent_chance: Option<u32>,
+    pub precipitation_amount_50_percent_chance: Option<u32>,
+    pub precipitation_amount_75_percent_chance: Option<u32>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -71,8 +71,8 @@ pub struct Now {
     pub is_night: Option<bool>,
     pub now_label: Option<String>,
     pub later_label: Option<String>,
-    pub temp_now: Option<f64>,
-    pub temp_later: Option<f64>,
+    pub temp_now: Option<i32>,
+    pub temp_later: Option<i32>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -81,8 +81,8 @@ pub struct DailyEntry {
     pub uv: Option<UV>,
     pub astronomical: Option<Astronomical>,
     pub date: Option<DateTime<Utc>>,
-    pub temp_max: Option<f64>,
-    pub temp_min: Option<f64>,
+    pub temp_max: Option<i32>,
+    pub temp_min: Option<i32>,
     pub extended_text: Option<String>,
     pub icon_descriptor: Option<String>,
     pub short_text: Option<String>,
@@ -105,12 +105,12 @@ pub struct DailyMetadata {
 #[derive(Deserialize, Debug)]
 pub struct HourlyForecast {
     pub rain: Rain,
-    pub temp: f64,
-    pub temp_feels_like: f64,
-    pub dew_point: f64,
+    pub temp: i32,
+    pub temp_feels_like: i32,
+    pub dew_point: u32,
     pub wind: Wind,
-    pub relative_humidity: f64,
-    pub uv: f64,
+    pub relative_humidity: u32,
+    pub uv: u32,
     pub icon_descriptor: String,
     pub next_three_hourly_forecast_period: DateTime<Utc>,
     pub time: DateTime<Utc>,

@@ -1,3 +1,4 @@
+use strum_macros::Display;
 use thiserror::Error;
 
 use crate::weather::icons::Icon;
@@ -15,6 +16,18 @@ pub enum DashboardError {
     UpdateFailed(String),
 }
 
+#[derive(Debug, Display)]
+pub enum DashboardErrorIconName {
+    #[strum(to_string = "code-orange.svg")]
+    NoInternet,
+    #[strum(to_string = "code-red.svg")]
+    ApiError,
+    #[strum(to_string = "code-yellow.svg")]
+    IncompleteData,
+    #[strum(to_string = "code-green.svg")]
+    UpdateFailed,
+}
+
 pub trait Description {
     fn short_description(&self) -> &'static str;
     fn long_description(&self) -> String;
@@ -23,11 +36,12 @@ pub trait Description {
 impl Icon for DashboardError {
     fn get_icon_name(&self) -> String {
         match self {
-            DashboardError::NoInternet { .. } => "code-orange.svg".to_string(),
-            DashboardError::ApiError(_) => "code-red.svg".to_string(),
-            DashboardError::IncompleteData { .. } => "code-yellow.svg".to_string(),
-            DashboardError::UpdateFailed(_) => "code-green.svg".to_string(),
+            DashboardError::NoInternet { .. } => DashboardErrorIconName::NoInternet,
+            DashboardError::ApiError(_) => DashboardErrorIconName::ApiError,
+            DashboardError::IncompleteData { .. } => DashboardErrorIconName::IncompleteData,
+            DashboardError::UpdateFailed(_) => DashboardErrorIconName::UpdateFailed,
         }
+        .to_string()
     }
 }
 

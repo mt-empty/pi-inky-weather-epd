@@ -84,8 +84,8 @@
 
             <text x="85" y="43.5" fill="{text_colour}" font-size="20">Now
             </text>
-            <text x="140" y="43.5" fill="{text_colour}" font-size="20" font-style="italic">Max
-                <tspan baseline-shift="super" font-size="17" dx="-3" font-style="italic">24h</tspan>
+            <text x="140" y="43.5" fill="{text_colour}" font-size="20">Max
+                <tspan baseline-shift="super" font-size="17" dx="-3">24h</tspan>
             </text>
         </svg>
 
