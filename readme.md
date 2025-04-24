@@ -77,6 +77,17 @@ x_axis_always_at_min = false
 ![](./misc/dashboard-x-axis-at-zero.png)
 
 
+## Degraded operation
+
+The dashboard can still work using cached data for a while if the API is unreachable.
+You will see an icon and a small warning message appearing on the display in case of any errors.
+| Error Type       | Icon                                                                                  |
+|------------------|---------------------------------------------------------------------------------------|
+| **Api Error**    | <img src="./static/fill-svg-static/code-red.svg" alt="Api Error" width="32" height="32" />        |
+| **No Internet**  | <img src="./static/fill-svg-static/code-orange.svg" alt="No Internet" width="32" height="32" />   |
+| **Incomplete Data** | <img src="./static/fill-svg-static/code-yellow.svg" alt="Incomplete Data" width="32" height="32" /> |
+
+
 ## Inky Impression 7.3
 
 ### Supported colors at 1.0 Saturation
@@ -100,17 +111,21 @@ These colors were found by trial and error:
 [255, 20, 147, 255],  // DeepPink
 ```
 
-## Documentation
+## Documentation and Resources
 
 - EPD used: Inky Impression 7.3 https://shop.pimoroni.com/products/inky-impression-7-3?variant=40512683376723
 - Actual Panel: Waveshare display https://www.waveshare.com/7.3inch-e-paper-hat-f.htm
 - Panel documentation: https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)_Manual#Overview
-- API: https://github.com/bremor/bureau_of_meteorology/blob/main/api%20doc/API.md
-- Icons are based on: https://bas.dev/work/meteocons
+- BOM API: https://github.com/bremor/bureau_of_meteorology/blob/main/api%20doc/API.md
+- [Icons](fill-svg-static) have been overhauled, which were originality based on: https://bas.dev/work/meteocons
 
 ## TODO
 - [ ] Testing: create a script that auto generates some/all weather variations
   - This script should simulate different weather conditions (e.g., sunny, rainy, cloudy) and generate corresponding images for testing the display.
+
+### Wish List
+- [ ] An algorithm that is smooth and does not overshoot
+- [ ] Rain gradient that looks like rain
 
 ## Developing
 
@@ -169,11 +184,8 @@ cargo run
 
 ## Troubleshooting
 
-Check the logs for any errors:
-```bash
-tail -f inky.log
-```
-Then `cd` into the extracted directory and run the cron script manually to see if there are any errors
+- Execute the ./pi-inky-weather-epd separately and observe the logs for any errors, then open the generated image to see if it is correct.
+- Run the cron script manually to see if there are any errors
 
 #### Issues with latest version of Inky 
 
