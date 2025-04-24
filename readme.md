@@ -1,13 +1,13 @@
 # Pi Inky Weather Display
 
-This is a weather display powered by a Raspberry Pi and a 7.3in 7 color E-Paper (aka E-ink) display. Current and forecasted weather data is obtained from the Australian Bureau of Meteorology API.
+This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper (aka E-ink) display. Weather data is obtained from the Australian Bureau of Meteorology API.
 
 ![](./misc/dashboard.png)
 
 ## Hardware
 - Raspberry Pi (zero model requires soldering the GPIO Header)
-- 7.3in E-Paper display (Inky Impression 7.3)
-- 3D printed case (optional)
+- [Inky impression 7.3in E-Paper display](https://shop.pimoroni.com/products/inky-impression-7-3?variant=55186435244411)
+- [3D printed case](https://github.com/mt-empty/inky-impression-7-3-colour-case) (optional)
 
 ## Setup on Raspberry Pi 
 
@@ -77,6 +77,13 @@ x_axis_always_at_min = false
 ![](./misc/dashboard-x-axis-at-zero.png)
 
 
+Whether to enable auto-update when a new release is available. This is set to 0 to disable auto-updating.
+```toml
+[release]
+# set to 0 to disable auto-updating
+update_interval_days = 7
+```
+
 ## Degraded operation
 
 The dashboard can still work using cached data for a while if the API is unreachable.
@@ -90,7 +97,7 @@ You will see an icon and a small warning message appearing on the display in cas
 
 ## Inky Impression 7.3
 
-### Supported colors at 1.0 Saturation
+### Supported colours at 1.0 Saturation
 
 ```
 [0, 0, 0],        # Black
@@ -102,9 +109,9 @@ You will see an icon and a small warning message appearing on the display in cas
 [255, 140, 0],    # Orange
 ```
 
-#### Trial and error found colors
+#### Trial and error found colours
 
-These colors were found by trial and error:
+These colours were found by trial and error:
 ```
 [255, 248, 220, 255], // Cornsilk
 [255, 250, 205, 255], // Lemon Chiffon
@@ -117,7 +124,7 @@ These colors were found by trial and error:
 - Actual Panel: Waveshare display https://www.waveshare.com/7.3inch-e-paper-hat-f.htm
 - Panel documentation: https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)_Manual#Overview
 - BOM API: https://github.com/bremor/bureau_of_meteorology/blob/main/api%20doc/API.md
-- [Icons](fill-svg-static) have been overhauled, which were originality based on: https://bas.dev/work/meteocons
+- [Icons](./static/fill-svg-static/) have been overhauled, which were originality based on: https://bas.dev/work/meteocons
 
 ## TODO
 - [ ] Testing: create a script that auto generates some/all weather variations
@@ -126,6 +133,7 @@ These colors were found by trial and error:
 ### Wish List
 - [ ] An algorithm that is smooth and does not overshoot
 - [ ] Rain gradient that looks like rain
+- [ ] Overhaul the [line svg icons](./static/fill-svg-static/) to match display colours
 
 ## Developing
 
