@@ -121,7 +121,7 @@ pub enum GraphDataPath {
     Rain(String),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
 pub enum UVIndexCategory {
     None,
     Low,
@@ -129,7 +129,7 @@ pub enum UVIndexCategory {
     High,
     VeryHigh,
     Extreme,
-    Hazardous,
+    // Hazardous,
 }
 
 #[derive(Debug, Display)]
@@ -156,8 +156,8 @@ impl UVIndexCategory {
             3..=5 => UVIndexCategory::Moderate,
             6..=7 => UVIndexCategory::High,
             8..=10 => UVIndexCategory::VeryHigh,
-            11..=12 => UVIndexCategory::Extreme,
-            _ => UVIndexCategory::Hazardous,
+            11.. => UVIndexCategory::Extreme,
+            // _ => UVIndexCategory::Hazardous,
         }
     }
 
@@ -169,7 +169,7 @@ impl UVIndexCategory {
             UVIndexCategory::High => "orange",
             UVIndexCategory::VeryHigh => "red",
             UVIndexCategory::Extreme => "purple",
-            UVIndexCategory::Hazardous => "black",
+            // UVIndexCategory::Hazardous => "black",
         }
     }
 }

@@ -1,0 +1,157 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 512 512"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+>
+  <defs>
+
+    <!-- Symbol #c (originally a sun with gradient fill + orange stroke) -->
+    <symbol id="c" viewBox="0 0 384 384">
+      <!-- Sun circle: now solid orange + black stroke -->
+      <circle
+        cx="192"
+        cy="192"
+        r="84"
+        fill="purple"
+        stroke="black"
+        stroke-miterlimit="10"
+        stroke-width="8"
+      />
+
+  <!-- 12 Rays at 30-degree increments -->
+  <!-- Each ray goes from rIn=131 to rOut=181 around (192,192) -->
+  <!-- Ray 1: angle 300° -->
+  <path
+    fill="none"
+    stroke="green"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="24"
+    d="M257.50,78.55 L282.50,35.24"
+  />
+  <!-- Ray 2: angle 330° -->
+  <path
+    fill="none"
+    stroke="green"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="24"
+    d="M305.45,126.50 L348.76,101.50"
+  />
+  <!-- Ray 3: angle 0° -->
+  <path
+    fill="none"
+    stroke="yellow"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="24"
+    d="M323.00,192.00 L373.00,192.00"
+  />
+  <!-- Ray 4: angle 30° -->
+  <path
+    fill="none"
+    stroke="yellow"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="24"
+    d="M305.45,257.50 L348.76,282.50"
+  />
+  <!-- Ray 5: angle 60° -->
+  <path
+    fill="none"
+    stroke="yellow"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="24"
+    d="M257.50,305.45 L282.50,348.76"
+  />
+  <!-- Ray 6: angle 90° -->
+  <path
+    fill="none"
+    stroke="orange"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="24"
+    d="M192.00,323.00 L192.00,373.00"
+  />
+  <!-- Ray 7: angle 120° -->
+  <path
+    fill="none"
+    stroke="orange"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="24"
+    d="M126.50,305.45 L101.50,348.76"
+  />
+  <!-- Ray 8: angle 150° -->
+  <path
+    fill="none"
+    stroke="red"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="24"
+    d="M78.55,257.50 L35.24,282.50"
+  />
+  <!-- Ray 9: angle 180° -->
+  <path
+    fill="none"
+    stroke="red"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="24"
+    d="M61.00,192.00 L11.00,192.00"
+  />
+  <!-- Ray 10: angle 210° -->
+  <path
+    fill="none"
+    stroke="red"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="24"
+    d="M78.55,126.50 L35.24,101.50"
+  />
+  <!-- Ray 11: angle 240° -->
+  <path
+    fill="none"
+    stroke="purple"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="24"
+    d="M126.50,78.55 L101.50,35.24"
+  />
+  <!-- Ray 12: angle 270° -->
+  <path
+    fill="none"
+    stroke="purple"
+    stroke-linecap="round"
+    stroke-miterlimit="10"
+    stroke-width="24"
+    d="M192.00,61.00 L192.00,11.00"
+  />
+    </symbol>
+  </defs>
+
+  <!-- Group with clipping -->
+  <g clip-path="url(#b)">
+    <!-- Sun symbol usage -->
+    <use
+      xlink:href="#c"
+      width="384"
+      height="384"
+      transform="translate(64 64)"
+    />
+  </g>
+
+  <!-- Path was fill="#374251", now black for e-ink style -->
+  <text
+    x="255"
+    y="295"
+    fill="white"
+    font-size="90px"
+    font-weight="bold"
+    font-family="Roboto"
+    text-anchor="middle"
+  >
+    UV
+  </text>
+</svg>

@@ -48,6 +48,10 @@ pub enum WindIconName {
 pub enum HumidityIconName {
     #[strum(to_string = "humidity.svg")]
     Humidity,
+    #[strum(to_string = "humidity-plus.svg")]
+    HumidityPlus,
+    #[strum(to_string = "humidity-plus-plus.svg")]
+    HumidityPlusPlus,
 }
 
 #[derive(Debug, Display)]
@@ -78,8 +82,18 @@ pub enum RainAmountIcon {
 
 #[derive(Debug, Display)]
 pub enum UVIndexIcon {
-    #[strum(to_string = "uv-index.svg")]
-    UVIndex,
+    #[strum(to_string = "uv-index-none.svg")]
+    None,
+    #[strum(to_string = "uv-index-low.svg")]
+    Low,
+    #[strum(to_string = "uv-index-moderate.svg")]
+    Moderate,
+    #[strum(to_string = "uv-index-high.svg")]
+    High,
+    #[strum(to_string = "uv-index-very-high.svg")]
+    VeryHigh,
+    #[strum(to_string = "uv-index-extreme.svg")]
+    Extreme,
 }
 
 /// A trait representing an icon with methods to get its name and path.
@@ -176,12 +190,15 @@ impl Icon for RainAmount {
 impl Icon for UV {
     fn get_icon_name(&self) -> String {
         match self.max_index {
-            Some(_index) => UVIndexIcon::UVIndex.to_string(),
-            // Some(index) => match index {
-            //     0.. => "uv-index.svg".to_string(),
-            //     // 1..=11 => format!("uv-index-{}.svg", index),
-            //     _ => NotAvailableIcon::NotAvailable.to_string(),
-            // },
+            Some(index) => match index {
+                0 => UVIndexIcon::None,
+                1..=2 => UVIndexIcon::Low,
+                3..=5 => UVIndexIcon::Moderate,
+                6..=7 => UVIndexIcon::High,
+                8..=10 => UVIndexIcon::VeryHigh,
+                11.. => UVIndexIcon::Extreme,
+            }
+            .to_string(),
             None => NotAvailableIcon::NotAvailable.to_string(),
         }
     }
@@ -200,11 +217,13 @@ impl Icon for DailyEntry {
     }
 }
 
-type RelativeHumidity = u32;
-
 impl Icon for RelativeHumidity {
     fn get_icon_name(&self) -> String {
-        HumidityIconName::Humidity.to_string()
+        match *self {
+            0..=40 => HumidityIconName::Humidity.to_string(),
+            41..=70 => HumidityIconName::HumidityPlus.to_string(),
+            71.. => HumidityIconName::HumidityPlusPlus.to_string(),
+        }
     }
 }
 

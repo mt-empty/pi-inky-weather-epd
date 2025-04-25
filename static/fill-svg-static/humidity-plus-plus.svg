@@ -45,6 +45,18 @@
   <g transform="translate(0 20)">
     <g transform="translate(60 0)">
       <use
+        xlink:href="#b"
+        stroke-width="9"
+        height="315"
+        transform="translate(0 35)"
+      />
+      <use
+        stroke-width="15"
+        xlink:href="#b"
+        height="145"
+        transform="translate(103 35)"
+      />
+      <use
         stroke-width="6"
         xlink:href="#b"
         width="500"
