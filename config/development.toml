@@ -2,7 +2,7 @@
 release_info_url = "https://api.github.com/repos/mt-empty/pi-inky-weather-epd/releases/latest"
 download_base_url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/download"
 # set to 0 to disable auto-updating
-update_interval_days = 7
+update_interval_days = 0
 
 ## Extremes
 # Babinda, QLD: "rhzv2d" # wettest place in Australia
@@ -48,5 +48,6 @@ generated_png_name = "dashboard.png"
 svg_icons_directory = "static/fill-svg-static/"
 
 [debugging]
-disable_network_requests = false # if true, the weather data will be loaded from a cached file instead of the API, make you ran the application at least once with this set to false 
+disable_weather_api_requests = false # if true, the weather data will be loaded from a cached file instead of the API, make you ran the application at least once with this set to false 
 disable_png_output = false
+allow_pre_release_version = true

@@ -64,8 +64,9 @@ pub struct RenderOptions {
 
 #[derive(Debug, Deserialize)]
 pub struct Debugging {
-    pub disable_network_requests: bool,
+    pub disable_weather_api_requests: bool,
     pub disable_png_output: bool,
+    pub allow_pre_release_version: bool,
 }
 
 #[derive(Debug, Validate, Deserialize)]

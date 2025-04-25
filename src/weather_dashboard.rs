@@ -17,7 +17,7 @@ enum FetchOutcome<T> {
 fn load_cached<T: for<'de> Deserialize<'de>>(file_path: &PathBuf) -> Result<T, Error> {
     let cached = fs::read_to_string(file_path).map_err(|_| {
         Error::msg(
-            "Weather data JSON file not found. If this is your first time running the application. Please ensure 'disable_network_requests' is set to false in the configuration so data can be cached.",
+            "Weather data JSON file not found. If this is your first time running the application. Please ensure 'disable_weather_api_requests' is set to false in the configuration so data can be cached.",
         )
     }).map_err(|_| {
         DashboardError::NoInternet {
@@ -46,8 +46,8 @@ fn fetch_data<T: for<'de> Deserialize<'de>>(
     if !file_path.exists() {
         fs::create_dir_all(file_path.parent().unwrap())?;
     }
-    // TODO: delegate the Config::debugging.disable_network_requests to a different function
-    if !CONFIG.debugging.disable_network_requests {
+    // TODO: delegate the Config::debugging.disable_weather_api_requests to a different function
+    if !CONFIG.debugging.disable_weather_api_requests {
         let client = reqwest::blocking::Client::new();
         let response = match client.get(endpoint).send() {
             Ok(res) => res,

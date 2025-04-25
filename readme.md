@@ -125,7 +125,7 @@ You will see an icon and a small warning message appearing on the display in cas
 
 ## Inky Impression 7.3
 
-### Supported colours at 1.0 Saturation
+### Supported colours at 1.0 Saturation without dithering
 
 ```
 [0, 0, 0],        # Black

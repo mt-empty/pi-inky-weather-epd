@@ -51,6 +51,12 @@ fn fetch_latest_release() -> Result<(), anyhow::Error> {
 
     if latest_version > current_version {
         println!("Newer version available: {}", latest_version);
+
+        // return early if CONFIG.debugging.allow_pre_release_version is false and the latest version is a pre-release
+        if !latest_version.pre.is_empty() && !CONFIG.debugging.allow_pre_release_version {
+            println!("Skipping pre-release version: {}", latest_version);
+            return Ok(());
+        }
         download_and_extract_release(&client, &header_value, &latest_version)?;
     } else {
         println!("You're already using the latest version.");
@@ -271,7 +277,6 @@ fn get_base_dir_path() -> Result<PathBuf> {
 /// Returns an error if the last checked timestamp cannot be read or written,
 /// if the timestamp cannot be parsed, or if the update process fails.
 pub fn update_app() -> Result<(), anyhow::Error> {
-    println!("Checking for updates...");
     // create a file to store the last time we checked for an update
     let base_dir = get_base_dir_path()?;
     let last_checked_path = base_dir.join(LAST_CHECKED_FILE_NAME);
@@ -294,7 +299,7 @@ pub fn update_app() -> Result<(), anyhow::Error> {
         let elapsed = now_utc.signed_duration_since(last_check_utc);
         if elapsed > Duration::days(CONFIG.release.update_interval_days) {
             println!(
-                "It's been more than {} days ({:.1} days elapsed). .",
+                "It's been more than {} days ({:.1} days elapsed), Checking for latest version...",
                 CONFIG.release.update_interval_days,
                 elapsed.num_days()
             );
