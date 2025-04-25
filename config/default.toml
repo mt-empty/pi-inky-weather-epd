@@ -24,7 +24,7 @@ text_colour = "black"
 x_axis_colour = "black"
 y_left_axis_colour = "red"
 y_right_axis_colour = "blue"
-temp_colour = "red"
+actual_temp_colour = "red"
 feels_like_colour = "green"
 rain_colour = "blue"
 

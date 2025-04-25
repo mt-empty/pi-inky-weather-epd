@@ -1,5 +1,6 @@
 use crate::constants::DEFAULT_AXIS_LABEL_FONT_SIZE;
 use anyhow::Error;
+use strum_macros::Display;
 
 #[derive(Clone, Debug, Copy)]
 pub struct Point {
@@ -129,6 +130,22 @@ pub enum UVIndexCategory {
     VeryHigh,
     Extreme,
     Hazardous,
+}
+
+#[derive(Debug, Display)]
+pub enum FontStyle {
+    #[strum(to_string = "normal")]
+    Normal,
+    #[strum(to_string = "italic")]
+    Italic,
+}
+
+#[derive(Debug, Display)]
+pub enum ElementVisibility {
+    #[strum(to_string = "visible")]
+    Visible,
+    #[strum(to_string = "hidden")]
+    Hidden,
 }
 
 impl UVIndexCategory {
@@ -469,11 +486,12 @@ impl HourlyForecastGraph {
 
         format!(
             r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
-                   <text x="{x_text}" y="{y_text}" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" font-style="italic"  transform="rotate(-90, {rotate_x_text}, {rotate_y_text})" text-anchor="start">{tomorrow_day_name}</text>"#,
+                   <text x="{x_text}" y="{y_text}" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" font-style="{font_style}"  transform="rotate(-90, {rotate_x_text}, {rotate_y_text})" text-anchor="start">{tomorrow_day_name}</text>"#,
             x = x_coor,
             chart_height = self.height,
             x_text = x_coor + 10.0,
             y_text = self.height / 2.0,
+            font_style = FontStyle::Italic,
             rotate_x_text = x_coor + 10.0 - 30.0,
             rotate_y_text = (self.height / 2.0) - 35.0,
             colour = self.text_colour,

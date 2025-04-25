@@ -10,7 +10,7 @@ use crate::{
 use chrono::{DateTime, Local, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::chart::CurveType;
+use super::chart::{CurveType, ElementVisibility, FontStyle};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Context {
@@ -94,82 +94,88 @@ pub struct Context {
 
 impl Default for Context {
     fn default() -> Self {
+        let na = "NA".to_string();
+        let not_available_icon_path = NOT_AVAILABLE_ICON_PATH.to_string();
+        let colours = CONFIG.colours.clone();
+        let render_options = CONFIG.render_options.clone();
+        let graph_height = "300".to_string();
+        let graph_width = "600".to_string();
         Self {
-            background_colour: CONFIG.colours.background_colour.clone(),
-            text_colour: CONFIG.colours.text_colour.clone(),
-            x_axis_colour: CONFIG.colours.x_axis_colour.clone(),
-            y_left_axis_colour: CONFIG.colours.y_left_axis_colour.clone(),
-            y_right_axis_colour: CONFIG.colours.y_right_axis_colour.clone(),
-            actual_temp_colour: CONFIG.colours.temp_colour.clone(),
-            feels_like_colour: CONFIG.colours.feels_like_colour.clone(),
-            rain_colour: CONFIG.colours.rain_colour.clone(),
-            max_uv_index: "NA".to_string(),
-            max_uv_index_font_style: "normal".to_string(),
-            max_gust_speed: "NA".to_string(),
-            max_gust_speed_font_style: "normal".to_string(),
-            max_relative_humidity: "NA".to_string(),
-            max_relative_humidity_font_style: "normal".to_string(),
-            total_rain_today: "NA".to_string(),
-            temp_unit: CONFIG.render_options.temp_unit.clone(),
-            current_hour_actual_temp: "NA".to_string(),
-            current_hour_weather_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            current_hour_feels_like: "NA".to_string(),
-            current_hour_wind_speed: "NA".to_string(),
-            current_hour_wind_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            current_hour_uv_index: "NA".to_string(),
-            current_hour_relative_humidity: "NA".to_string(),
-            current_hour_relative_humidity_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            current_day_date: "NA".to_string(),
-            current_hour_rain_amount: "NA".to_string(),
-            rain_measure_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            graph_height: "300".to_string(),
-            graph_width: "600".to_string(),
-            actual_temp_curve_data: "".to_string(),
-            feel_like_curve_data: "".to_string(),
-            rain_curve_data: "".to_string(),
-            uv_index: "NA".to_string(),
-            uv_index_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            wind_speed: "NA".to_string(),
-            wind_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            x_axis_path: "".to_string(),
-            x_axis_guideline_path: "".to_string(),
-            y_left_axis_path: "".to_string(),
-            x_labels: "".to_string(),
-            y_left_labels: "".to_string(),
-            y_right_axis_path: "".to_string(),
-            y_right_labels: "".to_string(),
-            uv_gradient: "".to_string(),
-            day2_mintemp: "NA".to_string(),
-            day2_maxtemp: "NA".to_string(),
-            day2_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            day2_name: "NA".to_string(),
-            day3_mintemp: "NA".to_string(),
-            day3_maxtemp: "NA".to_string(),
-            day3_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            day3_name: "NA".to_string(),
-            day4_mintemp: "NA".to_string(),
-            day4_maxtemp: "NA".to_string(),
-            day4_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            day4_name: "NA".to_string(),
-            day5_mintemp: "NA".to_string(),
-            day5_maxtemp: "NA".to_string(),
-            day5_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            day5_name: "NA".to_string(),
-            day6_mintemp: "NA".to_string(),
-            day6_maxtemp: "NA".to_string(),
-            day6_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            day6_name: "NA".to_string(),
-            day7_mintemp: "NA".to_string(),
-            day7_maxtemp: "NA".to_string(),
-            day7_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            day7_name: "NA".to_string(),
-            sunrise_time: "NA".to_string(),
-            sunset_time: "NA".to_string(),
+            background_colour: colours.background_colour,
+            text_colour: colours.text_colour,
+            x_axis_colour: colours.x_axis_colour,
+            y_left_axis_colour: colours.y_left_axis_colour,
+            y_right_axis_colour: colours.y_right_axis_colour,
+            actual_temp_colour: colours.actual_temp_colour,
+            feels_like_colour: colours.feels_like_colour,
+            rain_colour: colours.rain_colour,
+            max_uv_index: na.clone(),
+            max_uv_index_font_style: FontStyle::Normal.to_string(),
+            max_gust_speed: na.clone(),
+            max_gust_speed_font_style: FontStyle::Normal.to_string(),
+            max_relative_humidity: na.clone(),
+            max_relative_humidity_font_style: FontStyle::Normal.to_string(),
+            total_rain_today: na.clone(),
+            temp_unit: render_options.temp_unit,
+            current_hour_actual_temp: na.clone(),
+            current_hour_weather_icon: not_available_icon_path.clone(),
+            current_hour_feels_like: na.clone(),
+            current_hour_wind_speed: na.clone(),
+            current_hour_wind_icon: not_available_icon_path.clone(),
+            current_hour_uv_index: na.clone(),
+            current_hour_relative_humidity: na.clone(),
+            current_hour_relative_humidity_icon: not_available_icon_path.clone(),
+            current_day_date: na.clone(),
+            current_hour_rain_amount: na.clone(),
+            rain_measure_icon: not_available_icon_path.clone(),
+            graph_height,
+            graph_width,
+            actual_temp_curve_data: String::new(),
+            feel_like_curve_data: String::new(),
+            rain_curve_data: String::new(),
+            uv_index: na.clone(),
+            uv_index_icon: not_available_icon_path.clone(),
+            wind_speed: na.clone(),
+            wind_icon: not_available_icon_path.clone(),
+            x_axis_path: String::new(),
+            x_axis_guideline_path: String::new(),
+            y_left_axis_path: String::new(),
+            x_labels: String::new(),
+            y_left_labels: String::new(),
+            y_right_axis_path: String::new(),
+            y_right_labels: String::new(),
+            uv_gradient: String::new(),
+            day2_mintemp: na.clone(),
+            day2_maxtemp: na.clone(),
+            day2_icon: not_available_icon_path.clone(),
+            day2_name: na.clone(),
+            day3_mintemp: na.clone(),
+            day3_maxtemp: na.clone(),
+            day3_icon: not_available_icon_path.clone(),
+            day3_name: na.clone(),
+            day4_mintemp: na.clone(),
+            day4_maxtemp: na.clone(),
+            day4_icon: not_available_icon_path.clone(),
+            day4_name: na.clone(),
+            day5_mintemp: na.clone(),
+            day5_maxtemp: na.clone(),
+            day5_icon: not_available_icon_path.clone(),
+            day5_name: na.clone(),
+            day6_mintemp: na.clone(),
+            day6_maxtemp: na.clone(),
+            day6_icon: not_available_icon_path.clone(),
+            day6_name: na.clone(),
+            day7_mintemp: na.clone(),
+            day7_maxtemp: na.clone(),
+            day7_icon: not_available_icon_path.clone(),
+            day7_name: na.clone(),
+            sunrise_time: na.clone(),
+            sunset_time: na.clone(),
             sunset_icon: SunPositionIconName::Sunset.get_icon_path(),
             sunrise_icon: SunPositionIconName::Sunrise.get_icon_path(),
-            warning_message: "NA".to_string(),
-            warning_icon: NOT_AVAILABLE_ICON_PATH.to_string(),
-            warning_visibility: "hidden".to_string(),
+            warning_message: na,
+            warning_icon: not_available_icon_path,
+            warning_visibility: ElementVisibility::Hidden.to_string(),
         }
     }
 }
@@ -524,7 +530,7 @@ impl ContextBuilder {
             self.context.max_gust_speed = max_wind_today.to_string();
         } else {
             self.context.max_gust_speed = max_wind_tomorrow.to_string();
-            self.context.max_gust_speed_font_style = "italic".to_string();
+            self.context.max_gust_speed_font_style = FontStyle::Italic.to_string();
         }
 
         let max_uv_index = find_max_item_between_dates(
@@ -547,7 +553,7 @@ impl ContextBuilder {
             self.context.max_uv_index = max_uv_index.to_string();
         } else {
             self.context.max_uv_index = max_uv_index_tomorrow.to_string();
-            self.context.max_uv_index_font_style = "italic".to_string();
+            self.context.max_uv_index_font_style = FontStyle::Italic.to_string();
         }
 
         let max_relative_humidity = find_max_item_between_dates(
@@ -570,7 +576,7 @@ impl ContextBuilder {
             self.context.max_relative_humidity = max_relative_humidity.to_string();
         } else {
             self.context.max_relative_humidity = max_relative_humidity_tomorrow.to_string();
-            self.context.max_relative_humidity_font_style = "italic".to_string();
+            self.context.max_relative_humidity_font_style = FontStyle::Italic.to_string();
         }
     }
 
@@ -579,7 +585,7 @@ impl ContextBuilder {
         // TODO: at the moment the last error will overwrite the previous ones, so need to
         // display the errors in a list, front to back in cascading icons style
         self.context.warning_icon = error.get_icon_path().to_string();
-        self.context.warning_visibility = "visible".to_string();
+        self.context.warning_visibility = ElementVisibility::Visible.to_string();
         eprintln!("Error: {}", error.long_description());
         self
     }

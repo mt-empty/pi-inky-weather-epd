@@ -23,7 +23,7 @@ pub struct Api {
     pub location: String,
 }
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Validate, Deserialize, Clone)]
 pub struct Colours {
     #[validate(custom(function = "is_valid_colour"))]
     pub background_colour: String,
@@ -36,7 +36,7 @@ pub struct Colours {
     #[validate(custom(function = "is_valid_colour"))]
     pub y_right_axis_colour: String,
     #[validate(custom(function = "is_valid_colour"))]
-    pub temp_colour: String,
+    pub actual_temp_colour: String,
     #[validate(custom(function = "is_valid_colour"))]
     pub feels_like_colour: String,
     #[validate(custom(function = "is_valid_colour"))]
@@ -54,7 +54,7 @@ pub struct Misc {
     pub svg_icons_directory: String,
 }
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Validate, Deserialize, Clone)]
 pub struct RenderOptions {
     #[validate(length(equal = 1, message = "Temp unit must be either 'C', 'F' or 'K'"))]
     pub temp_unit: String,
