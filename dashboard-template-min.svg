@@ -56,7 +56,7 @@
     </svg>
 
     <!-- Sunset/Sunrise Information -->
-    <svg x="30" y="150" label="rain">
+    <svg x="30" y="150">
         <image x="0" y="0" width="75" height="75" href="{sunrise_icon}" />
         <text x="12" y="70" text-anchor="start" font-size="20" fill="{text_colour}">{sunrise_time}</text>
 

@@ -54,44 +54,96 @@ You can override the default configs located at [./config/](./config/) by creati
 ```
 
 ### Example configuration
+Here are example configurations:
 
-Default configuration file:
-
-![](./misc/dashboard-default.png)
-
-
-
-```toml
-[render_options]
+<table>
+  <thead>
+    <tr>
+      <th>Example</th>
+      <th>Preview</th>
+      <th>Configuration Snippet</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Default configuration file</strong></td>
+      <td>
+        <img src="./misc/dashboard-without-moon-phase.png" alt="Dashboard without moon phase preview" />
+      </td>
+      <td>
+        <pre><code class="language-toml">[render_options]
 # When the sky is clear, the moon phase icon will be used instead of the clear night icon
 use_moon_phase_instead_of_clear_night = false
-```
-![](./misc/dashboard-without-moon-phase.png)
-
-
-```toml
-[render_options]
+</code></pre>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Enable Moon Phase when sky clear at night</strong></td>
+      <td>
+        <img src="./misc/dashboard-default.png" alt="Default dashboard preview" /><br/>
+      </td>
+      <td>
+        <pre><code class="language-toml">[render_options]
+# When the sky is clear, the moon phase icon will be used instead of the clear night icon
+use_moon_phase_instead_of_clear_night = false
+</code></pre>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Placement of x-axis at minimum</strong></td>
+      <td>
+        <img src="./misc/dashboard-x-axis-at-zero.png" alt="Dashboard with x-axis at zero" />
+      </td>
+      <td>
+        <pre><code class="language-toml">[render_options]
 # this controls the placement of the x-axis when the temperature is below zero
 x_axis_always_at_min = false
-```
-![](./misc/dashboard-x-axis-at-zero.png)
+</code></pre>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Dark theme</strong></td>
+      <td>
+        <img src="./misc/dashboard-dark.png" alt="Dashboard dark theme preview" />
+      </td>
+      <td>
+        <pre><code class="language-toml">[colours]
+background_colour   = "black"
+text_colour         = "white"
 
+x_axis_colour       = "white"
+y_left_axis_colour  = "red"
+y_right_axis_colour = "blue"
 
-Whether to enable auto-update when a new release is available. This is set to 0 to disable auto-updating.
-```toml
-[release]
+actual_temp_colour  = "red"
+feels_like_colour   = "green"
+rain_colour         = "blue"
+</code></pre>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Auto-update interval</strong></td>
+      <td>N/A</td>
+      <td>
+        <pre><code class="language-toml">[release]
 # set to 0 to disable auto-updating
 update_interval_days = 7
-```
+</code></pre>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
 
 ## Degraded operation
 
 The dashboard can still work using cached data for a while if the API is unreachable.
 You will see an icon and a small warning message appearing on the display in case of any errors.
-| Error Type       | Icon                                                                                  |
-|------------------|---------------------------------------------------------------------------------------|
-| **Api Error**    | <img src="./static/fill-svg-static/code-red.svg" alt="Api Error" width="32" height="32" />        |
-| **No Internet**  | <img src="./static/fill-svg-static/code-orange.svg" alt="No Internet" width="32" height="32" />   |
+| Error Type          | Icon                                                                                                |
+| ------------------- | --------------------------------------------------------------------------------------------------- |
+| **Api Error**       | <img src="./static/fill-svg-static/code-red.svg" alt="Api Error" width="32" height="32" />          |
+| **No Internet**     | <img src="./static/fill-svg-static/code-orange.svg" alt="No Internet" width="32" height="32" />     |
 | **Incomplete Data** | <img src="./static/fill-svg-static/code-yellow.svg" alt="Incomplete Data" width="32" height="32" /> |
 
 
@@ -134,6 +186,7 @@ These colours were found by trial and error:
 - [ ] An algorithm that is smooth and does not overshoot
 - [ ] Rain gradient that looks like rain
 - [ ] Overhaul the [line svg icons](./static/fill-svg-static/) to match display colours
+- [ ] Inline all svg icons into the template and have full control over the colours
 
 ## Developing
 

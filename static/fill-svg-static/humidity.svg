@@ -4,14 +4,31 @@
   viewBox="0 0 512 512"
 >
   <defs>
+    <!-- <filter id="blurEdges">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2"/>
+    </filter> -->
     <symbol id="b" viewBox="0 -20 330 355">
       <path
-        fill="white"
-        stroke="blue"
+        fill="lightblue"
+        stroke="black"
         stroke-miterlimit="10"
-        stroke-width="20"
-        d="M82 3.6c-48.7 72-80 117-80 160.7s35.8 79.3 80 79.3 80-35.5 80-79.3S130.7 75.5 82 3.6Z"
+        d="M82 3.6
+        c-48.7 72-80 117-80 160.7
+        s35.8 79.3 80 79.3 80-35.5 80-79.3
+        S130.7 75.5 82 3.6
+        Z"
       />
+
+<!-- Glossy effect -->
+    <!-- <path
+      d="m 292.665,-103.4 a 64.989,17.749 0 0 1 -64.688,17.749 64.989,17.749 0 0 1 -65.289,-17.584 64.989,17.749 0 0 1 64.081,-17.912 64.989,17.749 0 0 1 65.884,17.417"
+      fill="#ffffff"
+      opacity="0.5"
+      filter="url(#blurEdges)"
+      transform="matrix(0.52393012,0.85176495,0.029998,1.0032795,-4.0140536,-8.2912304)"
+      id="path2" 
+     /> -->
+
       <!-- <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
         <stop offset="40%" style="stop-color:white;stop-opacity:1" />
         <stop offset="40%" style="stop-color:blue;stop-opacity:1" />
@@ -29,15 +46,18 @@
     <g transform="translate(60 0)">
       <use
         xlink:href="#b"
+        stroke-width="9"
         height="315"
         transform="translate(0 35)"
       />
       <use
+        stroke-width="15"
         xlink:href="#b"
         height="145"
         transform="translate(103 35)"
       />
       <use
+        stroke-width="6"
         xlink:href="#b"
         width="500"
         transform="translate(131.9 50)"
@@ -46,6 +66,9 @@
       transform="scale(1.4) translate(-65 -60)"
       fill="black"
       d="M218.8 250.5q4.8-4.5 13.7-4.5t13.6 4.5q4.8 4.4 4.8 12.4v8q0 7.8-4.8 12.2t-13.6 4.4q-9 0-13.7-4.4t-4.8-12.2v-8q0-8 4.8-12.4Zm71.2-1.6a2.8 2.8 0 01-.6 2.6l-53 73.3a9.4 9.4 0 01-2.8 2.8 12.3 12.3 0 01-4.6.6h-4.4c-1.3 0-2.1-.4-2.5-1.1a2.8 2.8 0 01.7-2.8l53-73.3a7 7 0 012.6-2.7 12.7 12.7 0 014.4-.5h4.9c1.2 0 2 .4 2.3 1.1Zm-57.5 7.6q-7.7 0-7.7 7v6.7q0 7 7.7 7t7.7-7v-6.8q0-6.9-7.7-6.9Zm33.4 36.4q4.7-4.5 13.7-4.5t13.6 4.5q4.8 4.5 4.8 12.4v8q0 7.8-4.8 12.2t-13.7 4.5q-8.9 0-13.6-4.4t-4.8-12.3v-8q0-8 4.8-12.4Zm13.6 6.1q-7.6 0-7.6 7v6.6q0 7 7.6 7t7.7-7v-6.7q0-6.9-7.7-6.9Z"
+      stroke="white"
+      stroke-width="8"
+      paint-order="stroke"
     />
       <!-- Humidity wave lines -->
     </g>

@@ -96,6 +96,9 @@
     font-weight="bold"
     font-family="Roboto"
     text-anchor="middle"
+    stroke="white"
+    stroke-width="15"
+    paint-order="stroke"
   >
     km/h
   </text>
