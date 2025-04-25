@@ -2,7 +2,6 @@
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-pub type UVIndex = u32;
 pub type RelativeHumidity = u32;
 
 #[derive(Deserialize, Debug)]
@@ -51,7 +50,7 @@ pub struct Rain {
 pub struct UV {
     pub category: Option<String>,
     pub end_time: Option<DateTime<Utc>>,
-    pub max_index: Option<UVIndex>,
+    pub max_index: Option<u32>,
     // #[serde(deserialize_with = "deserialize_optional_naive_date")]
     pub start_time: Option<DateTime<Utc>>,
 }
@@ -113,7 +112,7 @@ pub struct HourlyForecast {
     pub dew_point: u32,
     pub wind: Wind,
     pub relative_humidity: RelativeHumidity,
-    pub uv: UVIndex,
+    pub uv: u32,
     pub icon_descriptor: String,
     pub next_three_hourly_forecast_period: DateTime<Utc>,
     pub time: DateTime<Utc>,
