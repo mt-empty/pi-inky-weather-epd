@@ -1,4 +1,4 @@
-use crate::constants::DEFAULT_AXIS_LABEL_FONT_SIZE;
+use crate::{constants::DEFAULT_AXIS_LABEL_FONT_SIZE, weather::icons::UVIndexIcon};
 use anyhow::Error;
 use strum_macros::Display;
 
@@ -121,17 +121,6 @@ pub enum GraphDataPath {
     Rain(String),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
-pub enum UVIndexCategory {
-    None,
-    Low,
-    Moderate,
-    High,
-    VeryHigh,
-    Extreme,
-    // Hazardous,
-}
-
 #[derive(Debug, Display)]
 pub enum FontStyle {
     #[strum(to_string = "normal")]
@@ -148,8 +137,10 @@ pub enum ElementVisibility {
     Hidden,
 }
 
+type UVIndexCategory = UVIndexIcon;
+
 impl UVIndexCategory {
-    pub fn from_u8(value: u8) -> Self {
+    pub fn from_u8(value: usize) -> Self {
         match value {
             0 => UVIndexCategory::None,
             1..=2 => UVIndexCategory::Low,
@@ -157,7 +148,6 @@ impl UVIndexCategory {
             6..=7 => UVIndexCategory::High,
             8..=10 => UVIndexCategory::VeryHigh,
             11.. => UVIndexCategory::Extreme,
-            // _ => UVIndexCategory::Hazardous,
         }
     }
 
@@ -169,7 +159,6 @@ impl UVIndexCategory {
             UVIndexCategory::High => "orange",
             UVIndexCategory::VeryHigh => "red",
             UVIndexCategory::Extreme => "purple",
-            // UVIndexCategory::Hazardous => "black",
         }
     }
 }
@@ -542,7 +531,7 @@ impl HourlyForecastGraph {
 
         for (i, &uv) in self.uv_data.iter().enumerate() {
             let offset = (i as f64 / 23.0) * 100.0;
-            let colour = UVIndexCategory::from_u8(uv as u8).to_colour();
+            let colour = UVIndexCategory::from_u8(uv).to_colour();
             gradient.push_str(&format!(
                 r#"<stop offset="{:.2}%" stop-color="{}"/>"#,
                 offset, colour
