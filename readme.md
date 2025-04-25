@@ -56,58 +56,38 @@ You can override the default configs located at [./config/](./config/) by creati
 ### Example configuration
 Here are example configurations:
 
-<table>
-  <thead>
-    <tr>
-      <th>Example</th>
-      <th>Preview</th>
-      <th>Configuration Snippet</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>Default configuration file</strong></td>
-      <td>
-        <img src="./misc/dashboard-without-moon-phase.png" alt="Dashboard without moon phase preview" />
-      </td>
-      <td>
-        <pre><code class="language-toml">[render_options]
-# When the sky is clear, the moon phase icon will be used instead of the clear night icon
+### Default configuration file
+
+<img src="./misc/dashboard-default.png" alt="Default configuration" width="600"/>
+
+### Enable Moon Phase when sky is clear at night
+
+<img src="./misc/dashboard-without-moon-phase.png" alt="Moon phase configuration" width="600"/>
+
+When the sky is clear, the moon phase icon will be used instead of the clear night icon
+
+```toml
+[render_options]
 use_moon_phase_instead_of_clear_night = false
-</code></pre>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>Enable Moon Phase when sky clear at night</strong></td>
-      <td>
-        <img src="./misc/dashboard-default.png" alt="Default dashboard preview" /><br/>
-      </td>
-      <td>
-        <pre><code class="language-toml">[render_options]
-# When the sky is clear, the moon phase icon will be used instead of the clear night icon
-use_moon_phase_instead_of_clear_night = false
-</code></pre>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>Placement of x-axis at minimum</strong></td>
-      <td>
-        <img src="./misc/dashboard-x-axis-at-zero.png" alt="Dashboard with x-axis at zero" />
-      </td>
-      <td>
-        <pre><code class="language-toml">[render_options]
-# this controls the placement of the x-axis when the temperature is below zero
+```
+
+### Placement of x-axis at minimum
+
+<img src="./misc/dashboard-x-axis-at-zero.png" alt="X-axis at minimum" width="600"/>
+
+The x-axis is no longer at the bottom of the graph when the temperature is below zero, it is now always positioned at x = 0.
+
+```toml
+[render_options]
 x_axis_always_at_min = false
-</code></pre>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>Dark theme</strong></td>
-      <td>
-        <img src="./misc/dashboard-dark.png" alt="Dashboard dark theme preview" />
-      </td>
-      <td>
-        <pre><code class="language-toml">[colours]
+```
+
+### Dark theme
+
+<img src="./misc/dashboard-dark.png" alt="Dark theme" width="600"/>
+
+```toml
+[colours]
 background_colour   = "black"
 text_colour         = "white"
 
@@ -118,21 +98,17 @@ y_right_axis_colour = "blue"
 actual_temp_colour  = "red"
 feels_like_colour   = "green"
 rain_colour         = "blue"
-</code></pre>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>Auto-update interval</strong></td>
-      <td>N/A</td>
-      <td>
-        <pre><code class="language-toml">[release]
+```
+
+### Auto-update interval
+
+Whether to enable auto-update when a new release is available. This is disabled by default.
+
+```toml
+[release]
 # set to 0 to disable auto-updating
 update_interval_days = 7
-</code></pre>
-      </td>
-    </tr>
-  </tbody>
-</table>
+```
 
 
 
