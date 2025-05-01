@@ -526,7 +526,7 @@ impl HourlyForecastGraph {
     }
 
     pub fn draw_uv_gradient_over_time(&self) -> String {
-        // println!("UV data: {:?}", uv_data);
+        // println!("UV data: {:?}", self.uv_data);
         let mut gradient = String::new();
 
         for (i, &uv) in self.uv_data.iter().enumerate() {

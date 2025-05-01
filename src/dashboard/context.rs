@@ -1,5 +1,5 @@
 use crate::{
-    apis::bom::models::{DailyEntry, HourlyForecast, UV},
+    apis::bom::models::{DailyEntry, HourlyForecast},
     constants::NOT_AVAILABLE_ICON_PATH,
     dashboard::chart::{GraphDataPath, HourlyForecastGraph},
     errors::{DashboardError, Description},
@@ -362,14 +362,8 @@ impl ContextBuilder {
         self.context.actual_temp_curve_data = temp_curve_data;
         self.context.feel_like_curve_data = feel_like_curve_data;
         self.context.rain_curve_data = rain_curve_data;
-        self.context.uv_index = hourly_forecast_data[0].uv.to_string();
-        let current_uv = UV {
-            category: None,
-            end_time: None,
-            max_index: Some(hourly_forecast_data[0].uv),
-            start_time: None,
-        };
-        self.context.uv_index_icon = current_uv.get_icon_path().to_string();
+        self.context.uv_index = hourly_forecast_data[0].uv.0.to_string();
+        self.context.uv_index_icon = hourly_forecast_data[0].uv.get_icon_path();
         self.context.wind_speed = hourly_forecast_data[0].wind.speed_kilometre.to_string();
 
         Self::set_max_values(
@@ -442,16 +436,16 @@ impl ContextBuilder {
         forecast_window_end: chrono::DateTime<Utc>,
         graph: &mut HourlyForecastGraph,
     ) {
-        let mut x = 0.0;
+        let mut x = 0;
         hourly_forecast_data
             .iter()
             .filter(|forecast| {
                 forecast.time >= forecast_window_start && forecast.time < forecast_window_end
             })
             .for_each(|forecast| {
-                if x == 0.0 {
+                if x == 0 {
                     self.with_current_hour_data(forecast);
-                } else if x >= 24.0 {
+                } else if x >= 24 {
                     eprintln!(
                         "Warning: More than 24 hours of hourly forecast data, this should not happen"
                     );
@@ -462,13 +456,13 @@ impl ContextBuilder {
                     // we push this index to make scaling graph easier
                 for curve_type in &mut graph.curves.iter_mut() {
                     match curve_type {
-                        CurveType::ActualTemp(curve) => curve.add_point(x, forecast.temp as f64),
-                        CurveType::TempFeelLike(curve) => curve.add_point(x, forecast.temp_feels_like as f64),
-                        CurveType::RainChance(curve) => curve.add_point(x, forecast.rain.chance.unwrap_or(0).into()),
+                        CurveType::ActualTemp(curve) => curve.add_point(x as f64, forecast.temp as f64),
+                        CurveType::TempFeelLike(curve) => curve.add_point(x as f64, forecast.temp_feels_like as f64),
+                        CurveType::RainChance(curve) => curve.add_point(x as f64, forecast.rain.chance.unwrap_or(0).into()),
                     }
                 }
-                graph.uv_data[x as usize] = forecast.uv as usize;
-                x += 1.0;
+                graph.uv_data[x] = forecast.uv.0 as usize;
+                x += 1;
             });
     }
 
@@ -478,8 +472,8 @@ impl ContextBuilder {
         self.context.current_hour_feels_like = current_hour.temp_feels_like.to_string();
         self.context.current_hour_wind_speed = current_hour.wind.speed_kilometre.to_string();
         self.context.current_hour_wind_icon = current_hour.wind.get_icon_path();
-        self.context.current_hour_uv_index = current_hour.uv.to_string();
-        self.context.current_hour_relative_humidity = current_hour.relative_humidity.to_string();
+        self.context.current_hour_uv_index = current_hour.uv.0.to_string();
+        self.context.current_hour_relative_humidity = current_hour.relative_humidity.0.to_string();
         self.context.current_hour_relative_humidity_icon =
             current_hour.relative_humidity.get_icon_path();
         self.context.current_day_date = chrono::Local::now().format("%A, %d %B").to_string();
@@ -550,9 +544,9 @@ impl ContextBuilder {
         );
 
         if max_uv_index > max_uv_index_tomorrow {
-            self.context.max_uv_index = max_uv_index.to_string();
+            self.context.max_uv_index = max_uv_index.0.to_string();
         } else {
-            self.context.max_uv_index = max_uv_index_tomorrow.to_string();
+            self.context.max_uv_index = max_uv_index_tomorrow.0.to_string();
             self.context.max_uv_index_font_style = FontStyle::Italic.to_string();
         }
 
@@ -573,9 +567,9 @@ impl ContextBuilder {
         );
 
         if max_relative_humidity > max_relative_humidity_tomorrow {
-            self.context.max_relative_humidity = max_relative_humidity.to_string();
+            self.context.max_relative_humidity = max_relative_humidity.0.to_string();
         } else {
-            self.context.max_relative_humidity = max_relative_humidity_tomorrow.to_string();
+            self.context.max_relative_humidity = max_relative_humidity_tomorrow.0.to_string();
             self.context.max_relative_humidity_font_style = FontStyle::Italic.to_string();
         }
     }
