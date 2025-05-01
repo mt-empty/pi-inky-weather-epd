@@ -187,20 +187,17 @@ impl Icon for RainAmount {
     }
 }
 
-impl Icon for UV {
+impl Icon for HourlyUV {
     fn get_icon_name(&self) -> String {
-        match self.max_index {
-            Some(index) => match index {
-                0 => UVIndexIcon::None,
-                1..=2 => UVIndexIcon::Low,
-                3..=5 => UVIndexIcon::Moderate,
-                6..=7 => UVIndexIcon::High,
-                8..=10 => UVIndexIcon::VeryHigh,
-                11.. => UVIndexIcon::Extreme,
-            }
-            .to_string(),
-            None => NotAvailableIcon::NotAvailable.to_string(),
+        match self.0 {
+            0 => UVIndexIcon::None,
+            1..=2 => UVIndexIcon::Low,
+            3..=5 => UVIndexIcon::Moderate,
+            6..=7 => UVIndexIcon::High,
+            8..=10 => UVIndexIcon::VeryHigh,
+            11.. => UVIndexIcon::Extreme,
         }
+        .to_string()
     }
 }
 
@@ -219,7 +216,7 @@ impl Icon for DailyEntry {
 
 impl Icon for RelativeHumidity {
     fn get_icon_name(&self) -> String {
-        match *self {
+        match self.0 {
             0..=40 => HumidityIconName::Humidity.to_string(),
             41..=70 => HumidityIconName::HumidityPlus.to_string(),
             71.. => HumidityIconName::HumidityPlusPlus.to_string(),
