@@ -9,6 +9,8 @@ This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper
 - [Inky impression 7.3in E-Paper display](https://shop.pimoroni.com/products/inky-impression-7-3?variant=55186435244411)
 - [3D printed case](https://github.com/mt-empty/inky-impression-7-3-colour-case) (optional)
 
+![](./misc/dashboard-case.png)
+
 ## Setup on Raspberry Pi 
 
 1. Install the Inky library:
