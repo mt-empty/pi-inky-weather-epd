@@ -153,7 +153,7 @@ impl UVIndexCategory {
 
     pub fn to_colour(self) -> &'static str {
         match self {
-            UVIndexCategory::None => "transparent",
+            UVIndexCategory::None => "white",
             UVIndexCategory::Low => "green",
             UVIndexCategory::Moderate => "yellow",
             UVIndexCategory::High => "orange",
