@@ -101,6 +101,9 @@
 
         <!-- Wind Information -->
         <svg x="20" y="330" label="wind" text-anchor="middle">
+            <text x="42.2" y="66.2" fill="{text_colour}" font-size="15.1" text-anchor="middle">
+                km/h
+            </text>
             <image width="75" height="75" href="{current_hour_wind_icon}" />
             <text x="100" y="45.5" font-size="30" fill="{text_colour}">{current_hour_wind_speed}
             </text>
