@@ -5,7 +5,7 @@
   <!-- Path: stroke was #e5e7eb, now black -->
   <path
     fill="none"
-    stroke="black"
+    stroke="blue"
     stroke-dasharray="16.9 56.2"
     stroke-linecap="round"
     stroke-linejoin="round"
