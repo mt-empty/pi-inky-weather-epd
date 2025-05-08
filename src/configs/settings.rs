@@ -1,63 +1,99 @@
-use super::validation::is_valid_colour;
+use super::validation::*;
+use nutype::nutype;
 use serde::Deserialize;
-use std::env;
-use validator::Validate;
+use std::{env, fmt, path::PathBuf};
+use strum_macros::Display;
+use url::Url;
 
 use config::{Config, ConfigError, Environment, File};
 const CONFIG_DIR: &str = "./config";
 const DEFAULT_CONFIG_NAME: &str = "default";
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Deserialize, PartialOrd, PartialEq, Clone, Copy, Display)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum TemperatureUnit {
+    #[strum(serialize = "C")]
+    C,
+    #[strum(serialize = "F")]
+    F,
+}
+
+#[nutype(
+    sanitize(trim),
+    validate(with = is_valid_colour, error = ValidationError),
+    derive(Debug, Deserialize, PartialEq, Clone)
+)]
+pub struct Colour(String);
+
+impl fmt::Display for Colour {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.clone().into_inner())
+    }
+}
+
+#[nutype(
+    sanitize(trim, lowercase),
+    validate(len_char_min = 6, len_char_max = 6),
+    derive(Debug, Deserialize, PartialEq, Clone, AsRef)
+)]
+pub struct GeoHash(String);
+
+impl fmt::Display for GeoHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.clone().into_inner())
+    }
+}
+
+#[nutype(
+    sanitize(),
+    validate(greater_or_equal = 0),
+    derive(Debug, Deserialize, PartialEq, Clone, AsRef, Copy)
+)]
+pub struct UpdateIntervalDays(i32);
+
+impl fmt::Display for UpdateIntervalDays {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.into_inner())
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub struct Release {
-    #[validate(url)]
-    pub release_info_url: String,
-    #[validate(url)]
-    pub download_base_url: String,
-    #[validate(range(min = 0))]
-    pub update_interval_days: i64,
+    pub release_info_url: Url,
+    pub download_base_url: Url,
+    pub update_interval_days: UpdateIntervalDays,
 }
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Api {
-    #[validate(length(equal = 6, message = "Location must be a 6 character hash code"))]
-    pub location: String,
+    // #[validate(length(equal = 6, message = "Location must be a 6 character hash code"))]
+    pub location: GeoHash,
 }
 
-#[derive(Debug, Validate, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Colours {
-    #[validate(custom(function = "is_valid_colour"))]
-    pub background_colour: String,
-    #[validate(custom(function = "is_valid_colour"))]
-    pub text_colour: String,
-    #[validate(custom(function = "is_valid_colour"))]
-    pub x_axis_colour: String,
-    #[validate(custom(function = "is_valid_colour"))]
-    pub y_left_axis_colour: String,
-    #[validate(custom(function = "is_valid_colour"))]
-    pub y_right_axis_colour: String,
-    #[validate(custom(function = "is_valid_colour"))]
-    pub actual_temp_colour: String,
-    #[validate(custom(function = "is_valid_colour"))]
-    pub feels_like_colour: String,
-    #[validate(custom(function = "is_valid_colour"))]
-    pub rain_colour: String,
+    pub background_colour: Colour,
+    pub text_colour: Colour,
+    pub x_axis_colour: Colour,
+    pub y_left_axis_colour: Colour,
+    pub y_right_axis_colour: Colour,
+    pub actual_temp_colour: Colour,
+    pub feels_like_colour: Colour,
+    pub rain_colour: Colour,
 }
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Misc {
-    pub weather_data_cache_path: String,
-    pub template_path: String,
-    #[validate(contains(pattern = ".svg", message = "SVG file must end with .svg"))]
-    pub generated_svg_name: String,
-    #[validate(contains(pattern = ".png", message = "PNG file must end with .png"))]
-    pub generated_png_name: String,
-    pub svg_icons_directory: String,
+    pub weather_data_cache_path: PathBuf,
+    pub template_path: PathBuf,
+    pub generated_svg_name: PathBuf,
+    pub generated_png_name: PathBuf,
+    pub svg_icons_directory: PathBuf,
 }
 
-#[derive(Debug, Validate, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct RenderOptions {
-    #[validate(length(equal = 1, message = "Temp unit must be either 'C', 'F' or 'K'"))]
-    pub temp_unit: String,
+    pub temp_unit: TemperatureUnit,
     pub use_moon_phase_instead_of_clear_night: bool,
     pub x_axis_always_at_min: bool,
 }
@@ -69,17 +105,12 @@ pub struct Debugging {
     pub allow_pre_release_version: bool,
 }
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct DashboardSettings {
-    #[validate(nested)]
     pub release: Release,
-    #[validate(nested)]
     pub api: Api,
-    #[validate(nested)]
     pub colours: Colours,
-    #[validate(nested)]
     pub misc: Misc,
-    #[validate(nested)]
     pub render_options: RenderOptions,
     pub debugging: Debugging,
 }
@@ -138,13 +169,11 @@ impl DashboardSettings {
         let final_settings: Result<DashboardSettings, ConfigError> = settings.try_deserialize();
 
         // Validate the settings after deserializing
-        if let Ok(settings) = &final_settings {
-            if let Err(validation_errors) = settings.validate() {
-                return Err(ConfigError::Message(format!(
-                    "Configuration validation failed: {:?}",
-                    validation_errors
-                )));
-            }
+        if let Err(error) = &final_settings {
+            return Err(ConfigError::Message(format!(
+                "Configuration validation failed: {:?}",
+                error
+            )));
         }
 
         final_settings

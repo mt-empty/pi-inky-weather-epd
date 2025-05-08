@@ -29,7 +29,7 @@ pub fn get_moon_phase_icon_name() -> MoonPhaseIconName {
     let day = now.day();
 
     // Calculate the approximate age of the moon in days since the last new moon
-    let mut moon_age_days = ((year as f64 - 2000.0) * 365.25 + month as f64 * 30.6 + day as f64
+    let mut moon_age_days = ((year as f32 - 2000.0) * 365.25 + month as f32 * 30.6 + day as f32
         - 2451550.1)
         % 29.530588;
     if moon_age_days < 0.0 {

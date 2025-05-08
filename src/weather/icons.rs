@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use strum_macros::Display;
 
 use crate::apis::bom::models::*;
@@ -116,11 +118,12 @@ pub trait Icon {
     /// The path is constructed using the `svg_icons_directory` from the configuration
     /// and the icon name obtained from `get_icon_name`.
     fn get_icon_path(&self) -> String {
-        format!(
-            "{}{}",
-            CONFIG.misc.svg_icons_directory,
-            self.get_icon_name()
-        )
+        CONFIG
+            .misc
+            .svg_icons_directory
+            .join(Path::new(&self.get_icon_name()))
+            .to_string_lossy()
+            .to_string()
     }
 }
 

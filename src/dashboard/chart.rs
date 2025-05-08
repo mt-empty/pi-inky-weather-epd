@@ -4,8 +4,8 @@ use strum_macros::Display;
 
 #[derive(Clone, Debug, Copy)]
 pub struct Point {
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
 }
 
 impl Point {
@@ -60,22 +60,22 @@ impl CurveType {
 }
 
 impl GraphData {
-    pub fn add_point(&mut self, x: f64, y: f64) {
+    pub fn add_point(&mut self, x: f32, y: f32) {
         self.points.push(Point { x, y })
     }
 }
 pub struct HourlyForecastGraph {
     pub curves: Vec<CurveType>,
-    pub uv_data: [usize; 24],
-    pub height: f64,
-    pub width: f64,
-    pub starting_x: f64,
-    pub ending_x: f64,
-    pub min_y: f64,
-    pub max_y: f64,
-    pub x_ticks: usize,
-    pub y_left_ticks: usize,
-    pub y_right_ticks: usize,
+    pub uv_data: [u16; 24],
+    pub height: f32,
+    pub width: f32,
+    pub starting_x: f32,
+    pub ending_x: f32,
+    pub min_y: f32,
+    pub max_y: f32,
+    pub x_ticks: u16,
+    pub y_left_ticks: u16,
+    pub y_right_ticks: u16,
     pub x_axis_always_at_min: bool,
     pub text_colour: String,
 }
@@ -103,8 +103,8 @@ impl Default for HourlyForecastGraph {
             width: 600.0,
             starting_x: 0.0,
             ending_x: 23.0,
-            min_y: f64::INFINITY,
-            max_y: -f64::INFINITY,
+            min_y: f32::INFINITY,
+            max_y: -f32::INFINITY,
             // Number of ticks, +1 because of the fencepost problem
             x_ticks: 6,
             y_left_ticks: 5,
@@ -140,7 +140,7 @@ pub enum ElementVisibility {
 type UVIndexCategory = UVIndexIcon;
 
 impl UVIndexCategory {
-    pub fn from_u8(value: usize) -> Self {
+    pub fn from_u8(value: u16) -> Self {
         match value {
             0 => UVIndexCategory::None,
             1..=2 => UVIndexCategory::Low,
@@ -181,7 +181,7 @@ pub fn catmull_rom_to_bezier(points: Vec<Point>) -> Vec<Curve> {
     let mut curves = Vec::with_capacity(points.len() - 1);
 
     let last_point = points.len() - 1;
-    const TENSION: f64 = 6.0; // Catmull_Rom_standard, adjust to make curves more or less smooth
+    const TENSION: f32 = 6.0; // Catmull_Rom_standard, adjust to make curves more or less smooth
 
     for i in 0..last_point {
         let p0 = if i == 0 { points[0] } else { points[i - 1] };
@@ -233,7 +233,7 @@ pub struct AxisPaths {
 
 /// Create the axis paths and labels for the graph
 impl HourlyForecastGraph {
-    pub fn create_axis_with_labels(&self, current_hour: f64) -> AxisPaths {
+    pub fn create_axis_with_labels(&self, current_hour: f32) -> AxisPaths {
         let range_x = self.ending_x - self.starting_x + 1.0; // +1 because last hour is 23
         let range_y_left = self.max_y - self.min_y;
         let range_y_right = 100.0; // Rain data is in percentage
@@ -241,10 +241,10 @@ impl HourlyForecastGraph {
         // Mapping functions from data space to SVG space
         // x data domain maps to [0, width]
         // y data domain maps to [height, 0] (SVG y goes down)
-        let map_x = |x: f64| (x - self.starting_x) * (self.width / range_x);
-        let map_y_left = |y: f64| self.height - ((y - self.min_y) * (self.height / range_y_left));
+        let map_x = |x: f32| (x - self.starting_x) * (self.width / range_x);
+        let map_y_left = |y: f32| self.height - ((y - self.min_y) * (self.height / range_y_left));
         // For the right axis, we assume 0 to 100% maps directly onto the height.
-        let map_y_right = |y: f64| self.height - (y * (self.height / range_y_right));
+        let map_y_right = |y: f32| self.height - (y * (self.height / range_y_right));
 
         // Determine where to place the x-axis (shared between both left and right data)
         // If 0 is within the y range, place x-axis at y=0.
@@ -280,9 +280,9 @@ impl HourlyForecastGraph {
             y_right_axis_x, y_right_axis_x, self.height
         );
 
-        let x_step = range_x / self.x_ticks as f64;
-        let y_left_step = range_y_left / self.y_left_ticks as f64;
-        let y_right_step = range_y_right / self.y_right_ticks as f64;
+        let x_step = range_x / self.x_ticks as f32;
+        let y_left_step = range_y_left / self.y_left_ticks as f32;
+        let y_right_step = range_y_right / self.y_right_ticks as f32;
 
         // println!(
         //     "X step: {}, Y step (left): {}, Y step (right): {}",
@@ -324,14 +324,14 @@ impl HourlyForecastGraph {
 
     fn generate_right_axis_ticks(
         &self,
-        map_y_right: impl Fn(f64) -> f64,
-        y_right_axis_x: f64,
+        map_y_right: impl Fn(f32) -> f32,
+        y_right_axis_x: f32,
         y_right_axis_path: &mut String,
-        y_right_step: f64,
+        y_right_step: f32,
     ) -> String {
         let mut y_right_labels = String::new();
         for k in 0..=self.y_right_ticks {
-            let y_val = k as f64 * y_right_step; // percentage step
+            let y_val = k as f32 * y_right_step; // percentage step
             if y_val > 100.0 {
                 break;
             }
@@ -361,14 +361,14 @@ impl HourlyForecastGraph {
 
     fn generate_y_axis_ticks(
         &self,
-        map_y_left: impl Fn(f64) -> f64,
-        y_axis_x: f64,
+        map_y_left: impl Fn(f32) -> f32,
+        y_axis_x: f32,
         y_left_axis_path: &mut String,
-        y_left_step: f64,
+        y_left_step: f32,
     ) -> String {
         let mut y_left_labels = String::new();
         for j in 0..=self.y_left_ticks {
-            let y_val = self.min_y + j as f64 * y_left_step;
+            let y_val = self.min_y + j as f32 * y_left_step;
             if y_val > self.max_y {
                 break;
             }
@@ -404,20 +404,20 @@ impl HourlyForecastGraph {
 
     fn generate_x_axis_labels(
         &self,
-        current_hour: f64,
-        map_x: impl Fn(f64) -> f64,
-        x_axis_y: f64,
+        current_hour: f32,
+        map_x: impl Fn(f32) -> f32,
+        x_axis_y: f32,
         x_axis_path: &mut String,
         x_axis_guideline_path: &mut String,
-        x_step: f64,
+        x_step: f32,
     ) -> String {
-        let mut x_val: f64 = 0.0;
+        let mut x_val: f32 = 0.0;
         let mut x_labels = String::new();
         for i in 0..=self.x_ticks {
             if x_val > self.ending_x {
                 break;
             }
-            x_val = self.starting_x + i as f64 * x_step;
+            x_val = self.starting_x + i as f32 * x_step;
 
             let xs = map_x(x_val);
             // Tick mark
@@ -467,7 +467,7 @@ impl HourlyForecastGraph {
         x_labels
     }
 
-    fn draw_tomorrow_line(&self, x_coor: f64) -> String {
+    fn draw_tomorrow_line(&self, x_coor: f32) -> String {
         let tomorrow_day_name = chrono::Local::now()
             .checked_add_days(chrono::Days::new(1))
             .map(|d| d.format("%A").to_string())
@@ -494,12 +494,12 @@ impl HourlyForecastGraph {
                 .get_points()
                 .iter()
                 .map(|val| val.y)
-                .fold(f64::NAN, f64::min);
+                .fold(f32::NAN, f32::min);
             let max_y_data = curve
                 .get_points()
                 .iter()
                 .map(|val| val.y)
-                .fold(f64::NAN, f64::max);
+                .fold(f32::NAN, f32::max);
 
             let starting_x_data = curve.get_points().first().map(|val| val.x).unwrap_or(0.0);
             let ending_x_data = curve.get_points().last().map(|val| val.x).unwrap_or(0.0);
@@ -526,11 +526,11 @@ impl HourlyForecastGraph {
     }
 
     pub fn draw_uv_gradient_over_time(&self) -> String {
-        // println!("UV data: {:?}", self.uv_data);
+        println!("UV data starting at current UTC date: {:?}", self.uv_data);
         let mut gradient = String::new();
 
         for (i, &uv) in self.uv_data.iter().enumerate() {
-            let offset = (i as f64 / 23.0) * 100.0;
+            let offset = (i as f32 / 23.0) * 100.0;
             let colour = UVIndexCategory::from_u8(uv).to_colour();
             gradient.push_str(&format!(
                 r#"<stop offset="{:.2}%" stop-color="{}"/>"#,

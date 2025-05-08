@@ -8,6 +8,7 @@ use resvg::tiny_skia;
 use resvg::usvg;
 use serde::Deserialize;
 use std::fs;
+use std::path::PathBuf;
 use usvg::fontdb;
 
 /// Converts an SVG file to a PNG file.
@@ -22,8 +23,8 @@ use usvg::fontdb;
 ///
 /// * `Result<(), Error>` - Ok(()) if successful, or an error message.
 pub fn convert_svg_to_png(
-    input_path: &str,
-    output_path: &str,
+    input_path: &PathBuf,
+    output_path: &PathBuf,
     scale_factor: f32,
 ) -> Result<(), Error> {
     // Read the SVG file

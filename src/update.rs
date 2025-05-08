@@ -9,6 +9,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::{fs, path::Path};
 use tempfile::NamedTempFile;
+use url::Url;
 use zip::ZipArchive;
 
 const LAST_CHECKED_FILE_NAME: &str = "last_checked";
@@ -80,7 +81,7 @@ fn fetch_release_info(
     header_value: &str,
 ) -> Result<GithubRelease, anyhow::Error> {
     let response = client
-        .get(CONFIG.release.release_info_url.as_str())
+        .get(CONFIG.release.release_info_url.clone())
         .header(reqwest::header::USER_AGENT, header_value)
         .send()
         .context("Failed to fetch latest release info")?;
@@ -128,7 +129,7 @@ fn parse_latest_version(release_info: &GithubRelease) -> Result<Version, anyhow:
 fn download_zip_archive(
     client: &reqwest::blocking::Client,
     header_value: &str,
-    download_url: &str,
+    download_url: Url,
 ) -> Result<NamedTempFile, anyhow::Error> {
     let mut response = client
         .get(download_url)
@@ -231,14 +232,16 @@ fn download_and_extract_release(
     header_value: &str,
     latest_version: &semver::Version,
 ) -> Result<(), anyhow::Error> {
-    let download_url = format!(
-        "{}/v{}/{}.zip",
-        CONFIG.release.download_base_url.as_str(),
-        latest_version,
-        TARGET_ARTIFACT
-    );
+    let download_url = {
+        let mut u = CONFIG.release.download_base_url.clone();
+        u.path_segments_mut()
+            .unwrap()
+            .push(&format!("v{}", latest_version))
+            .push(&format!("{}.zip", TARGET_ARTIFACT));
+        u
+    };
 
-    let temp_zip = download_zip_archive(client, header_value, &download_url)?;
+    let temp_zip = download_zip_archive(client, header_value, download_url)?;
     let base_dir = get_base_dir_path()?;
     let temp_dir =
         tempfile::tempdir_in(&base_dir).context("Failed to create temporary directory")?;
@@ -297,7 +300,7 @@ pub fn update_app() -> Result<(), anyhow::Error> {
         let now_utc = Utc::now();
         // Compare the difference
         let elapsed = now_utc.signed_duration_since(last_check_utc);
-        if elapsed > Duration::days(CONFIG.release.update_interval_days) {
+        if elapsed > Duration::days(CONFIG.release.update_interval_days.into_inner().into()) {
             println!(
                 "It's been more than {} days ({:.1} days elapsed), Checking for latest version...",
                 CONFIG.release.update_interval_days,

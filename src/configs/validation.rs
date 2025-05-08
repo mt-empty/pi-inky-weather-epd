@@ -1,5 +1,38 @@
+use std::{
+    borrow::Cow,
+    fmt::{self, Display},
+};
+
 use regex::Regex;
-use validator::ValidationError;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct ValidationError {
+    pub message: Cow<'static, str>,
+}
+
+impl ValidationError {
+    pub fn new(message: &'static str) -> ValidationError {
+        ValidationError {
+            message: Cow::Borrowed(message),
+        }
+    }
+}
+
+impl std::error::Error for ValidationError {
+    fn description(&self) -> &str {
+        &self.message
+    }
+    fn cause(&self) -> Option<&dyn std::error::Error> {
+        None
+    }
+}
+
+impl Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
 
 // See this https://www.w3.org/TR/SVG11/types.html#ColorKeywords
 const NAMED_COLOURS: [&str; 147] = [

@@ -14,6 +14,7 @@ use super::chart::{CurveType, ElementVisibility, FontStyle};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Context {
+    // colours
     pub background_colour: String,
     pub text_colour: String,
     pub x_axis_colour: String,
@@ -22,6 +23,7 @@ pub struct Context {
     pub actual_temp_colour: String,
     pub feels_like_colour: String,
     pub rain_colour: String,
+    // any weather element that is not graph
     pub max_uv_index: String,
     pub max_uv_index_font_style: String,
     pub max_gust_speed: String,
@@ -36,20 +38,23 @@ pub struct Context {
     pub current_hour_wind_speed: String,
     pub current_hour_wind_icon: String,
     pub current_hour_uv_index: String,
+    pub current_hour_uv_index_icon: String,
     pub current_hour_relative_humidity: String,
     pub current_hour_relative_humidity_icon: String,
     pub current_day_date: String,
     pub current_hour_rain_amount: String,
-    pub rain_measure_icon: String,
+    pub current_hour_rain_measure_icon: String,
+    pub sunset_time: String,
+    pub sunrise_time: String,
+    pub sunset_icon: String,
+    pub sunrise_icon: String,
+    // these values might not be used
     pub graph_height: String,
     pub graph_width: String,
+    // graph and curves
     pub actual_temp_curve_data: String,
     pub feel_like_curve_data: String,
     pub rain_curve_data: String,
-    pub uv_index: String,
-    pub uv_index_icon: String,
-    pub wind_speed: String,
-    pub wind_icon: String,
     pub x_axis_path: String,
     pub x_axis_guideline_path: String,
     pub y_left_axis_path: String,
@@ -83,10 +88,7 @@ pub struct Context {
     pub day7_maxtemp: String,
     pub day7_icon: String,
     pub day7_name: String,
-    pub sunset_time: String,
-    pub sunrise_time: String,
-    pub sunset_icon: String,
-    pub sunrise_icon: String,
+    // warning message
     pub warning_message: String,
     pub warning_icon: String,
     pub warning_visibility: String,
@@ -95,20 +97,20 @@ pub struct Context {
 impl Default for Context {
     fn default() -> Self {
         let na = "NA".to_string();
-        let not_available_icon_path = NOT_AVAILABLE_ICON_PATH.to_string();
+        let not_available_icon_path = NOT_AVAILABLE_ICON_PATH.to_string_lossy().to_string();
         let colours = CONFIG.colours.clone();
         let render_options = CONFIG.render_options.clone();
         let graph_height = "300".to_string();
         let graph_width = "600".to_string();
         Self {
-            background_colour: colours.background_colour,
-            text_colour: colours.text_colour,
-            x_axis_colour: colours.x_axis_colour,
-            y_left_axis_colour: colours.y_left_axis_colour,
-            y_right_axis_colour: colours.y_right_axis_colour,
-            actual_temp_colour: colours.actual_temp_colour,
-            feels_like_colour: colours.feels_like_colour,
-            rain_colour: colours.rain_colour,
+            background_colour: colours.background_colour.to_string(),
+            text_colour: colours.text_colour.to_string(),
+            x_axis_colour: colours.x_axis_colour.to_string(),
+            y_left_axis_colour: colours.y_left_axis_colour.to_string(),
+            y_right_axis_colour: colours.y_right_axis_colour.to_string(),
+            actual_temp_colour: colours.actual_temp_colour.to_string(),
+            feels_like_colour: colours.feels_like_colour.to_string(),
+            rain_colour: colours.rain_colour.to_string(),
             max_uv_index: na.clone(),
             max_uv_index_font_style: FontStyle::Normal.to_string(),
             max_gust_speed: na.clone(),
@@ -116,27 +118,28 @@ impl Default for Context {
             max_relative_humidity: na.clone(),
             max_relative_humidity_font_style: FontStyle::Normal.to_string(),
             total_rain_today: na.clone(),
-            temp_unit: render_options.temp_unit,
+            temp_unit: render_options.temp_unit.to_string(),
             current_hour_actual_temp: na.clone(),
             current_hour_weather_icon: not_available_icon_path.clone(),
             current_hour_feels_like: na.clone(),
             current_hour_wind_speed: na.clone(),
             current_hour_wind_icon: not_available_icon_path.clone(),
             current_hour_uv_index: na.clone(),
+            current_hour_uv_index_icon: not_available_icon_path.clone(),
             current_hour_relative_humidity: na.clone(),
             current_hour_relative_humidity_icon: not_available_icon_path.clone(),
             current_day_date: na.clone(),
             current_hour_rain_amount: na.clone(),
-            rain_measure_icon: not_available_icon_path.clone(),
+            current_hour_rain_measure_icon: not_available_icon_path.clone(),
+            sunrise_time: na.clone(),
+            sunset_time: na.clone(),
+            sunset_icon: SunPositionIconName::Sunset.get_icon_path(),
+            sunrise_icon: SunPositionIconName::Sunrise.get_icon_path(),
             graph_height,
             graph_width,
             actual_temp_curve_data: String::new(),
             feel_like_curve_data: String::new(),
             rain_curve_data: String::new(),
-            uv_index: na.clone(),
-            uv_index_icon: not_available_icon_path.clone(),
-            wind_speed: na.clone(),
-            wind_icon: not_available_icon_path.clone(),
             x_axis_path: String::new(),
             x_axis_guideline_path: String::new(),
             y_left_axis_path: String::new(),
@@ -169,10 +172,6 @@ impl Default for Context {
             day7_maxtemp: na.clone(),
             day7_icon: not_available_icon_path.clone(),
             day7_name: na.clone(),
-            sunrise_time: na.clone(),
-            sunset_time: na.clone(),
-            sunset_icon: SunPositionIconName::Sunset.get_icon_path(),
-            sunrise_icon: SunPositionIconName::Sunrise.get_icon_path(),
             warning_message: na,
             warning_icon: not_available_icon_path,
             warning_visibility: ElementVisibility::Hidden.to_string(),
@@ -329,7 +328,7 @@ impl ContextBuilder {
 
         let mut graph = HourlyForecastGraph {
             x_axis_always_at_min: CONFIG.render_options.x_axis_always_at_min,
-            text_colour: CONFIG.colours.text_colour.clone(),
+            text_colour: CONFIG.colours.text_colour.to_string(),
             ..Default::default()
         };
 
@@ -362,9 +361,6 @@ impl ContextBuilder {
         self.context.actual_temp_curve_data = temp_curve_data;
         self.context.feel_like_curve_data = feel_like_curve_data;
         self.context.rain_curve_data = rain_curve_data;
-        self.context.uv_index = hourly_forecast_data[0].uv.0.to_string();
-        self.context.uv_index_icon = hourly_forecast_data[0].uv.get_icon_path();
-        self.context.wind_speed = hourly_forecast_data[0].wind.speed_kilometre.to_string();
 
         Self::set_max_values(
             self,
@@ -380,14 +376,12 @@ impl ContextBuilder {
             &forecast_window_end,
             |item: &HourlyForecast| item.rain.calculate_median_rain(),
             |item| &item.time,
-        ) as usize)
-            .to_string();
-
-        self.context.wind_icon = hourly_forecast_data[0].wind.get_icon_path();
+        ))
+        .to_string();
 
         let forecast_window_start_local = forecast_window_start.with_timezone(&chrono::Local);
         let axis_data_path =
-            graph.create_axis_with_labels(forecast_window_start_local.hour() as f64);
+            graph.create_axis_with_labels(forecast_window_start_local.hour() as f32);
 
         self.context.x_axis_path = axis_data_path.x_axis_path;
         self.context.y_left_axis_path = axis_data_path.y_left_axis_path;
@@ -456,30 +450,31 @@ impl ContextBuilder {
                     // we push this index to make scaling graph easier
                 for curve_type in &mut graph.curves.iter_mut() {
                     match curve_type {
-                        CurveType::ActualTemp(curve) => curve.add_point(x as f64, forecast.temp as f64),
-                        CurveType::TempFeelLike(curve) => curve.add_point(x as f64, forecast.temp_feels_like as f64),
-                        CurveType::RainChance(curve) => curve.add_point(x as f64, forecast.rain.chance.unwrap_or(0).into()),
+                        CurveType::ActualTemp(curve) => curve.add_point(x as f32, *forecast.temp),
+                        CurveType::TempFeelLike(curve) => curve.add_point(x as f32, *forecast.temp_feels_like),
+                        CurveType::RainChance(curve) => curve.add_point(x as f32, forecast.rain.chance.unwrap_or(0) as f32),
                     }
                 }
-                graph.uv_data[x] = forecast.uv.0 as usize;
+                graph.uv_data[x] = forecast.uv.0;
                 x += 1;
             });
     }
 
-    pub fn with_current_hour_data(&mut self, current_hour: &HourlyForecast) -> &mut Self {
+    fn with_current_hour_data(&mut self, current_hour: &HourlyForecast) -> &mut Self {
         self.context.current_hour_actual_temp = current_hour.temp.to_string();
         self.context.current_hour_weather_icon = current_hour.get_icon_path();
         self.context.current_hour_feels_like = current_hour.temp_feels_like.to_string();
         self.context.current_hour_wind_speed = current_hour.wind.speed_kilometre.to_string();
         self.context.current_hour_wind_icon = current_hour.wind.get_icon_path();
         self.context.current_hour_uv_index = current_hour.uv.0.to_string();
+        self.context.current_hour_uv_index_icon = current_hour.uv.get_icon_path();
         self.context.current_hour_relative_humidity = current_hour.relative_humidity.0.to_string();
         self.context.current_hour_relative_humidity_icon =
             current_hour.relative_humidity.get_icon_path();
         self.context.current_day_date = chrono::Local::now().format("%A, %d %B").to_string();
         self.context.current_hour_rain_amount =
             current_hour.rain.calculate_median_rain().to_string();
-        self.context.rain_measure_icon = current_hour.rain.amount.get_icon_path();
+        self.context.current_hour_rain_measure_icon = current_hour.rain.amount.get_icon_path();
         self
     }
 

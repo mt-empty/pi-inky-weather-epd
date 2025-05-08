@@ -91,7 +91,7 @@
 
         <!-- UV Index -->
         <svg x="20" y="260" label="UV-index" text-anchor="middle">
-            <image width="75" height="75" href="{uv_index_icon}" />
+            <image width="75" height="75" href="{current_hour_uv_index_icon}" />
             <text x="100" y="45.5" font-size="30" fill="{text_colour}">{current_hour_uv_index}
             </text>
             <text x="155" y="45.5" font-size="30" fill="{text_colour}"

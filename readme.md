@@ -161,10 +161,10 @@ These colours were found by trial and error:
   - This script should simulate different weather conditions (e.g., sunny, rainy, cloudy) and generate corresponding images for testing the display.
 
 ### Wish List
-- [ ] An algorithm that is smooth and does not overshoot
+- [ ] An algorithm that is smooth and only overshoots in the x dimension
 - [ ] Rain gradient that looks like rain
 - [ ] Overhaul the [line svg icons](./static/fill-svg-static/) to match display colours
-- [ ] Inline all svg icons into the template and have full control over the colours
+- [ ] Inline all svg icons into the template and have full control over all the colours
 
 ## Developing
 

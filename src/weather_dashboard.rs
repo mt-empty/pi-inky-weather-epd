@@ -7,6 +7,7 @@ use serde::Deserialize;
 use std::io::Write;
 use std::{fs, path::PathBuf};
 use tinytemplate::{format_unescaped, TinyTemplate};
+use url::Url;
 pub use utils::*;
 
 enum FetchOutcome<T> {
@@ -40,7 +41,7 @@ fn fallback<T: for<'de> Deserialize<'de>>(
 }
 
 fn fetch_data<T: for<'de> Deserialize<'de>>(
-    endpoint: &str,
+    endpoint: Url,
     file_path: &PathBuf,
 ) -> Result<FetchOutcome<T>, Error> {
     if !file_path.exists() {
@@ -86,15 +87,19 @@ fn fetch_data<T: for<'de> Deserialize<'de>>(
 }
 
 fn fetch_daily_forecast_data() -> Result<FetchOutcome<DailyForecastResponse>, Error> {
-    let file_path =
-        std::path::Path::new(&CONFIG.misc.weather_data_cache_path).join("daily_forecast.json");
-    fetch_data(&DAILY_FORECAST_ENDPOINT, &file_path)
+    let file_path = CONFIG
+        .misc
+        .weather_data_cache_path
+        .join("daily_forecast.json");
+    fetch_data(DAILY_FORECAST_ENDPOINT.clone(), &file_path)
 }
 
 fn fetch_hourly_forecast_data() -> Result<FetchOutcome<HourlyForecastResponse>, Error> {
-    let file_path =
-        std::path::Path::new(&CONFIG.misc.weather_data_cache_path).join("hourly_forecast.json");
-    fetch_data(&HOURLY_FORECAST_ENDPOINT, &file_path)
+    let file_path = CONFIG
+        .misc
+        .weather_data_cache_path
+        .join("hourly_forecast.json");
+    fetch_data(HOURLY_FORECAST_ENDPOINT.clone(), &file_path)
 }
 
 // Extrusion Pattern: force everything through one function until it resembles spaghetti
@@ -176,14 +181,13 @@ fn render_dashboard_template(context: &Context, dashboard_svg: String) -> Result
 
 pub fn generate_weather_dashboard() -> Result<(), Error> {
     let current_dir = std::env::current_dir()?;
-    let template_path = current_dir.join(&CONFIG.misc.template_path);
     let mut context_builder = ContextBuilder::new();
 
-    let template_svg = match fs::read_to_string(&template_path) {
+    let template_svg = match fs::read_to_string(CONFIG.misc.template_path.clone()) {
         Ok(svg) => svg,
         Err(e) => {
-            println!("Current directory: {:?}", current_dir);
-            println!("Template path: {:?}", &template_path);
+            println!("Current directory: {}", current_dir.display());
+            println!("Template path: {}", &CONFIG.misc.template_path.display());
             println!("Failed to read template file: {}", e);
             return Err(e.into());
         }
