@@ -66,7 +66,7 @@ Here are example configurations:
 
 <img src="./misc/dashboard-without-moon-phase.png" alt="Moon phase configuration" width="600"/>
 
-When the sky is clear, the moon phase icon will be used instead of the clear night icon
+When the sky is clear, the moon phase icon is used instead of the clear night icon
 
 ```toml
 [render_options]
@@ -117,7 +117,8 @@ update_interval_days = 7
 ## Degraded operation
 
 The dashboard can still work using cached data for a while if the API is unreachable.
-You will see an icon and a small warning message appearing on the display in case of any errors.
+A warning icon and a small warning message appears on the display in case of any errors.
+
 | Error Type          | Icon                                                                                                |
 | ------------------- | --------------------------------------------------------------------------------------------------- |
 | **Api Error**       | <img src="./static/fill-svg-static/code-red.svg" alt="Api Error" width="32" height="32" />          |
@@ -163,8 +164,8 @@ These colours were found by trial and error:
 ### Wish List
 - [ ] An algorithm that is smooth and only overshoots in the x dimension
 - [ ] Rain gradient that looks like rain
-- [ ] Overhaul the [line svg icons](./static/fill-svg-static/) to match display colours
-- [ ] Inline all svg icons into the template and have full control over all the colours
+- [ ] Overhaul the [line SVG icons](./static/fill-svg-static/) to match display colours
+- [ ] Inline all SVG icons into the template and have full control over all the colours
 
 ## Developing
 
