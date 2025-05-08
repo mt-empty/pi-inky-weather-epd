@@ -8,7 +8,7 @@ use std::{
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-use crate::configs::settings::TemperatureUnit;
+use crate::{configs::settings::TemperatureUnit, CONFIG};
 
 #[derive(Deserialize, Debug, Copy, PartialOrd, PartialEq, Default, Clone)]
 pub struct RelativeHumidity(pub u16);
@@ -66,11 +66,21 @@ impl Display for Temperature {
 
 #[derive(Deserialize, Debug)]
 pub struct Wind {
-    pub speed_kilometre: u16,
+    speed_kilometre: u16,
     // pub speed_knot: u16,
     // pub direction: String,
     // pub gust_speed_knot: Option<u16>,
-    pub gust_speed_kilometre: Option<u16>,
+    gust_speed_kilometre: u16,
+}
+
+impl Wind {
+    pub fn get_speed(&self) -> u16 {
+        if CONFIG.render_options.use_gust_instead_of_wind {
+            self.gust_speed_kilometre
+        } else {
+            self.speed_kilometre
+        }
+    }
 }
 
 // #[derive(Deserialize, Debug)]

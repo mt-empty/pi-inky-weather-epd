@@ -96,6 +96,7 @@ pub struct RenderOptions {
     pub temp_unit: TemperatureUnit,
     pub use_moon_phase_instead_of_clear_night: bool,
     pub x_axis_always_at_min: bool,
+    pub use_gust_instead_of_wind: bool,
 }
 
 #[derive(Debug, Deserialize)]

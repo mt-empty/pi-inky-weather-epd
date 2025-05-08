@@ -175,7 +175,7 @@ impl Rain {
 
 impl Icon for Wind {
     fn get_icon_name(&self) -> String {
-        match self.speed_kilometre {
+        match self.get_speed() {
             0..=20 => WindIconName::Wind,
             21..=40 => WindIconName::UmbrellaWind,
             41.. => WindIconName::UmbrellaWindAlt,

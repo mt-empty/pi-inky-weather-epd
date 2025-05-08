@@ -464,7 +464,7 @@ impl ContextBuilder {
         self.context.current_hour_actual_temp = current_hour.temp.to_string();
         self.context.current_hour_weather_icon = current_hour.get_icon_path();
         self.context.current_hour_feels_like = current_hour.temp_feels_like.to_string();
-        self.context.current_hour_wind_speed = current_hour.wind.speed_kilometre.to_string();
+        self.context.current_hour_wind_speed = current_hour.wind.get_speed().to_string();
         self.context.current_hour_wind_icon = current_hour.wind.get_icon_path();
         self.context.current_hour_uv_index = current_hour.uv.0.to_string();
         self.context.current_hour_uv_index_icon = current_hour.uv.get_icon_path();
@@ -503,7 +503,7 @@ impl ContextBuilder {
             hourly_forecast_data,
             &forecast_window_start,
             &day_end,
-            |item| item.wind.gust_speed_kilometre.unwrap_or(0),
+            |item| item.wind.get_speed(),
             |item| &item.time,
         );
 
@@ -511,7 +511,7 @@ impl ContextBuilder {
             hourly_forecast_data,
             &day_end,
             &forecast_window_end,
-            |item| item.wind.gust_speed_kilometre.unwrap_or(0),
+            |item| item.wind.get_speed(),
             |item| &item.time,
         );
 
