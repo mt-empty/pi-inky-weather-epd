@@ -2,7 +2,7 @@
 
 This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper (aka E-ink) display. Weather data is obtained from the Australian Bureau of Meteorology API.
 
-![](./misc/dashboard.png)
+![](./misc/timelapse.gif)
 
 ## Hardware
 - Raspberry Pi (zero model requires soldering the GPIO Header)
@@ -56,7 +56,7 @@ You can override the default configs located at [./config/](./config/) by creati
 ```
 
 ### Example configuration
-Here are example configurations:
+Here are example configurations, note some of these images are slightly outdated:
 
 ### Default configuration file
 
