@@ -8,7 +8,10 @@
 		"svg.preview.background": "dark-transparent",
 		"explorer.excludeGitIgnore": false,
 		"search.useParentIgnoreFiles": false,
-		"search.useIgnoreFiles": false
+		"search.useIgnoreFiles": false,
+		"cSpell.words": [
+			"meteo"
+		]
 	},
 	"extensions": {
 		"recommendations": [
