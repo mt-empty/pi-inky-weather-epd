@@ -1,6 +1,6 @@
 use crate::{configs::settings::TemperatureUnit, CONFIG};
 use once_cell::sync::Lazy;
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 use url::Url;
 
 pub const BOM_API_TEMP_UNIT: TemperatureUnit = TemperatureUnit::C;
@@ -25,6 +25,9 @@ fn build_forecast_url(frequency: &str) -> Url {
 
 pub static DAILY_FORECAST_ENDPOINT: Lazy<Url> = Lazy::new(|| build_forecast_url("daily"));
 pub static HOURLY_FORECAST_ENDPOINT: Lazy<Url> = Lazy::new(|| build_forecast_url("hourly"));
+pub const OPEN_METEO_ENDPOINT: Lazy<Url> = Lazy::new(|| {
+    Url::parse("https://api.open-meteo.com/v1/forecast?latitude=-37.814&longitude=144.9633&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,uv_index,wind_speed_10m,wind_gusts_10m,relative_humidity_2m&current=is_day").unwrap()
+});
 
 pub static NOT_AVAILABLE_ICON_PATH: Lazy<PathBuf> = Lazy::new(|| {
     CONFIG
