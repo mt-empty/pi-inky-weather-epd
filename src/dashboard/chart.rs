@@ -479,10 +479,10 @@ impl HourlyForecastGraph {
             x = x_coor,
             chart_height = self.height,
             x_text = x_coor + 10.0,
-            y_text = self.height / 2.0,
+            y_text = (self.height / 2.0) + 20.0,
             font_style = FontStyle::Italic,
             rotate_x_text = x_coor + 10.0 - 30.0,
-            rotate_y_text = (self.height / 2.0) - 35.0,
+            rotate_y_text = (self.height / 2.0) - 15.0,
             colour = self.text_colour,
             tomorrow_day_name = tomorrow_day_name
         )

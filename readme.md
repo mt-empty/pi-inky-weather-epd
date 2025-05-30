@@ -24,7 +24,19 @@ This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper
    unzip <YOUR_DOWNLOAD_RELEASE>.tar.gz
    chmod +x pi-inky-weather-epd
    ```
-3. Obtain a six-character geohash for your location from https://geohash.softeng.co
+3. Australia -> Bom API
+   1. Obtain a six-character geohash of your location from https://geohash.softeng.co
+   2. Create a configuration file with your geohash:
+   ```bash
+   echo -e '[api]\nlocation = "YOUR_GEOHASH"' > ~/.config/pi-inky-weather-epd.toml
+   ```
+   Worldwide -> Open-Metro (WIP)
+   1. Obtain a Longitude and Latitude of your location from https://geohash.softeng.co
+   2. Create a configuration file with your geohash:
+   ```bash
+   echo -e '[api]\lon_lat = "LON,Lat"' > ~/.config/pi-inky-weather-epd.toml
+   ```
+
 
 4. Create a configuration file with your geohash:
    ```bash
