@@ -4,11 +4,17 @@ on:
   pull_request:
     branches:
       - master
+    paths-ignore:
+      - '**/*.md'
+      - 'mics/**'
   push:
     branches:
       - master
     tags-ignore:
       - 'v*'
+    paths-ignore:
+      - '**/*.md'
+      - 'mics/**'
   workflow_dispatch:
 
 env:
