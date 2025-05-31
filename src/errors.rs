@@ -48,8 +48,8 @@ impl Icon for DashboardError {
 impl Description for DashboardError {
     fn short_description(&self) -> &'static str {
         match self {
-            DashboardError::NoInternet { .. } => "API unreachable → Stale Data",
-            DashboardError::ApiError(_) => "API error ➜ Stale Data",
+            DashboardError::NoInternet { .. } => "API unreachable -> Stale Data",
+            DashboardError::ApiError(_) => "API error -> Stale Data",
             DashboardError::IncompleteData { .. } => "Incomplete Data",
             DashboardError::UpdateFailed(_) => "Update failed",
         }
