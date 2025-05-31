@@ -247,6 +247,7 @@ impl ContextBuilder {
                         .unwrap_or_default()
                         .sunrise_time
                         .unwrap_or_default()
+                        .with_timezone(&Local)
                         .format("%H:%M")
                         .to_string();
                     self.context.sunset_time = day
@@ -254,6 +255,7 @@ impl ContextBuilder {
                         .unwrap_or_default()
                         .sunset_time
                         .unwrap_or_default()
+                        .with_timezone(&Local)
                         .format("%H:%M")
                         .to_string();
                 }
