@@ -1,0 +1,238 @@
+<svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- tspan doesn't work well with the degree symbol ° for some fonts!-->
+    <!-- Avoid using tspan with text-anchor, `dx` or `dy`, resvg doesn't handle it properly -->
+    <!-- see https://github.com/linebender/resvg/issues/583 -->
+
+    <defs>
+        <linearGradient id="fillGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="blue" stop-opacity="0.5" />
+            <stop offset="100%" stop-color="blue" stop-opacity="0.1" />
+        </linearGradient>
+        <pattern id="dots" patternUnits="userSpaceOnUse" width="10" height="10">
+            <circle cx="5" cy="5" r="2" fill="blue" />
+        </pattern>
+        <pattern id="grid" patternUnits="userSpaceOnUse" width="10" height="10">
+            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="blue" stroke-width="1" />
+        </pattern>
+        <pattern id="diagonal-lines" patternUnits="userSpaceOnUse" width="10" height="10">
+            <path d="M 0 10 L 10 0" stroke="blue" stroke-width="2" />
+        </pattern>
+        <pattern id="crosshatch" patternUnits="userSpaceOnUse" width="10" height="10">
+            <path d="M 0 0 L 10 10 M 10 0 L 0 10" stroke="blue" stroke-width="1" />
+        </pattern>
+    </defs>
+
+    <rect width="100%" height="100%" fill="white" />
+
+    <!-- Current Day Information -->
+    <!-- Do not modify the x position of current_hour_temp and current_hour_feels_like, see above issue at the start of the file -->
+    <text x="270" y="50" font-size="35" fill="black">Saturday, 31 May </text>
+    <image x="0" y="0" width="200" height="180" href="static/fill-svg-static/clear-day.svg" />
+
+
+    <!-- Current temperature and Feels Like temperature -->
+    <text x="266" y="128" font-size="70" fill="red" text-anchor="middle">
+        16
+        <tspan baseline-shift="27" dx="-20" font-size="33">°C</tspan>
+    </text>
+
+    <text x="246" y="158" text-anchor="middle" font-size="18" fill="black">
+        <tspan>Feels</tspan>
+        <tspan dy="15.5" dx="-46.6">Like</tspan>
+        <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="green"
+            dx="10" dy="-7">
+            12
+            <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan>
+        </tspan>
+    </text>
+
+    <!-- Warning Message -->
+    <svg x="580" y="0" width="200" height="100" text-anchor="middle" visibility="hidden">
+        <image x="63" y="-10" width="74" height="74" href="./cached_bom_data/not-available.svg" />
+        <text x="100" y="60" width="200" font-size="12">
+            NA
+        </text>
+    </svg>
+
+    <!-- Sunset/Sunrise Information -->
+    <svg x="30" y="150">
+        <image x="0" y="0" width="75" height="75" href="static/fill-svg-static/sunrise.svg" />
+        <text x="12" y="70" text-anchor="start" font-size="20" fill="black">21:48</text>
+
+        <image x="70" y="0" width="75" height="75" href="static/fill-svg-static/sunset.svg" />
+        <text x="83" y="70" text-anchor="start" font-size="20" fill="black">08:20</text>
+    </svg>
+
+    <g transform="translate(-15, 0)">
+
+        <!-- vertical lines with artistic variations -->
+        <svg class="line">
+            <path d="M95 240 C90 220, 95 320, 95 470" />
+            <path d="M150 240 C155 220, 145 320, 150 470" />
+
+            <!-- horizontal lines with artistic variations -->
+            <path d="M40 260 C150 261, 250 258, 185 260" />
+            <path d="M40 330 C150 325, 250 335, 185 330" />
+            <path d="M40 400 C150 402, 250 399, 185 400" />
+        </svg>
+
+        <!-- row header-->
+        <svg x="15" y="210" label="UV-index" text-anchor="start">
+            <text x="16" y="43.5" fill="black" font-size="20">Metric
+            </text>
+
+            <text x="85" y="43.5" fill="black" font-size="20">Now
+            </text>
+            <text x="140" y="43.5" fill="black" font-size="20">Max
+                <tspan baseline-shift="super" font-size="17" dx="-3">24h</tspan>
+            </text>
+        </svg>
+
+        <!-- UV Index -->
+        <svg x="20" y="260" label="UV-index" text-anchor="middle">
+            <image width="75" height="75" href="static/fill-svg-static/uv-index-low.svg" />
+            <text x="100" y="45.5" font-size="30" fill="black">1
+            </text>
+            <text x="155" y="45.5" font-size="30" fill="black"
+                font-style="normal">4
+            </text>
+        </svg>
+
+        <!-- Wind Information -->
+        <svg x="20" y="330" label="wind" text-anchor="middle">
+            <text x="42.2" y="66.2" fill="black" font-size="15.1" text-anchor="middle">
+                km/h
+            </text>
+            <image width="75" height="75" href="static/fill-svg-static/wind.svg" />
+            <text x="100" y="45.5" font-size="30" fill="black">17
+            </text>
+            <text x="155" y="45.5" font-size="30" fill="black"
+                font-style="italic">17
+            </text>
+        </svg>
+
+        <!-- Relative Humidity -->
+        <svg x="20" y="400" label="relative_humidity" text-anchor="middle">
+            <image width="75" height="75" href="static/fill-svg-static/humidity-plus.svg" />
+            <text x="100" y="45.5" font-size="30" fill="black">45
+            </text>
+            <text x="155" y="45.5" font-size="30" fill="black"
+                font-style="normal">100
+            </text>
+        </svg>
+    </g>
+
+
+    <!-- Forecast for the next 6 days -->
+    <svg x="292" y="30">
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Sun</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
+        <text y="155" font-size="20" fill="black">
+            <tspan x="52" text-anchor="end">21°</tspan>
+            <tspan x="52" text-anchor="middle">|</tspan>
+            <tspan x="52" text-anchor="start">6°</tspan>
+        </text>
+    </svg>
+
+    <svg x="373" y="30">
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Mon</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
+        <text y="155" font-size="20" fill="black">
+            <tspan x="52" text-anchor="end">25°</tspan>
+            <tspan x="52" text-anchor="middle">|</tspan>
+            <tspan x="52" text-anchor="start">6°</tspan>
+        </text>
+    </svg>
+
+    <svg x="454" y="30">
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Tue</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
+        <text y="155" font-size="20" fill="black">
+            <tspan x="52" text-anchor="end">27°</tspan>
+            <tspan x="52" text-anchor="middle">|</tspan>
+            <tspan x="52" text-anchor="start">9°</tspan>
+        </text>
+    </svg>
+
+    <svg x="535" y="30">
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Wed</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
+        <text y="155" font-size="20" fill="black">
+            <tspan x="52" text-anchor="end">26°</tspan>
+            <tspan x="52" text-anchor="middle">|</tspan>
+            <tspan x="52" text-anchor="start">12°</tspan>
+        </text>
+    </svg>
+
+    <svg x="616" y="30">
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Thu</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/partly-cloudy-day.svg" />
+        <text y="155" font-size="20" fill="black">
+            <tspan x="52" text-anchor="end">25°</tspan>
+            <tspan x="52" text-anchor="middle">|</tspan>
+            <tspan x="52" text-anchor="start">13°</tspan>
+        </text>
+    </svg>
+
+    <svg x="697" y="30">
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Fri</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/partly-cloudy-day.svg" />
+        <text y="155" font-size="20" fill="black">
+            <tspan x="52" text-anchor="end">25°</tspan>
+            <tspan x="52" text-anchor="middle">|</tspan>
+            <tspan x="52" text-anchor="start">11°</tspan>
+        </text>
+    </svg>
+
+    <!-- Graph for hourly forecast -->
+    <svg x="220" y="160" width="560" height="350" viewBox="-50 0 690 300" preserveAspectRatio="xMidYMid meet"
+        style="overflow: visible;">
+        <path stroke="black" stroke-linejoin="round" stroke-width="2" d="M 0 300 L 600 300 M 0 295 L 0 305 M 100 295 L 100 305 M 200 295 L 200 305 M 300 295 L 300 305 M 400 295 L 400 305 M 500 295 L 500 305 M 600 295 L 600 305" fill="none" />
+        <!-- X axis Guidelines -->
+        <path stroke="black" stroke-linejoin="round" stroke-width="1" d="M 0 300 L 600 300 M 0 300 v -300 m 0 2 v -2 M 100 300 v -300 m 0 2 v -2 M 200 300 v -300 m 0 2 v -2 M 400 300 v -300 m 0 2 v -2 M 500 300 v -300 m 0 2 v -2 M 600 300 v -300 m 0 2 v -2" fill="none"
+            stroke-dasharray="5,10" />
+        <!-- X Labels -->
+        <text x="0" y="320" fill="black" font-size="19" text-anchor="middle">12pm</text><text x="100" y="320" fill="black" font-size="19" text-anchor="middle">4pm</text><text x="200" y="320" fill="black" font-size="19" text-anchor="middle">8pm</text><text x="300" y="320" fill="black" font-size="19" text-anchor="middle">12am</text><text x="400" y="320" fill="black" font-size="19" text-anchor="middle">4am</text><text x="500" y="320" fill="black" font-size="19" text-anchor="middle">8am</text><text x="600" y="320" fill="black" font-size="19" text-anchor="middle">12pm</text><line x1="300" y1="0" x2="300" y2="300" stroke="black" stroke-width="2" stroke-dasharray="3,3" />
+                   <text x="310" y="170" fill="black" font-size="19" font-style="italic"  transform="rotate(-90, 280, 135)" text-anchor="start">Sunday</text>
+        <!-- Y Labels -->
+        <text x="-10" y="300"  fill="black" font-size="35" text-anchor="end" dx="8" dy="4">3°</text><text x="-10" y="240"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">6.2°</text><text x="-10" y="180"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">9.4°</text><text x="-10" y="120"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">12.6°</text><text x="-10" y="60"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">15.8°</text><text x="-10" y="0"  fill="black" font-size="35" text-anchor="end" dx="8" dy="4">19°</text>
+        <!-- Y right Labels -->
+        <text x="610" y="300" fill="black"  font-size="19" text-anchor="start" dy="4">0%</text><text x="610" y="240" fill="black"  font-size="19" text-anchor="start" dy="4">20%</text><text x="610" y="180" fill="black"  font-size="19" text-anchor="start" dy="4">40%</text><text x="610" y="120" fill="black"  font-size="19" text-anchor="start" dy="4">60%</text><text x="610" y="60" fill="black"  font-size="19" text-anchor="start" dy="4">80%</text><text x="610" y="0" fill="black"  font-size="19" text-anchor="start" dy="4">100%</text>
+        <path stroke="red" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
+            d="M 0.0000 246.8750C 34.7826 268.7500, 43.4783 275.0000, 52.1739 281.2500C 60.8696 287.5000, 69.5652 296.8750, 78.2609 300.0000C 86.9565 303.1250, 95.6522 300.0000, 104.3478 300.0000C 113.0435 300.0000, 121.7391 306.2500, 130.4348 300.0000C 139.1304 293.7500, 147.8261 275.0000, 156.5217 262.5000C 165.2174 250.0000, 173.9130 237.5000, 182.6087 225.0000C 191.3043 212.5000, 200.0000 196.8750, 208.6956 187.5000C 217.3913 178.1250, 226.0870 175.0000, 234.7826 168.7500C 243.4783 162.5000, 252.1739 153.1250, 260.8696 150.0000C 269.5652 146.8750, 278.2609 153.1250, 286.9565 150.0000C 295.6521 146.8750, 304.3478 137.5000, 313.0435 131.2500C 321.7391 125.0000, 330.4348 115.6250, 339.1304 112.5000C 347.8261 109.3750, 356.5217 115.6250, 365.2174 112.5000C 373.9131 109.3750, 382.6087 100.0000, 391.3044 93.7500C 400.0000 87.5000, 408.6956 78.1250, 417.3913 75.0000C 426.0869 71.8750, 434.7826 75.0000, 443.4782 75.0000C 452.1739 75.0000, 460.8696 78.1250, 469.5652 75.0000C 478.2609 71.8750, 486.9565 59.3750, 495.6522 56.2500C 504.3478 53.1250, 513.0435 46.8750, 521.7391 56.2500C 530.4348 65.6250, 539.1304 90.6250, 547.8260 112.5000C 556.5217 134.3750, 565.2173 168.7500, 573.9130 187.5000C 582.6086 206.2500, 595.6522 218.7500, 600.0000 225.0000" stroke-width="3.0" fill="none" />
+        <path stroke="green" stroke-linejoin="round" stroke-dasharray="5,5"
+            transform="translate(0, 300) scale(1, -1)" d="M 0.0000 171.8750C 34.7826 193.7500, 43.4783 200.0000, 52.1739 206.2500C 60.8696 212.5000, 69.5652 218.7500, 78.2609 225.0000C 86.9565 231.2500, 95.6522 243.7500, 104.3478 243.7500C 113.0435 243.7500, 121.7391 234.3750, 130.4348 225.0000C 139.1304 215.6250, 147.8261 200.0000, 156.5217 187.5000C 165.2174 175.0000, 173.9130 159.3750, 182.6087 150.0000C 191.3043 140.6250, 200.0000 140.6250, 208.6956 131.2500C 217.3913 121.8750, 226.0870 103.1250, 234.7826 93.7500C 243.4783 84.3750, 252.1739 78.1250, 260.8696 75.0000C 269.5652 71.8750, 278.2609 78.1250, 286.9565 75.0000C 295.6521 71.8750, 304.3478 59.3750, 313.0435 56.2500C 321.7391 53.1250, 330.4348 56.2500, 339.1304 56.2500C 347.8261 56.2500, 356.5217 59.3750, 365.2174 56.2500C 373.9131 53.1250, 382.6087 43.7500, 391.3044 37.5000C 400.0000 31.2500, 408.6956 21.8750, 417.3913 18.7500C 426.0869 15.6250, 434.7826 18.7500, 443.4782 18.7500C 452.1739 18.7500, 460.8696 21.8750, 469.5652 18.7500C 478.2609 15.6250, 486.9565 3.1250, 495.6522 0.0000C 504.3478 -3.1250, 513.0435 -9.3750, 521.7391 0.0000C 530.4348 9.3750, 539.1304 37.5000, 547.8260 56.2500C 556.5217 75.0000, 565.2173 96.8750, 573.9130 112.5000C 582.6086 128.1250, 595.6522 143.7500, 600.0000 150.0000" stroke-width="3.0" fill="none" />
+        <path transform="translate(0, 300) scale(1, -1)" d="M 0.0000 0.0000L 26.086956 0L 52.173912 0L 78.260864 0L 104.347824 0L 130.43478 0L 156.52173 0L 182.60869 0L 208.69565 0L 234.78261 0L 260.86957 0L 286.9565 0L 313.04346 0L 339.13043 15L 365.21738 15L 391.30435 15L 417.3913 15L 443.47824 15L 469.56522 15L 495.65216 15L 521.73914 15L 547.82605 15L 573.913 0L 600 0 L 600 0 L 0 0Z" fill="blue"
+            fill-opacity="25%" />
+        <defs>
+            <linearGradient id="UVGradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0.00%" stop-color="green"/><stop offset="4.35%" stop-color="yellow"/><stop offset="8.70%" stop-color="yellow"/><stop offset="13.04%" stop-color="yellow"/><stop offset="17.39%" stop-color="green"/><stop offset="21.74%" stop-color="green"/><stop offset="26.09%" stop-color="green"/><stop offset="30.43%" stop-color="white"/><stop offset="34.78%" stop-color="white"/><stop offset="39.13%" stop-color="white"/><stop offset="43.48%" stop-color="white"/><stop offset="47.83%" stop-color="white"/><stop offset="52.17%" stop-color="white"/><stop offset="56.52%" stop-color="white"/><stop offset="60.87%" stop-color="white"/><stop offset="65.22%" stop-color="white"/><stop offset="69.57%" stop-color="white"/><stop offset="73.91%" stop-color="white"/><stop offset="78.26%" stop-color="white"/><stop offset="82.61%" stop-color="white"/><stop offset="86.96%" stop-color="white"/><stop offset="91.30%" stop-color="white"/><stop offset="95.65%" stop-color="green"/><stop offset="100.00%" stop-color="green"/>
+            </linearGradient>
+        </defs>
+        <rect x="0" y="-14" width="600" height="8" fill="url(#UVGradient)" />
+        <path stroke="black" stroke-linejoin="round" stroke-width="2" d="M 0 300 L 600 300 M 0 295 L 0 305 M 100 295 L 100 305 M 200 295 L 200 305 M 300 295 L 300 305 M 400 295 L 400 305 M 500 295 L 500 305 M 600 295 L 600 305" fill="none" />
+        <path stroke="red" stroke-linejoin="round" stroke-width="2" d="M 0 0 L 0 300 M -5 300 L 5 300 M -5 240 L 5 240 M -5 180 L 5 180 M -5 120 L 5 120 M -5 60 L 5 60 M -5 0 L 5 0" />
+        <path stroke="blue" stroke-linejoin="round" stroke-width="3" d="M 600 0 L 600 300 M 595 300 L 605 300 M 595 240 L 605 240 M 595 180 L 605 180 M 595 120 L 605 120 M 595 60 L 605 60 M 595 0 L 605 0"
+            fill="none" />
+    </svg>
+    <!-- These are needed render svg in browser/ide -->
+    <style>
+        @font-face {
+            font-family: 'Roboto';
+            src: url('static/fonts/Roboto-Regular.ttf') format('truetype');
+        }
+
+        @font-face { 
+            font-family: 'Roboto-Regular-Dashed';
+            src: url('static/fonts/Roboto-Regular-Dashed.ttf') format('truetype');
+        }
+
+        .line { 
+            stroke: black;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+    </style>
+</svg>
