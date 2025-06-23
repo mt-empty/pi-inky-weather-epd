@@ -128,27 +128,27 @@ pub fn convert_utc_to_local_datetime(utc_time: &str) -> Result<NaiveDateTime, ch
 /// # Arguments
 ///
 /// * `data` - A slice of data items.
-/// * `start_date` - The start date as `DateTime<Utc>`.
-/// * `end_date` - The end date as `DateTime<Utc>`.
+/// * `start_date` - The start date as `DateTime<TZ>`.
+/// * `end_date` - The end date as `DateTime<TZ>`.
 /// * `get_value` - A function to extract the value from a data item.
 /// * `get_time` - A function to extract the time from a data item.
 ///
 /// # Returns
 ///
 /// * `V` - The total value between the specified dates.
-pub fn get_total_between_dates<T, V>(
+pub fn get_total_between_dates<T, V, TZ: TimeZone>(
     data: &[T],
-    start_date: &DateTime<Utc>,
-    end_date: &DateTime<Utc>,
+    start_date: &DateTime<TZ>,
+    end_date: &DateTime<TZ>,
     get_value: impl Fn(&T) -> V,
-    get_time: impl Fn(&T) -> &DateTime<Utc>,
+    get_time: impl Fn(&T) -> DateTime<TZ>,
 ) -> V
 where
     V: std::iter::Sum + Default,
 {
     data.iter()
         .filter_map(|item| {
-            let item_date = get_time(item);
+            let item_date = &get_time(item);
             if item_date >= start_date && item_date < end_date {
                 Some(get_value(item))
             } else {
@@ -163,20 +163,20 @@ where
 /// # Arguments
 ///
 /// * `data` - A slice of data items.
-/// * `start_date` - The start date as `DateTime<Utc>`.
-/// * `end_date` - The end date as `DateTime<Utc>`, not inclusive.
+/// * `start_date` - The start date as `DateTime<TZ>`.
+/// * `end_date` - The end date as `DateTime<TZ>`, not inclusive.
 /// * `get_value` - A function to extract the value from a data item.
 /// * `get_time` - A function to extract the time from a data item.
 ///
 /// # Returns
 ///
 /// * `V` - The maximum value between the specified dates.
-pub fn find_max_item_between_dates<T, V>(
+pub fn find_max_item_between_dates<T, V, TZ: TimeZone>(
     data: &[T],
-    start_date: &DateTime<Utc>,
-    end_date: &DateTime<Utc>,
+    start_date: &DateTime<TZ>,
+    end_date: &DateTime<TZ>,
     get_value: impl Fn(&T) -> V,
-    get_time: impl Fn(&T) -> &DateTime<Utc>,
+    get_time: impl Fn(&T) -> DateTime<TZ>,
 ) -> V
 where
     V: PartialOrd + Copy + Default,
@@ -184,7 +184,7 @@ where
     // Use V::default() as the initial value for finding the maximum, it should be fine for numeric types here since they are all positive
     data.iter()
         .filter_map(|item| {
-            let date = get_time(item);
+            let date = &get_time(item);
             if date >= start_date && date < end_date {
                 Some(get_value(item))
             } else {

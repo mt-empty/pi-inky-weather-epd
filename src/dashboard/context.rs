@@ -191,7 +191,7 @@ impl ContextBuilder {
     }
 
     pub fn with_daily_forecast_data(&mut self, daily_forecast_data: Vec<DailyEntry>) -> &mut Self {
-        // The date returned by Bom api is x:14 utc, which translates to x+10:00 AEST time,
+        // The date returned by Bom api is UTC, for example x:14 UTC, which translates to x:14+10:00 AEST time,
         // so we have to do some conversion
         let local_date_truncated = Local::now()
             .with_hour(0)
@@ -310,11 +310,12 @@ impl ContextBuilder {
         }
     }
 
+    // Extrusion Pattern: force everything through one function until it resembles spaghetti
     pub fn with_hourly_forecast_data(
         &mut self,
         hourly_forecast_data: Vec<HourlyForecast>,
     ) -> &mut Self {
-        let (forecast_window_start, forecast_window_end) = match Self::find_forecast_window(
+        let (utc_forecast_window_start, utc_forecast_window_end) = match Self::find_forecast_window(
             &hourly_forecast_data,
         ) {
             Some((start, end)) => (start, end),
@@ -325,8 +326,30 @@ impl ContextBuilder {
             }
         };
 
-        println!("24h forecast window start : {:?}", forecast_window_start);
-        println!("24h forecast window end   : {:?}", forecast_window_end);
+        println!(
+            "24h UTC forecast window: start = {:?}, end = {:?}",
+            utc_forecast_window_start, utc_forecast_window_end
+        );
+
+        let local_forecast_window_start: DateTime<Local> =
+            utc_forecast_window_start.with_timezone(&Local);
+        let local_forecast_window_end: DateTime<Local> =
+            utc_forecast_window_end.with_timezone(&Local);
+        let day_end = local_forecast_window_start
+            .with_hour(0)
+            .unwrap()
+            .with_minute(0)
+            .unwrap()
+            .with_second(0)
+            .unwrap()
+            + chrono::Duration::days(1);
+
+        println!(
+            "Local forecast window: start = {:?}, end = {:?}",
+            local_forecast_window_start, local_forecast_window_end
+        );
+
+        // println!("Day end: {:?}", day_end);
 
         let mut graph = HourlyForecastGraph {
             x_axis_always_at_min: CONFIG.render_options.x_axis_always_at_min,
@@ -337,53 +360,22 @@ impl ContextBuilder {
         Self::populate_graph_data(
             self,
             &hourly_forecast_data,
-            forecast_window_start,
-            forecast_window_end,
+            local_forecast_window_start,
+            local_forecast_window_end,
             &mut graph,
         );
 
         let svg_result = graph.draw_graph().unwrap();
         let (temp_curve_data, feel_like_curve_data, rain_curve_data) =
             Self::extract_curve_data(&svg_result);
-
-        let day_start = forecast_window_start
-            .with_hour(0)
-            .unwrap()
-            .with_minute(0)
-            .unwrap()
-            .with_second(0)
-            .unwrap();
-        let day_end = day_start + chrono::Duration::days(1);
-
-        // println!("day_start: {:?}", day_start);
-        // println!("day_end: {:?}", day_end);
-
         self.context.graph_height = graph.height.to_string();
         self.context.graph_width = graph.width.to_string();
         self.context.actual_temp_curve_data = temp_curve_data;
         self.context.feel_like_curve_data = feel_like_curve_data;
         self.context.rain_curve_data = rain_curve_data;
 
-        Self::set_max_values(
-            self,
-            &hourly_forecast_data,
-            forecast_window_start,
-            day_end,
-            forecast_window_end,
-        );
-
-        self.context.total_rain_today = (get_total_between_dates(
-            &hourly_forecast_data,
-            &forecast_window_start,
-            &forecast_window_end,
-            |item: &HourlyForecast| item.rain.calculate_median_rain(),
-            |item| &item.time,
-        ))
-        .to_string();
-
-        let forecast_window_start_local = forecast_window_start.with_timezone(&chrono::Local);
         let axis_data_path =
-            graph.create_axis_with_labels(forecast_window_start_local.hour() as f32);
+            graph.create_axis_with_labels(local_forecast_window_start.hour() as f32);
 
         self.context.x_axis_path = axis_data_path.x_axis_path;
         self.context.y_left_axis_path = axis_data_path.y_left_axis_path;
@@ -394,6 +386,24 @@ impl ContextBuilder {
         self.context.x_axis_guideline_path = axis_data_path.x_axis_guideline_path;
 
         self.context.uv_gradient = graph.draw_uv_gradient_over_time();
+
+        Self::set_max_values_for_table(
+            self,
+            &hourly_forecast_data,
+            local_forecast_window_start,
+            day_end,
+            local_forecast_window_end,
+        );
+
+        self.context.total_rain_today = (get_total_between_dates(
+            &hourly_forecast_data,
+            &local_forecast_window_start,
+            &local_forecast_window_end,
+            |item: &HourlyForecast| item.rain.calculate_median_rain(),
+            |item| item.time.with_timezone(&Local),
+        ))
+        .to_string();
+
         self
     }
 
@@ -407,7 +417,7 @@ impl ContextBuilder {
             .unwrap()
             .with_nanosecond(0)
             .unwrap();
-        println!("Current UTC date          : {:?}", current_date);
+        println!("Current time (UTC, to the hour)     : {:?}", current_date);
 
         let first_date = hourly_forecast_data.iter().find_map(|forecast| {
             if forecast.time >= current_date {
@@ -425,11 +435,25 @@ impl ContextBuilder {
         }
     }
 
+    fn extract_curve_data(svg_result: &[GraphDataPath]) -> (String, String, String) {
+        svg_result.iter().fold(
+            (String::new(), String::new(), String::new()),
+            |(mut temp_acc, mut feel_like_acc, mut rain_acc), path| {
+                match path {
+                    GraphDataPath::Temp(data) => temp_acc.push_str(data),
+                    GraphDataPath::TempFeelLike(data) => feel_like_acc.push_str(data),
+                    GraphDataPath::Rain(data) => rain_acc.push_str(data),
+                }
+                (temp_acc, feel_like_acc, rain_acc)
+            },
+        )
+    }
+
     fn populate_graph_data(
         &mut self,
         hourly_forecast_data: &[HourlyForecast],
-        forecast_window_start: chrono::DateTime<Utc>,
-        forecast_window_end: chrono::DateTime<Utc>,
+        forecast_window_start: chrono::DateTime<Local>,
+        forecast_window_end: chrono::DateTime<Local>,
         graph: &mut HourlyForecastGraph,
     ) {
         let mut x = 0;
@@ -441,6 +465,7 @@ impl ContextBuilder {
             .for_each(|forecast| {
                 if x == 0 {
                     self.with_current_hour_data(forecast);
+                    self.set_now_values_for_table(forecast)
                 } else if x >= 24 {
                     eprintln!(
                         "Warning: More than 24 hours of hourly forecast data, this should not happen"
@@ -466,6 +491,15 @@ impl ContextBuilder {
         self.context.current_hour_actual_temp = current_hour.temp.to_string();
         self.context.current_hour_weather_icon = current_hour.get_icon_path();
         self.context.current_hour_feels_like = current_hour.temp_feels_like.to_string();
+        self.context.current_day_date = chrono::Local::now().format("%A, %d %B").to_string();
+        self.context.current_hour_rain_amount =
+            current_hour.rain.calculate_median_rain().to_string();
+        self.context.current_hour_rain_measure_icon = current_hour.rain.amount.get_icon_path();
+
+        self
+    }
+
+    fn set_now_values_for_table(&mut self, current_hour: &HourlyForecast) {
         self.context.current_hour_wind_speed = current_hour.wind.get_speed().to_string();
         self.context.current_hour_wind_icon = current_hour.wind.get_icon_path();
         self.context.current_hour_uv_index = current_hour.uv.0.to_string();
@@ -473,49 +507,55 @@ impl ContextBuilder {
         self.context.current_hour_relative_humidity = current_hour.relative_humidity.0.to_string();
         self.context.current_hour_relative_humidity_icon =
             current_hour.relative_humidity.get_icon_path();
-        self.context.current_day_date = chrono::Local::now().format("%A, %d %B").to_string();
-        self.context.current_hour_rain_amount =
-            current_hour.rain.calculate_median_rain().to_string();
-        self.context.current_hour_rain_measure_icon = current_hour.rain.amount.get_icon_path();
-        self
     }
 
-    fn extract_curve_data(svg_result: &[GraphDataPath]) -> (String, String, String) {
-        svg_result.iter().fold(
-            (String::new(), String::new(), String::new()),
-            |(mut temp_acc, mut feel_like_acc, mut rain_acc), path| {
-                match path {
-                    GraphDataPath::Temp(data) => temp_acc.push_str(data),
-                    GraphDataPath::TempFeelLike(data) => feel_like_acc.push_str(data),
-                    GraphDataPath::Rain(data) => rain_acc.push_str(data),
-                }
-                (temp_acc, feel_like_acc, rain_acc)
-            },
-        )
-    }
-
-    fn set_max_values(
+    fn set_max_values_for_table(
         &mut self,
         hourly_forecast_data: &[HourlyForecast],
-        forecast_window_start: chrono::DateTime<Utc>,
-        day_end: chrono::DateTime<Utc>,
-        forecast_window_end: chrono::DateTime<Utc>,
+        forecast_window_start: chrono::DateTime<Local>,
+        day_end: chrono::DateTime<Local>,
+        forecast_window_end: chrono::DateTime<Local>,
     ) {
-        let max_wind_today = find_max_item_between_dates(
-            hourly_forecast_data,
-            &forecast_window_start,
-            &day_end,
-            |item| item.wind.get_speed(),
-            |item| &item.time,
+        println!("### Calculating table Max24h...");
+        let today_duration = day_end
+            .signed_duration_since(forecast_window_start)
+            .num_hours();
+        println!(
+            "Today's Forecast Window: start = {:?}, end = {:?}, duration = {} hours",
+            forecast_window_start, day_end, today_duration
         );
 
-        let max_wind_tomorrow = find_max_item_between_dates(
-            hourly_forecast_data,
-            &day_end,
-            &forecast_window_end,
-            |item| item.wind.get_speed(),
-            |item| &item.time,
+        let tomorrow_duration = forecast_window_end
+            .signed_duration_since(day_end)
+            .num_hours();
+        println!(
+            "Tomorrow's Forecast Window: start = {:?}, end = {:?}, duration = {} hours",
+            day_end, forecast_window_end, tomorrow_duration
         );
+
+        macro_rules! max_in_today_and_tomorrow {
+            ($get_value:expr) => {{
+                let get_time = |item: &HourlyForecast| item.time.with_timezone(&Local);
+                let max_today = find_max_item_between_dates(
+                    hourly_forecast_data,
+                    &forecast_window_start,
+                    &day_end,
+                    $get_value,
+                    get_time,
+                );
+                let max_tomorrow = find_max_item_between_dates(
+                    hourly_forecast_data,
+                    &day_end,
+                    &forecast_window_end,
+                    $get_value,
+                    get_time,
+                );
+                (max_today, max_tomorrow)
+            }};
+        }
+
+        let (max_wind_today, max_wind_tomorrow) =
+            max_in_today_and_tomorrow!(|item| item.wind.get_speed());
 
         if max_wind_today > max_wind_tomorrow {
             self.context.max_gust_speed = max_wind_today.to_string();
@@ -524,47 +564,21 @@ impl ContextBuilder {
             self.context.max_gust_speed_font_style = FontStyle::Italic.to_string();
         }
 
-        let max_uv_index = find_max_item_between_dates(
-            hourly_forecast_data,
-            &forecast_window_start,
-            &day_end,
-            |item| item.uv,
-            |item| &item.time,
-        );
+        let (max_uv_index_today, max_uv_index_tomorrow) =
+            max_in_today_and_tomorrow!(|item| item.uv);
 
-        let max_uv_index_tomorrow = find_max_item_between_dates(
-            hourly_forecast_data,
-            &day_end,
-            &forecast_window_end,
-            |item| item.uv,
-            |item| &item.time,
-        );
-
-        if max_uv_index > max_uv_index_tomorrow {
-            self.context.max_uv_index = max_uv_index.0.to_string();
+        if max_uv_index_today > max_uv_index_tomorrow {
+            self.context.max_uv_index = max_uv_index_today.0.to_string();
         } else {
             self.context.max_uv_index = max_uv_index_tomorrow.0.to_string();
             self.context.max_uv_index_font_style = FontStyle::Italic.to_string();
         }
 
-        let max_relative_humidity = find_max_item_between_dates(
-            hourly_forecast_data,
-            &forecast_window_start,
-            &day_end,
-            |item| item.relative_humidity,
-            |item| &item.time,
-        );
+        let (max_relative_humidity_today, max_relative_humidity_tomorrow) =
+            max_in_today_and_tomorrow!(|item| item.relative_humidity);
 
-        let max_relative_humidity_tomorrow = find_max_item_between_dates(
-            hourly_forecast_data,
-            &day_end,
-            &forecast_window_end,
-            |item| item.relative_humidity,
-            |item| &item.time,
-        );
-
-        if max_relative_humidity > max_relative_humidity_tomorrow {
-            self.context.max_relative_humidity = max_relative_humidity.0.to_string();
+        if max_relative_humidity_today > max_relative_humidity_tomorrow {
+            self.context.max_relative_humidity = max_relative_humidity_today.0.to_string();
         } else {
             self.context.max_relative_humidity = max_relative_humidity_tomorrow.0.to_string();
             self.context.max_relative_humidity_font_style = FontStyle::Italic.to_string();
