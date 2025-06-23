@@ -102,7 +102,6 @@ fn fetch_hourly_forecast_data() -> Result<FetchOutcome<HourlyForecastResponse>, 
     fetch_data(HOURLY_FORECAST_ENDPOINT.clone(), &file_path)
 }
 
-// Extrusion Pattern: force everything through one function until it resembles spaghetti
 fn update_daily_forecast_data(context_builder: &mut ContextBuilder) -> Result<(), Error> {
     match fetch_daily_forecast_data() {
         Ok(FetchOutcome::Fresh(data)) => {
