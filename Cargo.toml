@@ -23,7 +23,7 @@ tinytemplate = "1.2"
 resvg = "0.45"
 image = "0.25"
 openssl = { version = "0.10", features = ["vendored"] }
-zip = "3.0.0"
+zip = "4.2.0"
 semver = "1.0"
 thiserror = "2.0"
 tempfile = "3.17"
