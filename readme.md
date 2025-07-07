@@ -152,15 +152,6 @@ A warning icon and a small warning message appears on the display in case of any
 [255, 140, 0],    # Orange
 ```
 
-#### Trial and error found colours
-
-These colours were found by trial and error:
-```
-[255, 248, 220, 255], // Cornsilk
-[255, 250, 205, 255], // Lemon Chiffon
-[255, 20, 147, 255],  // DeepPink
-```
-
 ## Documentation and Resources
 
 - EPD used: Inky Impression 7.3 https://shop.pimoroni.com/products/inky-impression-7-3?variant=40512683376723
