@@ -198,6 +198,8 @@ To do this, you need to install **avahi-daemon** on your pi. This is a service t
 
 ```bash
 sudo apt-get install avahi-daemon
+# modify /etc/hosts to include your <hostname>.local
+# 127.1.1   <hostname>.local <hostname>
 sudo systemctl enable avahi-daemon
 sudo systemctl start avahi-daemon
 ```
