@@ -1,4 +1,7 @@
 use crate::apis::bom::models::*;
+use crate::apis::open_metro::models::{
+    map_open_meteo_to_hourly_forecast, map_openmeteo_to_daily_forecast, OpenMeteoHourlyResponse,
+};
 use crate::dashboard::context::{Context, ContextBuilder};
 use crate::{constants::*, errors, utils, CONFIG};
 use anyhow::Error;
@@ -86,29 +89,22 @@ fn fetch_data<T: for<'de> Deserialize<'de>>(
     }
 }
 
-fn fetch_daily_forecast_data() -> Result<FetchOutcome<DailyForecastResponse>, Error> {
+// Extrusion Pattern: force everything through one function until it resembles spaghetti
+fn update_daily_forecast_data(context_builder: &mut ContextBuilder) -> Result<(), Error> {
     let file_path = CONFIG
         .misc
         .weather_data_cache_path
         .join("daily_forecast.json");
-    fetch_data(DAILY_FORECAST_ENDPOINT.clone(), &file_path)
-}
 
-fn fetch_hourly_forecast_data() -> Result<FetchOutcome<HourlyForecastResponse>, Error> {
-    let file_path = CONFIG
-        .misc
-        .weather_data_cache_path
-        .join("hourly_forecast.json");
-    fetch_data(HOURLY_FORECAST_ENDPOINT.clone(), &file_path)
-}
-
-fn update_daily_forecast_data(context_builder: &mut ContextBuilder) -> Result<(), Error> {
-    match fetch_daily_forecast_data() {
+    // match fetch_data::<DailyForecastResponse>(DAILY_FORECAST_ENDPOINT.clone(), &file_path) {
+    match fetch_data::<OpenMeteoHourlyResponse>(OPEN_METEO_ENDPOINT.clone(), &file_path) {
         Ok(FetchOutcome::Fresh(data)) => {
+            let data = map_openmeteo_to_daily_forecast(&data);
             context_builder.with_daily_forecast_data(data.data);
         }
         Ok(FetchOutcome::Stale { data, error }) => {
             eprintln!("Warning: Using stale data");
+            let data = map_openmeteo_to_daily_forecast(&data);
             context_builder
                 .set_errors(error)
                 .with_daily_forecast_data(data.data);
@@ -119,12 +115,20 @@ fn update_daily_forecast_data(context_builder: &mut ContextBuilder) -> Result<()
 }
 
 fn update_hourly_forecast_data(context_builder: &mut ContextBuilder) -> Result<(), Error> {
-    match fetch_hourly_forecast_data() {
+    let file_path = CONFIG
+        .misc
+        .weather_data_cache_path
+        .join("hourly_forecast.json");
+
+    // match fetch_data::<HourlyForecastResponse>(HOURLY_FORECAST_ENDPOINT.clone(), &file_path) {
+    match fetch_data::<OpenMeteoHourlyResponse>(OPEN_METEO_ENDPOINT.clone(), &file_path) {
         Ok(FetchOutcome::Fresh(data)) => {
+            let data = map_open_meteo_to_hourly_forecast(data);
             context_builder.with_hourly_forecast_data(data.data);
         }
         Ok(FetchOutcome::Stale { data, error }) => {
             eprintln!("Warning: Using stale data");
+            let data = map_open_meteo_to_hourly_forecast(data);
             context_builder
                 .set_errors(error)
                 .with_hourly_forecast_data(data.data);
@@ -138,7 +142,7 @@ fn update_hourly_forecast_data(context_builder: &mut ContextBuilder) -> Result<(
 fn update_forecast_context(context_builder: &mut ContextBuilder) -> Result<(), Error> {
     println!("## Daily forecast ...");
     match update_daily_forecast_data(context_builder) {
-        Ok(context) => context,
+        Ok(_) => (),
         Err(e) => {
             eprintln!("Failed to update daily forecast");
             return Err(e);
@@ -146,7 +150,7 @@ fn update_forecast_context(context_builder: &mut ContextBuilder) -> Result<(), E
     };
     println!("## Hourly forecast ...");
     match update_hourly_forecast_data(context_builder) {
-        Ok(context) => context,
+        Ok(_) => (),
         Err(e) => {
             eprintln!("Failed to update hourly forecast");
             return Err(e);
