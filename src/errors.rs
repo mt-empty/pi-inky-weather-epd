@@ -1,5 +1,6 @@
 use strum_macros::Display;
 use thiserror::Error;
+use std::fmt;
 
 use crate::weather::icons::Icon;
 
@@ -72,6 +73,28 @@ impl Description for DashboardError {
             DashboardError::UpdateFailed(msg) => {
                 format!("The application failed to update. Details: {}", msg)
             }
+        }
+    }
+}
+
+
+#[derive(Debug, Error)]
+pub enum GeohashError {
+    InvalidCoordinateRange(f64, f64),
+    InvalidLength(usize),
+}
+
+impl fmt::Display for GeohashError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            GeohashError::InvalidCoordinateRange(x, y) => {
+                write!(f, "invalid coordinate range: lat={}, lon={}", x, y)
+            }
+            GeohashError::InvalidLength(len) => write!(
+                f,
+                "Invalid length specified: {}. Accepted values are between 1 and 12, inclusive",
+                len
+            )
         }
     }
 }

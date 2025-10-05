@@ -9,33 +9,6 @@ use crate::{
 };
 use serde::{self, Deserialize, Deserializer};
 
-// --- Structs for Deserializing Open-Meteo API Response (from Canvas) ---
-// #[derive(De Debug)]
-// pub struct OpenMeteoHourlyResponse {
-//     pub hourly: HourlyData,
-// }
-
-// #[derive(De Debug)]
-// pub struct HourlyData {
-//     pub time: Vec<DateTime<Utc>>,
-//     pub temperature_2m: Vec<f32>,
-//     pub apparent_temperature: Vec<f32>,
-//     #[serde(rename = "wind_speed_10m")]
-//     pub wind_speed_10m: Vec<f32>,
-//     #[serde(rename = "wind_gusts_10m")]
-//     pub wind_gusts_10m: Vec<f32>,
-//     #[serde(rename = "relative_humidity_2m")]
-//     pub relative_humidity_2m: Vec<u16>,
-//     #[serde(rename = "uv_index")]
-//     pub uv_index: Vec<f32>,
-//     pub precipitation: Vec<f32>,
-//     #[serde(rename = "precipitation_probability")]
-//     pub precipitation_probability: Vec<u16>,
-//     #[serde(rename = "is_day")]
-//     pub is_day: Vec<i32>,
-// }
-// --- End of Open-Meteo Response Structs ---
-
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenMeteoHourlyResponse {

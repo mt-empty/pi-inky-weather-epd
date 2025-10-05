@@ -14,7 +14,9 @@ update_interval_days = 7
 # Hobart: "r22u0d"
 # Canberra: "r3dp32"
 [api]
-location = "r3gx2f" # uses GeoHash, must be 6 characters
+# location = "r3gx2f" # uses GeoHash, must be 6 characters
+latitude = -37.8136
+longitude = 144.9631
 
 # supported colours for 7.3 inky display
 # [black, white, green, blue, red, yellow, orange]

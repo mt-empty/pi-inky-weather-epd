@@ -67,7 +67,9 @@ pub struct Release {
 #[derive(Debug, Deserialize)]
 pub struct Api {
     // #[validate(length(equal = 6, message = "Location must be a 6 character hash code"))]
-    pub location: GeoHash,
+    // pub location: GeoHash,
+    pub longitude: f64,
+    pub latitude: f64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
