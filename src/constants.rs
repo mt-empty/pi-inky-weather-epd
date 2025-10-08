@@ -10,10 +10,9 @@ const BASE_WEATHER_URL: &str = "https://api.weather.bom.gov.au/v1/locations";
 const NOT_AVAILABLE_ICON_NAME: &str = "not-available.svg";
 
 fn build_forecast_url(frequency: &str) -> Url {
-    let mut u =
-        Url::parse(BASE_WEATHER_URL).expect("Failed to construct forecast endpoint URL");
+    let mut u = Url::parse(BASE_WEATHER_URL).expect("Failed to construct forecast endpoint URL");
 
-    let geohash = encode(CONFIG.api.longitude, CONFIG.api.latitude, 6)
+    let geohash = encode(CONFIG.api.longitude.into_inner(), CONFIG.api.latitude.into_inner(), 6)
         .expect("Failed to encode latitude and longitude to geohash");
 
     u.path_segments_mut()

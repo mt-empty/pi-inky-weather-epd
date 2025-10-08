@@ -1,6 +1,6 @@
 # Pi Inky Weather Display
 
-This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper (aka E-ink) display. Weather data is obtained from the Australian Bureau of Meteorology API.
+This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper (aka E-ink) display.
 
 ![](./misc/timelapse.gif)
 
@@ -24,28 +24,24 @@ This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper
    unzip <YOUR_DOWNLOAD_RELEASE>.tar.gz
    chmod +x pi-inky-weather-epd
    ```
-3. Australia -> Bom API
-   1. Obtain a six-character geohash of your location from https://geohash.softeng.co
-   2. Create a configuration file with your geohash:
-   ```bash
-   echo -e '[api]\nlocation = "YOUR_GEOHASH"' > ~/.config/pi-inky-weather-epd.toml
-   ```
-   Worldwide -> Open-Metro (WIP)
-   1. Obtain a Longitude and Latitude of your location from https://geohash.softeng.co
-   2. Create a configuration file with your geohash:
-   ```bash
-   echo -e '[api]\lon_lat = "LON,Lat"' > ~/.config/pi-inky-weather-epd.toml
-   ```
 
+3. Configure your weather data provider and location:
 
-4. Create a configuration file with your geohash:
+   Get your latitude and longitude from https://www.latlong.net/ and create a configuration file:
+
    ```bash
-   echo -e '[api]\nlocation = "YOUR_GEOHASH"' > ~/.config/pi-inky-weather-epd.toml
+   mkdir -p ~/.config
+   cat > ~/.config/pi-inky-weather-epd.toml << EOF
+   [api]
+   provider = "open_meteo"           # "open_meteo" (worldwide) or "bom" (Australia only)
+   latitude = YOUR_LATITUDE   # e.g., -47.8136
+   longitude = YOUR_LONGITUDE # e.g., 114.9631
+   EOF
    ```
 
-   See [./config/development.toml](./config/default.toml) for example cities and their geohashes.
+   See [./config/development.toml](./config/development.toml) for more configuration examples.
 
-5. Set up an hourly cron job to update the display:
+4. Set up an hourly cron job to update the display:
    ```bash
    (crontab -l 2>/dev/null; echo "0 * * * * cd /path/to/extracted/files && ./pi-inky-weather-epd && sudo PYTHON_PATH IMAGE_SCRIPT_PATH --file dashboard.png --saturation SATURATION") | crontab -
    ```
@@ -67,7 +63,7 @@ You can override the default configs located at [./config/](./config/) by creati
 ~/.config/pi-inky-weather-epd.toml
 ```
 
-### Example configuration
+### Example Configuration Files
 Here are example configurations, note some of these images are slightly outdated:
 
 ### Default configuration file

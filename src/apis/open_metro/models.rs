@@ -1,12 +1,4 @@
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
-
-use crate::{
-    apis::bom::models::{
-        Astronomical, DailyEntry, DailyForecastResponse, HourlyForecast, HourlyForecastResponse,
-        HourlyUV, Rain, RainAmount, RelativeHumidity, Temperature, Wind,
-    },
-    configs::settings::TemperatureUnit,
-};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{self, Deserialize, Deserializer};
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
@@ -129,167 +121,145 @@ pub struct Daily {
     pub precipitation_probability_max: Vec<u16>,
 }
 
-/// Maps the deserialized OpenMeteoHourlyResponse to the desired HourlyForecastResponse structure.
-pub fn map_open_meteo_to_hourly_forecast(
-    open_meteo_response: OpenMeteoHourlyResponse,
-) -> HourlyForecastResponse {
-    let mut hourly_forecasts: Vec<HourlyForecast> = Vec::new();
-    let hourly_data = open_meteo_response.hourly;
+impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast> {
+    fn from(response: OpenMeteoHourlyResponse) -> Self {
+        use crate::domain::models::{Precipitation, Temperature as DomainTemp, Wind as DomainWind};
+        use crate::CONFIG;
 
-    // Open-Meteo returns data in parallel arrays, so we iterate by index
-    // assuming all arrays have the same length.
-    let num_entries = hourly_data.time.len();
+        let hourly_data = response.hourly;
+        let num_entries = hourly_data.time.len();
+        let unit = CONFIG.render_options.temp_unit;
 
-    for i in 0..num_entries {
-        // Create Temperature structs
-        let temp = Temperature {
-            value: hourly_data.temperature_2m[i],
-            unit: TemperatureUnit::C, // Assuming Celsius based on curl command
-        };
-        let temp_feels_like = Temperature {
-            value: hourly_data.apparent_temperature[i],
-            unit: TemperatureUnit::C, // Assuming Celsius based on curl command
-        };
-
-        // Create Wind struct
-        let wind = Wind {
-            // Convert f32 to u16, handle potential errors or clipping if values exceed u16 max
-            speed_kilometre: hourly_data.wind_speed_10m[i].round() as u16,
-            gust_speed_kilometre: hourly_data.wind_gusts_10m[i].round() as u16,
-        };
-
-        // Create RelativeHumidity struct
-        let relative_humidity = RelativeHumidity(hourly_data.relative_humidity_2m[i]);
-
-        // Create HourlyUV struct
-        let uv = HourlyUV(hourly_data.uv_index[i].round() as u16); // Convert f32 to u16
-
-        // Create Rain struct
-        let rain_amount = RainAmount {
-            // Open-Meteo provides total precipitation per hour, not min/max
-            // We'll map the single value to 'max' and leave 'min' as None or 0
-            min: Some(0), // Open-Meteo gives total, so min is 0 for the hour
-            max: Some(hourly_data.precipitation[i].round() as u16), // Convert f32 to u16
-        };
-        let rain = Rain {
-            amount: rain_amount,
-            chance: Some(hourly_data.precipitation_probability[i]),
-        };
-
-        // Determine if it's night
-        let is_night = open_meteo_response.current.is_day == 0; // 0 from API means night
-
-        // Create the HourlyForecast entry
-        let hourly_entry = HourlyForecast {
-            rain,
-            temp,
-            temp_feels_like,
-            wind,
-            relative_humidity,
-            uv,
-            time: hourly_data.time[i],
-            is_night,
-        };
-
-        hourly_forecasts.push(hourly_entry);
-    }
-
-    // Wrap the vector in the response struct
-    HourlyForecastResponse {
-        data: hourly_forecasts,
-    }
-}
-
-pub fn map_openmeteo_to_daily_forecast(
-    response: &OpenMeteoHourlyResponse,
-) -> DailyForecastResponse {
-    let unit = TemperatureUnit::C;
-
-    let daily_data = response
-        .daily
-        .time
-        .iter()
-        .enumerate()
-        .map(|(i, date)| {
-            let temp_max = response
-                .daily
-                .temperature_2m_max
-                .get(i)
-                .copied()
-                .map(|val| {
-                    let temp = Temperature {
-                        value: val,
-                        unit: TemperatureUnit::C,
-                    };
+        (0..num_entries)
+            .map(|i| {
+                let temperature = {
+                    let val = hourly_data.temperature_2m[i];
+                    let temp = DomainTemp::new(val, crate::configs::settings::TemperatureUnit::C);
                     match unit {
-                        TemperatureUnit::C => temp,
-                        TemperatureUnit::F => temp.to_fahrenheit(),
+                        crate::configs::settings::TemperatureUnit::C => temp,
+                        crate::configs::settings::TemperatureUnit::F => temp.to_fahrenheit(),
                     }
-                });
-
-            let temp_min = response
-                .daily
-                .temperature_2m_min
-                .get(i)
-                .copied()
-                .map(|val| {
-                    let temp = Temperature {
-                        value: val,
-                        unit: TemperatureUnit::C,
-                    };
-                    match unit {
-                        TemperatureUnit::C => temp,
-                        TemperatureUnit::F => temp.to_fahrenheit(),
-                    }
-                });
-
-            let rain = {
-                let amount = RainAmount {
-                    min: None,
-                    max: response.daily.precipitation_sum.get(i).map(|x| *x as u16),
                 };
-                let chance = response.daily.precipitation_probability_max.get(i).copied();
-                if amount.max.is_some() || chance.is_some() {
-                    Some(Rain { amount, chance })
-                } else {
-                    None
+
+                let apparent_temperature = {
+                    let val = hourly_data.apparent_temperature[i];
+                    let temp = DomainTemp::new(val, crate::configs::settings::TemperatureUnit::C);
+                    match unit {
+                        crate::configs::settings::TemperatureUnit::C => temp,
+                        crate::configs::settings::TemperatureUnit::F => temp.to_fahrenheit(),
+                    }
+                };
+
+                let wind = DomainWind::new(
+                    hourly_data.wind_speed_10m[i].round() as u16,
+                    hourly_data.wind_gusts_10m[i].round() as u16,
+                );
+
+                let precipitation = Precipitation::new(
+                    Some(hourly_data.precipitation_probability[i]),
+                    None,
+                    Some(hourly_data.precipitation[i].round() as u16),
+                );
+
+                let uv_index = hourly_data.uv_index[i].round() as u16;
+                let relative_humidity = hourly_data.relative_humidity_2m[i];
+                let time = hourly_data.time[i];
+                let is_night = false; // TODO: Implement day/night detection
+
+                crate::domain::models::HourlyForecast {
+                    time,
+                    temperature,
+                    apparent_temperature,
+                    wind,
+                    precipitation,
+                    uv_index,
+                    relative_humidity,
+                    is_night,
                 }
-            };
-
-            let astronomical = {
-                let sunrise = response
-                    .daily
-                    .sunrise
-                    .get(i)
-                    .and_then(|s| s.parse::<DateTime<Utc>>().ok());
-                let sunset = response
-                    .daily
-                    .sunset
-                    .get(i)
-                    .and_then(|s| s.parse::<DateTime<Utc>>().ok());
-                if sunrise.is_some() || sunset.is_some() {
-                    Some(Astronomical {
-                        sunrise_time: sunrise,
-                        sunset_time: sunset,
-                    })
-                } else {
-                    None
-                }
-            };
-
-            DailyEntry {
-                date: Some(*date),
-                temp_max,
-                temp_min,
-                rain,
-                astronomical,
-            }
-        })
-        .collect();
-
-    DailyForecastResponse { data: daily_data }
+            })
+            .collect()
+    }
 }
 
+impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast> {
+    fn from(response: OpenMeteoHourlyResponse) -> Self {
+        use crate::domain::models::{Astronomical, Precipitation, Temperature as DomainTemp};
+        use crate::CONFIG;
+
+        let unit = CONFIG.render_options.temp_unit;
+
+        response
+            .daily
+            .time
+            .iter()
+            .enumerate()
+            .map(|(i, date)| {
+                let temp_max = {
+                    let val = response.daily.temperature_2m_max[i];
+                    let temp = DomainTemp::new(val, crate::configs::settings::TemperatureUnit::C);
+                    Some(match unit {
+                        crate::configs::settings::TemperatureUnit::C => temp,
+                        crate::configs::settings::TemperatureUnit::F => temp.to_fahrenheit(),
+                    })
+                };
+
+                let temp_min = {
+                    let val = response.daily.temperature_2m_min[i];
+                    let temp = DomainTemp::new(val, crate::configs::settings::TemperatureUnit::C);
+                    Some(match unit {
+                        crate::configs::settings::TemperatureUnit::C => temp,
+                        crate::configs::settings::TemperatureUnit::F => temp.to_fahrenheit(),
+                    })
+                };
+
+                let precipitation = {
+                    let amount_max = Some(response.daily.precipitation_sum[i].round() as u16);
+                    let chance = Some(response.daily.precipitation_probability_max[i]);
+
+                    if amount_max.unwrap_or(0) > 0 || chance.unwrap_or(0) > 0 {
+                        Some(Precipitation::new(chance, None, amount_max))
+                    } else {
+                        None
+                    }
+                };
+
+                let astronomical = {
+                    let sunrise = response.daily.sunrise.get(i).and_then(|s| {
+                        chrono::DateTime::parse_from_rfc3339(s)
+                            .ok()
+                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                    });
+                    let sunset = response.daily.sunset.get(i).and_then(|s| {
+                        chrono::DateTime::parse_from_rfc3339(s)
+                            .ok()
+                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                    });
+
+                    if sunrise.is_some() || sunset.is_some() {
+                        Some(Astronomical {
+                            sunrise_time: sunrise,
+                            sunset_time: sunset,
+                        })
+                    } else {
+                        None
+                    }
+                };
+
+                crate::domain::models::DailyForecast {
+                    date: Some(*date),
+                    temp_max,
+                    temp_min,
+                    precipitation,
+                    astronomical,
+                }
+            })
+            .collect()
+    }
+}
+
+// ============================================================================
+// Custom deserializers for OpenMeteo date/time formats
+// ============================================================================
 pub fn deserialize_vec_iso8601_loose<'de, D>(
     deserializer: D,
 ) -> Result<Vec<DateTime<Utc>>, D::Error>

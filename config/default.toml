@@ -4,17 +4,8 @@ download_base_url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/do
 # set to 0 to disable auto-updating
 update_interval_days = 7
 
-## Major Cities
-# Darwin: "qvv117"
-# Sydney: "r3gx2f"
-# Melbourne: "r1r0fs"
-# Brisbane: "r7hgd6"
-# Perth: "r28ekz"
-# Adelaide: "r1f93c"
-# Hobart: "r22u0d"
-# Canberra: "r3dp32"
 [api]
-# location = "r3gx2f" # uses GeoHash, must be 6 characters
+provider = "open_meteo"    # bom or open_meteo
 latitude = -37.8136
 longitude = 144.9631
 

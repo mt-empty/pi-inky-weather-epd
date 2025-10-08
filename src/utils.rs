@@ -1,3 +1,4 @@
+use crate::errors::GeohashError;
 use anyhow::Error;
 use anyhow::Result;
 use chrono::Local;
@@ -10,7 +11,6 @@ use serde::Deserialize;
 use std::fs;
 use std::path::PathBuf;
 use usvg::fontdb;
-use crate::{errors::GeohashError};
 
 /// Converts an SVG file to a PNG file.
 ///
@@ -238,7 +238,6 @@ where
         .map(|dt| Local.from_utc_datetime(&dt).naive_local())
         .map_err(serde::de::Error::custom)
 }
-
 
 // Below code was adopted from Geohash crate
 // https://github.com/georust/geohash/blob/main/src/core.rs

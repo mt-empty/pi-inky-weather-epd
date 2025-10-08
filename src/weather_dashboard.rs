@@ -1,161 +1,41 @@
-use crate::apis::bom::models::*;
-use crate::apis::open_metro::models::{
-    map_open_meteo_to_hourly_forecast, map_openmeteo_to_daily_forecast, OpenMeteoHourlyResponse,
-};
 use crate::dashboard::context::{Context, ContextBuilder};
-use crate::{constants::*, errors, utils, CONFIG};
+use crate::errors::DashboardError;
+use crate::providers::factory::create_provider;
+use crate::{utils, CONFIG};
 use anyhow::Error;
-use errors::*;
-use serde::Deserialize;
+use std::fs;
 use std::io::Write;
-use std::{fs, path::PathBuf};
 use tinytemplate::{format_unescaped, TinyTemplate};
-use url::Url;
 pub use utils::*;
 
-enum FetchOutcome<T> {
-    Fresh(T),
-    Stale { data: T, error: DashboardError },
-}
-
-fn load_cached<T: for<'de> Deserialize<'de>>(file_path: &PathBuf) -> Result<T, Error> {
-    let cached = fs::read_to_string(file_path).map_err(|_| {
-        Error::msg(
-            "Weather data JSON file not found. If this is your first time running the application. Please ensure 'disable_weather_api_requests' is set to false in the configuration so data can be cached.",
-        )
-    }).map_err(|_| {
-        DashboardError::NoInternet {
-            details: "No hourly forecast data available".to_string(),
-        }
-    })?;
-    let data = serde_json::from_str(&cached).map_err(Error::msg)?;
-    Ok(data)
-}
-
-fn fallback<T: for<'de> Deserialize<'de>>(
-    file_path: &PathBuf,
-    dashboard_error: DashboardError,
-) -> Result<FetchOutcome<T>, Error> {
-    let data = load_cached(file_path)?;
-    Ok(FetchOutcome::Stale {
-        data,
-        error: dashboard_error,
-    })
-}
-
-fn fetch_data<T: for<'de> Deserialize<'de>>(
-    endpoint: Url,
-    file_path: &PathBuf,
-) -> Result<FetchOutcome<T>, Error> {
-    if !file_path.exists() {
-        fs::create_dir_all(file_path.parent().unwrap())?;
-    }
-    // TODO: delegate the Config::debugging.disable_weather_api_requests to a different function
-    if !CONFIG.debugging.disable_weather_api_requests {
-        let client = reqwest::blocking::Client::new();
-        let response = match client.get(endpoint).send() {
-            Ok(res) => res,
-            Err(e) => {
-                eprintln!("API request failed: {}", e);
-
-                return fallback(
-                    file_path,
-                    DashboardError::NoInternet {
-                        details: e.to_string(),
-                    },
-                );
-            }
-        };
-
-        let body = response.text().map_err(Error::msg)?;
-
-        if let Ok(api_error) = serde_json::from_str::<BomError>(&body) {
-            if let Some(first_error) = api_error.errors.first() {
-                eprintln!("Warning: API request failed, double check your api configs, trying to load cached data");
-                let first_error_detail = first_error.detail.clone();
-                for (i, error) in api_error.errors.iter().enumerate() {
-                    eprintln!("API Errors, {}: {}", i + 1, error.detail);
-                }
-
-                return fallback(file_path, DashboardError::ApiError(first_error_detail));
-            }
-        }
-
-        fs::write(file_path, &body)?;
-        let data = serde_json::from_str(&body).map_err(Error::msg)?;
-        Ok(FetchOutcome::Fresh(data))
-    } else {
-        Ok(FetchOutcome::Fresh(load_cached(file_path)?))
-    }
-}
-
-// Extrusion Pattern: force everything through one function until it resembles spaghetti
-fn update_daily_forecast_data(context_builder: &mut ContextBuilder) -> Result<(), Error> {
-    let file_path = CONFIG
-        .misc
-        .weather_data_cache_path
-        .join("daily_forecast.json");
-
-    // match fetch_data::<DailyForecastResponse>(DAILY_FORECAST_ENDPOINT.clone(), &file_path) {
-    match fetch_data::<OpenMeteoHourlyResponse>(OPEN_METEO_ENDPOINT.clone(), &file_path) {
-        Ok(FetchOutcome::Fresh(data)) => {
-            let data = map_openmeteo_to_daily_forecast(&data);
-            context_builder.with_daily_forecast_data(data.data);
-        }
-        Ok(FetchOutcome::Stale { data, error }) => {
-            eprintln!("Warning: Using stale data");
-            let data = map_openmeteo_to_daily_forecast(&data);
-            context_builder
-                .set_errors(error)
-                .with_daily_forecast_data(data.data);
-        }
-        Err(e) => return Err(e),
-    };
-    Ok(())
-}
-
-fn update_hourly_forecast_data(context_builder: &mut ContextBuilder) -> Result<(), Error> {
-    let file_path = CONFIG
-        .misc
-        .weather_data_cache_path
-        .join("hourly_forecast.json");
-
-    // match fetch_data::<HourlyForecastResponse>(HOURLY_FORECAST_ENDPOINT.clone(), &file_path) {
-    match fetch_data::<OpenMeteoHourlyResponse>(OPEN_METEO_ENDPOINT.clone(), &file_path) {
-        Ok(FetchOutcome::Fresh(data)) => {
-            let data = map_open_meteo_to_hourly_forecast(data);
-            context_builder.with_hourly_forecast_data(data.data);
-        }
-        Ok(FetchOutcome::Stale { data, error }) => {
-            eprintln!("Warning: Using stale data");
-            let data = map_open_meteo_to_hourly_forecast(data);
-            context_builder
-                .set_errors(error)
-                .with_hourly_forecast_data(data.data);
-        }
-        Err(e) => return Err(e),
-    };
-
-    Ok(())
-}
-
 fn update_forecast_context(context_builder: &mut ContextBuilder) -> Result<(), Error> {
-    println!("## Daily forecast ...");
-    match update_daily_forecast_data(context_builder) {
-        Ok(_) => (),
-        Err(e) => {
-            eprintln!("Failed to update daily forecast");
-            return Err(e);
-        }
-    };
-    println!("## Hourly forecast ...");
-    match update_hourly_forecast_data(context_builder) {
-        Ok(_) => (),
-        Err(e) => {
-            eprintln!("Failed to update hourly forecast");
-            return Err(e);
-        }
-    };
+    let provider = create_provider()?;
+    let mut warnings: Vec<DashboardError> = Vec::new();
+
+    println!("## Using provider: {}", provider.provider_name());
+
+    println!("## Fetching daily forecast...");
+    let daily_result = provider.fetch_daily_forecast()?;
+    if let Some(warning) = daily_result.warning {
+        println!("⚠️  Warning: Using stale daily forecast data");
+        warnings.push(warning);
+    }
+    context_builder.with_daily_forecast_data(daily_result.data);
+
+    println!("## Fetching hourly forecast...");
+    let hourly_result = provider.fetch_hourly_forecast()?;
+    if let Some(warning) = hourly_result.warning {
+        println!("⚠️  Warning: Using stale hourly forecast data");
+        warnings.push(warning);
+    }
+    context_builder.with_hourly_forecast_data(hourly_result.data);
+
+    // If any warnings occurred, set the warning message
+    if !warnings.is_empty() {
+        // Use the first warning for display (could combine multiple in future)
+        context_builder.with_warning(warnings[0].clone());
+    }
+
     Ok(())
 }
 

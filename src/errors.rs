@@ -1,6 +1,6 @@
+use std::fmt;
 use strum_macros::Display;
 use thiserror::Error;
-use std::fmt;
 
 use crate::weather::icons::Icon;
 
@@ -77,7 +77,6 @@ impl Description for DashboardError {
     }
 }
 
-
 #[derive(Debug, Error)]
 pub enum GeohashError {
     InvalidCoordinateRange(f64, f64),
@@ -94,7 +93,7 @@ impl fmt::Display for GeohashError {
                 f,
                 "Invalid length specified: {}. Accepted values are between 1 and 12, inclusive",
                 len
-            )
+            ),
         }
     }
 }

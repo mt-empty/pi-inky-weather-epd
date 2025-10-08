@@ -10,6 +10,13 @@ const CONFIG_DIR: &str = "./config";
 const DEFAULT_CONFIG_NAME: &str = "default";
 
 #[derive(Debug, Deserialize, PartialOrd, PartialEq, Clone, Copy, Display)]
+#[serde(rename_all = "snake_case")]
+pub enum Providers {
+    Bom,
+    OpenMeteo,
+}
+
+#[derive(Debug, Deserialize, PartialOrd, PartialEq, Clone, Copy, Display)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum TemperatureUnit {
     #[strum(serialize = "C")]
@@ -57,6 +64,32 @@ impl fmt::Display for UpdateIntervalDays {
     }
 }
 
+#[nutype(
+    sanitize(),
+    validate(with = is_valid_longitude, error = ValidationError),
+    derive(Debug, Deserialize, PartialEq, Clone, Copy, AsRef)
+)]
+pub struct Longitude(f64);
+
+impl fmt::Display for Longitude {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.into_inner())
+    }
+}
+
+#[nutype(
+    sanitize(),
+    validate(with = is_valid_latitude, error = ValidationError),
+    derive(Debug, Deserialize, PartialEq, Clone, Copy, AsRef)
+)]
+pub struct Latitude(f64);
+
+impl fmt::Display for Latitude {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.into_inner())
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Release {
     pub release_info_url: Url,
@@ -66,10 +99,9 @@ pub struct Release {
 
 #[derive(Debug, Deserialize)]
 pub struct Api {
-    // #[validate(length(equal = 6, message = "Location must be a 6 character hash code"))]
-    // pub location: GeoHash,
-    pub longitude: f64,
-    pub latitude: f64,
+    pub provider: Providers,
+    pub longitude: Longitude,
+    pub latitude: Latitude,
 }
 
 #[derive(Debug, Deserialize, Clone)]
