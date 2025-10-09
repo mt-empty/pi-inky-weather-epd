@@ -3,7 +3,9 @@ use std::path::PathBuf;
 
 use crate::{
     apis::bom::models::{BomError, DailyForecastResponse, HourlyForecastResponse},
-    constants::{DAILY_FORECAST_ENDPOINT, HOURLY_FORECAST_ENDPOINT},
+    constants::{
+        DAILY_CACHE_SUFFIX, DAILY_FORECAST_ENDPOINT, HOURLY_CACHE_SUFFIX, HOURLY_FORECAST_ENDPOINT,
+    },
     domain::models::{DailyForecast, HourlyForecast},
     errors::DashboardError,
     providers::{
@@ -44,7 +46,7 @@ impl WeatherProvider for BomProvider {
             .fetcher
             .fetch_data::<HourlyForecastResponse, BomError>(
                 HOURLY_FORECAST_ENDPOINT.clone(),
-                "hourly_forecast.json",
+                &self.get_cache_filename(HOURLY_CACHE_SUFFIX),
                 Some(check_bom_error),
             )? {
             FetchOutcome::Fresh(data) => {
@@ -64,7 +66,7 @@ impl WeatherProvider for BomProvider {
     fn fetch_daily_forecast(&self) -> Result<FetchResult<Vec<DailyForecast>>, Error> {
         match self.fetcher.fetch_data::<DailyForecastResponse, BomError>(
             DAILY_FORECAST_ENDPOINT.clone(),
-            "daily_forecast.json",
+            &self.get_cache_filename(DAILY_CACHE_SUFFIX),
             Some(check_bom_error),
         )? {
             FetchOutcome::Fresh(data) => {
@@ -83,5 +85,9 @@ impl WeatherProvider for BomProvider {
 
     fn provider_name(&self) -> &str {
         "Bureau of Meteorology (BOM)"
+    }
+
+    fn provider_filename_prefix(&self) -> &str {
+        "bom_"
     }
 }

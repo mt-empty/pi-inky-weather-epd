@@ -6,14 +6,21 @@ use url::Url;
 pub const BOM_API_TEMP_UNIT: TemperatureUnit = TemperatureUnit::C;
 pub const DEFAULT_AXIS_LABEL_FONT_SIZE: u16 = 19;
 
+pub const HOURLY_CACHE_SUFFIX: &str = "hourly_forecast.json";
+pub const DAILY_CACHE_SUFFIX: &str = "daily_forecast.json";
+
 const BASE_WEATHER_URL: &str = "https://api.weather.bom.gov.au/v1/locations";
 const NOT_AVAILABLE_ICON_NAME: &str = "not-available.svg";
 
 fn build_forecast_url(frequency: &str) -> Url {
     let mut u = Url::parse(BASE_WEATHER_URL).expect("Failed to construct forecast endpoint URL");
 
-    let geohash = encode(CONFIG.api.longitude.into_inner(), CONFIG.api.latitude.into_inner(), 6)
-        .expect("Failed to encode latitude and longitude to geohash");
+    let geohash = encode(
+        CONFIG.api.longitude.into_inner(),
+        CONFIG.api.latitude.into_inner(),
+        6,
+    )
+    .expect("Failed to encode latitude and longitude to geohash");
 
     u.path_segments_mut()
         .unwrap()

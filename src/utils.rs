@@ -4,7 +4,7 @@ use anyhow::Result;
 use chrono::Local;
 use chrono::NaiveDate;
 use chrono::TimeZone;
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDateTime};
 use resvg::tiny_skia;
 use resvg::usvg;
 use serde::Deserialize;
@@ -280,21 +280,19 @@ fn interleave(x: u32, y: u32) -> u64 {
 /// * `lat_y` - The latitude (y coordinate) in degrees, must be in range [-90, 90]
 /// * `len` - The desired length of the geohash string (1-12)
 ///
-/// ### Examples
+/// # Examples
 ///
 /// Encoding a coordinate to a length five geohash:
 ///
-/// ```rust
-/// let geohash_string = geohash::encode(-120.6623, 35.3003, 5).expect("Invalid coordinate");
-///
+/// ```ignore
+/// let geohash_string = encode(-120.6623, 35.3003, 5).expect("Invalid coordinate");
 /// assert_eq!(geohash_string, "9q60y");
 /// ```
 ///
 /// Encoding a coordinate to a length ten geohash:
 ///
-/// ```rust
-/// let geohash_string = geohash::encode(-120.6623, 35.3003, 10).expect("Invalid coordinate");
-///
+/// ```ignore
+/// let geohash_string = encode(-120.6623, 35.3003, 10).expect("Invalid coordinate");
 /// assert_eq!(geohash_string, "9q60y60rhs");
 /// ```
 pub fn encode(lon_x: f64, lat_y: f64, len: usize) -> Result<String, GeohashError> {

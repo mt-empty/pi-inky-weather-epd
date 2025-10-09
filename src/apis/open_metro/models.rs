@@ -297,7 +297,7 @@ where
         .into_iter()
         .map(|s| {
             NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M")
-                .map(|naive| DateTime::<Utc>::from_utc(naive, Utc))
+                .map(|naive| DateTime::from_naive_utc_and_offset(naive, Utc))
                 .map_err(serde::de::Error::custom)
         })
         .collect()
@@ -320,7 +320,7 @@ where
             let datetime_str = format!("{}T13:00:00Z", date_str);
             // Parse the datetime string
             NaiveDateTime::parse_from_str(&datetime_str, "%Y-%m-%dT%H:%M:%SZ")
-                .map(|naive| DateTime::from_utc(naive, Utc))
+                .map(|naive| DateTime::from_naive_utc_and_offset(naive, Utc))
                 .map_err(serde::de::Error::custom) // Convert parsing error to serde error
         })
         .collect(); // Collect the results into a single Result

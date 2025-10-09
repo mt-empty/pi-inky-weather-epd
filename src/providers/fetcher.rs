@@ -51,19 +51,19 @@ impl Fetcher {
     ///
     /// # Arguments
     /// * `endpoint` - API endpoint URL
-    /// * `filename` - Name of cache file (e.g., "hourly_forecast.json")
+    /// * `cache_filename` - Name of cache file (e.g., "hourly_forecast.json")
     /// * `error_checker` - Optional function to check response for API-specific errors
     pub fn fetch_data<T, E>(
         &self,
         endpoint: Url,
-        filename: &str,
+        cache_filename: &str,
         error_checker: Option<fn(&str) -> Result<(), DashboardError>>,
     ) -> Result<FetchOutcome<T>, Error>
     where
         T: for<'de> Deserialize<'de>,
         E: for<'de> Deserialize<'de>,
     {
-        let file_path = self.cache_path.join(filename);
+        let file_path = self.cache_path.join(cache_filename);
 
         if !file_path.exists() {
             fs::create_dir_all(file_path.parent().unwrap())?;

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::{
     apis::open_metro::models::OpenMeteoHourlyResponse,
-    constants::OPEN_METEO_ENDPOINT,
+    constants::{DAILY_CACHE_SUFFIX, HOURLY_CACHE_SUFFIX, OPEN_METEO_ENDPOINT},
     domain::models::{DailyForecast, HourlyForecast},
     providers::{
         fetcher::{FetchOutcome, Fetcher},
@@ -28,7 +28,7 @@ impl WeatherProvider for OpenMeteoProvider {
         // OpenMeteo doesn't have custom error format, use None for error_checker
         match self.fetcher.fetch_data::<OpenMeteoHourlyResponse, ()>(
             OPEN_METEO_ENDPOINT.clone(),
-            "hourly_forecast.json",
+            &self.get_cache_filename(HOURLY_CACHE_SUFFIX),
             None,
         )? {
             FetchOutcome::Fresh(data) => {
@@ -46,7 +46,7 @@ impl WeatherProvider for OpenMeteoProvider {
         // OpenMeteo doesn't have custom error format, use None for error_checker
         match self.fetcher.fetch_data::<OpenMeteoHourlyResponse, ()>(
             OPEN_METEO_ENDPOINT.clone(),
-            "daily_forecast.json",
+            &self.get_cache_filename(DAILY_CACHE_SUFFIX),
             None,
         )? {
             FetchOutcome::Fresh(data) => {
@@ -62,5 +62,8 @@ impl WeatherProvider for OpenMeteoProvider {
 
     fn provider_name(&self) -> &str {
         "Open-Meteo"
+    }
+    fn provider_filename_prefix(&self) -> &str {
+        "open_meteo_"
     }
 }
