@@ -1,4 +1,5 @@
 use crate::{
+    clock::Clock,
     constants::NOT_AVAILABLE_ICON_PATH,
     dashboard::chart::{GraphDataPath, HourlyForecastGraph},
     domain::models::{DailyForecast, HourlyForecast},
@@ -193,10 +194,12 @@ impl ContextBuilder {
     pub fn with_daily_forecast_data(
         &mut self,
         daily_forecast_data: Vec<DailyForecast>,
+        clock: &dyn Clock,
     ) -> &mut Self {
         // The date returned by Bom api is UTC, for example x:14 UTC, which translates to x:14+10:00 AEST time,
         // so we have to do some conversion
-        let local_date_truncated = Local::now()
+        let local_date_truncated = clock
+            .now_local()
             .with_hour(0)
             .unwrap()
             .with_minute(0)
@@ -315,9 +318,11 @@ impl ContextBuilder {
     pub fn with_hourly_forecast_data(
         &mut self,
         hourly_forecast_data: Vec<HourlyForecast>,
+        clock: &dyn Clock,
     ) -> &mut Self {
         let (utc_forecast_window_start, utc_forecast_window_end) = match Self::find_forecast_window(
             &hourly_forecast_data,
+            clock,
         ) {
             Some((start, end)) => (start, end),
             None => {
@@ -364,6 +369,7 @@ impl ContextBuilder {
             local_forecast_window_start,
             local_forecast_window_end,
             &mut graph,
+            clock,
         );
 
         let svg_result = graph.draw_graph().unwrap();
@@ -410,8 +416,10 @@ impl ContextBuilder {
 
     fn find_forecast_window(
         hourly_forecast_data: &[HourlyForecast],
+        clock: &dyn Clock,
     ) -> Option<(chrono::DateTime<Utc>, chrono::DateTime<Utc>)> {
-        let current_date = chrono::Utc::now()
+        let current_date = clock
+            .now_utc()
             .with_minute(0)
             .unwrap()
             .with_second(0)
@@ -456,6 +464,7 @@ impl ContextBuilder {
         forecast_window_start: chrono::DateTime<Local>,
         forecast_window_end: chrono::DateTime<Local>,
         graph: &mut HourlyForecastGraph,
+        clock: &dyn Clock,
     ) {
         let mut x = 0;
         hourly_forecast_data
@@ -465,7 +474,7 @@ impl ContextBuilder {
             })
             .for_each(|forecast| {
                 if x == 0 {
-                    self.with_current_hour_data(forecast);
+                    self.with_current_hour_data(forecast, clock);
                     self.set_now_values_for_table(forecast)
                 } else if x >= 24 {
                     eprintln!(
@@ -488,11 +497,11 @@ impl ContextBuilder {
             });
     }
 
-    fn with_current_hour_data(&mut self, current_hour: &HourlyForecast) -> &mut Self {
+    fn with_current_hour_data(&mut self, current_hour: &HourlyForecast, clock: &dyn Clock) -> &mut Self {
         self.context.current_hour_actual_temp = current_hour.temperature.to_string();
         self.context.current_hour_weather_icon = current_hour.get_icon_path();
         self.context.current_hour_feels_like = current_hour.apparent_temperature.to_string();
-        self.context.current_day_date = chrono::Local::now().format("%A, %d %B").to_string();
+        self.context.current_day_date = clock.now_local().format("%A, %d %B").to_string();
         self.context.current_hour_rain_amount =
             current_hour.precipitation.calculate_median().to_string();
         self.context.current_hour_rain_measure_icon = current_hour.precipitation.get_icon_path();

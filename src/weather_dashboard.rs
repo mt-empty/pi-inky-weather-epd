@@ -1,3 +1,4 @@
+use crate::clock::{Clock, SystemClock};
 use crate::dashboard::context::{Context, ContextBuilder};
 use crate::errors::DashboardError;
 use crate::providers::factory::create_provider;
@@ -8,7 +9,7 @@ use std::io::Write;
 use tinytemplate::{format_unescaped, TinyTemplate};
 pub use utils::*;
 
-fn update_forecast_context(context_builder: &mut ContextBuilder) -> Result<(), Error> {
+fn update_forecast_context(context_builder: &mut ContextBuilder, clock: &dyn Clock) -> Result<(), Error> {
     let provider = create_provider()?;
     let mut warnings: Vec<DashboardError> = Vec::new();
 
@@ -20,7 +21,7 @@ fn update_forecast_context(context_builder: &mut ContextBuilder) -> Result<(), E
         println!("⚠️  Warning: Using stale daily forecast data");
         warnings.push(warning);
     }
-    context_builder.with_daily_forecast_data(daily_result.data);
+    context_builder.with_daily_forecast_data(daily_result.data, clock);
 
     println!("## Fetching hourly forecast...");
     let hourly_result = provider.fetch_hourly_forecast()?;
@@ -28,7 +29,7 @@ fn update_forecast_context(context_builder: &mut ContextBuilder) -> Result<(), E
         println!("⚠️  Warning: Using stale hourly forecast data");
         warnings.push(warning);
     }
-    context_builder.with_hourly_forecast_data(hourly_result.data);
+    context_builder.with_hourly_forecast_data(hourly_result.data, clock);
 
     // If any warnings occurred, set the warning message
     if !warnings.is_empty() {
@@ -75,7 +76,9 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
             return Err(e.into());
         }
     };
-    update_forecast_context(&mut context_builder)?;
+    
+    let clock = SystemClock;
+    update_forecast_context(&mut context_builder, &clock)?;
 
     println!("## Rendering dashboard to SVG ...");
     render_dashboard_template(&context_builder.context, template_svg)?;
