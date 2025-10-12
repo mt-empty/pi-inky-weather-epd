@@ -9,7 +9,8 @@
 			"extensions": [
 				"jock.svg",
 				"rust-lang.rust-analyzer",
-				"tamasfe.even-better-toml"
+				"tamasfe.even-better-toml",
+				"mitsuhiko.insta"
 			]
 		}
 	},

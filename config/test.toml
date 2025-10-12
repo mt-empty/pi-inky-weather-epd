@@ -1,0 +1,22 @@
+# Test configuration
+# This config is used when RUN_MODE=test environment variable is set
+# It ensures tests use fixtures instead of making real API calls
+
+[api]
+provider = "open_meteo"  # Default to Open-Meteo for tests (override with APP_API__PROVIDER=bom if needed)
+latitude = -37.8136
+longitude = 144.9631
+
+[misc]
+# Point to test fixtures instead of cached data
+weather_data_cache_path = "tests/fixtures/"
+template_path = "dashboard-template-min.svg"
+generated_svg_name = "dashboard.svg"
+generated_png_name = "dashboard.png"
+svg_icons_directory = "static/fill-svg-static/"
+
+[debugging]
+# CRITICAL: Disable API requests - use fixtures only
+disable_weather_api_requests = true
+disable_png_output = false  # Keep PNG generation for snapshot tests
+allow_pre_release_version = false

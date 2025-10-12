@@ -6,14 +6,14 @@ use serde::{self, Deserialize, Deserializer};
 pub struct OpenMeteoHourlyResponse {
     pub latitude: f32,
     pub longitude: f32,
-    #[serde(rename = "generationtime_ms")]
-    pub generationtime_ms: f32,
-    #[serde(rename = "utc_offset_seconds")]
-    pub utc_offset_seconds: i64,
+    // #[serde(rename = "generationtime_ms")]
+    // pub generationtime_ms: f32,
+    // #[serde(rename = "utc_offset_seconds")]
+    // pub utc_offset_seconds: i64,
     pub timezone: String,
-    #[serde(rename = "timezone_abbreviation")]
-    pub timezone_abbreviation: String,
-    pub elevation: f32,
+    // #[serde(rename = "timezone_abbreviation")]
+    // pub timezone_abbreviation: String,
+    // pub elevation: f32,
     #[serde(rename = "current_units")]
     pub current_units: CurrentUnits,
     pub current: Current,

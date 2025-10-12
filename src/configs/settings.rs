@@ -184,7 +184,7 @@ impl DashboardSettings {
             .join(".config")
             .join(format!("{}.toml", env!("CARGO_PKG_NAME")));
 
-        let settings = Config::builder()
+        let mut config_builder = Config::builder()
             // Start off by merging in the "default" configuration file
             .add_source(File::with_name(default_config_path.to_str().unwrap()))
             // Add in user configuration file
@@ -195,10 +195,25 @@ impl DashboardSettings {
             .add_source(File::with_name(run_mode_path.to_str().unwrap()).required(false))
             // Add in a local configuration file
             // This file shouldn't be checked in to git
-            .add_source(File::with_name(local_config_path.to_str().unwrap()).required(false))
+            .add_source(File::with_name(local_config_path.to_str().unwrap()).required(false));
+
+        // Add optional test config file only if TEST_MODE environment variable is set
+        // Example: TEST_MODE=config/test cargo test
+        if let Ok(test_mode) = env::var("TEST_MODE") {
+            config_builder = config_builder
+                .add_source(File::with_name(test_mode.as_str()).required(false));
+        }
+
+        let settings = config_builder
             // Add in settings from the environment (with a prefix of APP)
-            // Eg.. `APP_DEBUG=1 ./target/app` would set the `debug` key
-            .add_source(Environment::with_prefix("app"))
+            // Eg.. `APP_API__PROVIDER=open_meteo` would set the `api.provider` key
+            // Note: Single underscore _ separates prefix from key, double __ for nesting
+            .add_source(
+                Environment::with_prefix("APP")
+                    .prefix_separator("_")
+                    .separator("__")
+                    .try_parsing(true)
+            )
             .build()?;
 
         let final_settings: Result<DashboardSettings, ConfigError> = settings.try_deserialize();

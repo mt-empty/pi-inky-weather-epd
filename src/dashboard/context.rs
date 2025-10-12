@@ -382,7 +382,7 @@ impl ContextBuilder {
         self.context.rain_curve_data = rain_curve_data;
 
         let axis_data_path =
-            graph.create_axis_with_labels(local_forecast_window_start.hour() as f32);
+            graph.create_axis_with_labels(local_forecast_window_start.hour() as f32, clock);
 
         self.context.x_axis_path = axis_data_path.x_axis_path;
         self.context.y_left_axis_path = axis_data_path.y_left_axis_path;

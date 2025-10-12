@@ -1,4 +1,8 @@
-use crate::{constants::DEFAULT_AXIS_LABEL_FONT_SIZE, weather::icons::UVIndexIcon};
+use crate::{
+    clock::Clock,
+    constants::DEFAULT_AXIS_LABEL_FONT_SIZE,
+    weather::icons::UVIndexIcon,
+};
 use anyhow::Error;
 use strum_macros::Display;
 
@@ -233,7 +237,7 @@ pub struct AxisPaths {
 
 /// Create the axis paths and labels for the graph
 impl HourlyForecastGraph {
-    pub fn create_axis_with_labels(&self, current_hour: f32) -> AxisPaths {
+    pub fn create_axis_with_labels(&self, current_hour: f32, clock: &dyn Clock) -> AxisPaths {
         let range_x = self.ending_x - self.starting_x + 1.0; // +1 because last hour is 23
         let range_y_left = self.max_y - self.min_y;
         let range_y_right = 100.0; // Rain data is in percentage
@@ -297,6 +301,7 @@ impl HourlyForecastGraph {
             &mut x_axis_path,
             &mut x_axis_guideline_path,
             x_step,
+            clock,
         );
 
         // Y-axis ticks and labels (left)
@@ -410,6 +415,7 @@ impl HourlyForecastGraph {
         x_axis_path: &mut String,
         x_axis_guideline_path: &mut String,
         x_step: f32,
+        clock: &dyn Clock,
     ) -> String {
         let mut x_val: f32 = 0.0;
         let mut x_labels = String::new();
@@ -462,13 +468,13 @@ impl HourlyForecastGraph {
 
         // Add tomorrow day name vertically in the graph just like the guidelines
         if current_hour != 0.0 {
-            x_labels.push_str(self.draw_tomorrow_line(map_x(24.0 - current_hour)).as_str());
+            x_labels.push_str(self.draw_tomorrow_line(map_x(24.0 - current_hour), clock).as_str());
         }
         x_labels
     }
 
-    fn draw_tomorrow_line(&self, x_coor: f32) -> String {
-        let tomorrow_day_name = chrono::Local::now()
+    fn draw_tomorrow_line(&self, x_coor: f32, clock: &dyn Clock) -> String {
+        let tomorrow_day_name = clock.now_local()
             .checked_add_days(chrono::Days::new(1))
             .map(|d| d.format("%A").to_string())
             .unwrap_or_else(|| "Tomorrow".to_string());

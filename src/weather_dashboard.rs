@@ -63,7 +63,30 @@ fn render_dashboard_template(context: &Context, dashboard_svg: String) -> Result
     }
 }
 
+/// Generate weather dashboard using the system clock (production)
 pub fn generate_weather_dashboard() -> Result<(), Error> {
+    let clock = SystemClock;
+    generate_weather_dashboard_with_clock(&clock)
+}
+
+/// Generate weather dashboard with a custom clock (for testing)
+///
+/// This function allows dependency injection of a Clock implementation,
+/// enabling deterministic testing with FixedClock.
+///
+/// # Arguments
+///
+/// * `clock` - The clock implementation to use for time-dependent operations
+///
+/// # Examples
+///
+/// ```ignore
+/// use pi_inky_weather_epd::clock::FixedClock;
+///
+/// let clock = FixedClock::from_rfc3339("2025-10-09T22:00:00Z").unwrap();
+/// generate_weather_dashboard_with_clock(&clock)?;
+/// ```
+pub fn generate_weather_dashboard_with_clock(clock: &dyn Clock) -> Result<(), Error> {
     let current_dir = std::env::current_dir()?;
     let mut context_builder = ContextBuilder::new();
 
@@ -77,8 +100,7 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
         }
     };
     
-    let clock = SystemClock;
-    update_forecast_context(&mut context_builder, &clock)?;
+    update_forecast_context(&mut context_builder, clock)?;
 
     println!("## Rendering dashboard to SVG ...");
     render_dashboard_template(&context_builder.context, template_svg)?;
