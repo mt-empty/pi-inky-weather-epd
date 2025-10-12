@@ -9,7 +9,10 @@ use std::io::Write;
 use tinytemplate::{format_unescaped, TinyTemplate};
 pub use utils::*;
 
-fn update_forecast_context(context_builder: &mut ContextBuilder, clock: &dyn Clock) -> Result<(), Error> {
+fn update_forecast_context(
+    context_builder: &mut ContextBuilder,
+    clock: &dyn Clock,
+) -> Result<(), Error> {
     let provider = create_provider()?;
     let mut warnings: Vec<DashboardError> = Vec::new();
 
@@ -99,7 +102,7 @@ pub fn generate_weather_dashboard_with_clock(clock: &dyn Clock) -> Result<(), Er
             return Err(e.into());
         }
     };
-    
+
     update_forecast_context(&mut context_builder, clock)?;
 
     println!("## Rendering dashboard to SVG ...");

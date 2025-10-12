@@ -63,5 +63,8 @@ jobs:
       - name: Build binary with cross
         run: cross build --release --target=${{ env.TARGET }}
 
-      - name: Test binary with cross
-        run: cross test --target=${{ env.TARGET }}
+      - name: Test binary with cross (Open-Meteo)
+        run: TEST_MODE=config/test cross test --target=${{ env.TARGET }}
+
+      - name: Test BOM snapshot (ignored by default)
+        run: TEST_MODE=config/test APP_API__PROVIDER=bom cross test --target=${{ env.TARGET }} --test snapshot_provider_test snapshot_bom_dashboard -- --ignored

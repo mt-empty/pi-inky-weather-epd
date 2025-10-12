@@ -1,8 +1,4 @@
-use crate::{
-    clock::Clock,
-    constants::DEFAULT_AXIS_LABEL_FONT_SIZE,
-    weather::icons::UVIndexIcon,
-};
+use crate::{clock::Clock, constants::DEFAULT_AXIS_LABEL_FONT_SIZE, weather::icons::UVIndexIcon};
 use anyhow::Error;
 use strum_macros::Display;
 
@@ -468,13 +464,17 @@ impl HourlyForecastGraph {
 
         // Add tomorrow day name vertically in the graph just like the guidelines
         if current_hour != 0.0 {
-            x_labels.push_str(self.draw_tomorrow_line(map_x(24.0 - current_hour), clock).as_str());
+            x_labels.push_str(
+                self.draw_tomorrow_line(map_x(24.0 - current_hour), clock)
+                    .as_str(),
+            );
         }
         x_labels
     }
 
     fn draw_tomorrow_line(&self, x_coor: f32, clock: &dyn Clock) -> String {
-        let tomorrow_day_name = clock.now_local()
+        let tomorrow_day_name = clock
+            .now_local()
             .checked_add_days(chrono::Days::new(1))
             .map(|d| d.format("%A").to_string())
             .unwrap_or_else(|| "Tomorrow".to_string());

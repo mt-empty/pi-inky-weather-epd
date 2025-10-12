@@ -497,7 +497,11 @@ impl ContextBuilder {
             });
     }
 
-    fn with_current_hour_data(&mut self, current_hour: &HourlyForecast, clock: &dyn Clock) -> &mut Self {
+    fn with_current_hour_data(
+        &mut self,
+        current_hour: &HourlyForecast,
+        clock: &dyn Clock,
+    ) -> &mut Self {
         self.context.current_hour_actual_temp = current_hour.temperature.to_string();
         self.context.current_hour_weather_icon = current_hour.get_icon_path();
         self.context.current_hour_feels_like = current_hour.apparent_temperature.to_string();

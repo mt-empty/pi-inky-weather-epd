@@ -95,8 +95,7 @@ impl FixedClock {
     /// let clock = FixedClock::from_rfc3339("2025-10-09T22:00:00Z").unwrap();
     /// ```
     pub fn from_rfc3339(timestamp: &str) -> Result<Self, chrono::ParseError> {
-        let fixed_time = DateTime::parse_from_rfc3339(timestamp)?
-            .with_timezone(&Utc);
+        let fixed_time = DateTime::parse_from_rfc3339(timestamp)?.with_timezone(&Utc);
         Ok(Self { fixed_time })
     }
 }

@@ -79,12 +79,12 @@ fn snapshot_open_meteo_dashboard() {
         "openmeteo",
         "Test config should use Open-Meteo provider"
     );
-    
+
     // Fixed time: Oct 10, 2025, 1:00 AM UTC
     // In Melbourne AEDT (UTC+11): Oct 10, 2025, 12:00 PM (noon)
     // This should match mid-point of hourly forecast data
-    let clock = FixedClock::from_rfc3339("2025-10-10T01:00:00Z")
-        .expect("Failed to create fixed clock");
+    let clock =
+        FixedClock::from_rfc3339("2025-10-10T01:00:00Z").expect("Failed to create fixed clock");
 
     // Verify test configuration is loaded
     assert!(
@@ -95,7 +95,7 @@ fn snapshot_open_meteo_dashboard() {
     // Temporarily override provider to Open-Meteo
     // Note: This requires the config to be reloadable or we need a different approach
     // For now, we'll test with whatever provider is set in test.toml
-    
+
     // Generate the dashboard with Open-Meteo provider
     let result = generate_weather_dashboard_with_clock(&clock);
     assert!(
@@ -109,10 +109,7 @@ fn snapshot_open_meteo_dashboard() {
         .expect("Failed to read generated SVG file");
 
     // Verify SVG is not empty
-    assert!(
-        !svg_content.is_empty(),
-        "Generated SVG should not be empty"
-    );
+    assert!(!svg_content.is_empty(), "Generated SVG should not be empty");
     assert!(
         svg_content.contains("<svg"),
         "Generated file should be valid SVG"
@@ -125,7 +122,6 @@ fn snapshot_open_meteo_dashboard() {
     // - All graph paths, labels, icons
     insta::assert_snapshot!("open_meteo_dashboard", svg_content);
 }
-
 
 /// Test BOM provider dashboard generation with fixed time and fixtures
 ///
@@ -175,12 +171,12 @@ fn snapshot_bom_dashboard() {
         "bom",
         "Test should use BOM provider (set APP_API__PROVIDER=bom)"
     );
-    
+
     // Fixed time: Oct 9, 2025, 10:00 PM UTC
     // In Melbourne AEDT (UTC+11): Oct 10, 2025, 9:00 AM
     // This matches the first hourly forecast data point in the fixture
-    let clock = FixedClock::from_rfc3339("2025-10-09T22:00:00Z")
-        .expect("Failed to create fixed clock");
+    let clock =
+        FixedClock::from_rfc3339("2025-10-09T22:00:00Z").expect("Failed to create fixed clock");
 
     // Generate the dashboard with BOM provider
     let result = generate_weather_dashboard_with_clock(&clock);
@@ -195,10 +191,7 @@ fn snapshot_bom_dashboard() {
         .expect("Failed to read generated SVG file");
 
     // Verify SVG is not empty
-    assert!(
-        !svg_content.is_empty(),
-        "Generated SVG should not be empty"
-    );
+    assert!(!svg_content.is_empty(), "Generated SVG should not be empty");
     assert!(
         svg_content.contains("<svg"),
         "Generated file should be valid SVG"

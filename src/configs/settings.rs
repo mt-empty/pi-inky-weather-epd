@@ -200,8 +200,8 @@ impl DashboardSettings {
         // Add optional test config file only if TEST_MODE environment variable is set
         // Example: TEST_MODE=config/test cargo test
         if let Ok(test_mode) = env::var("TEST_MODE") {
-            config_builder = config_builder
-                .add_source(File::with_name(test_mode.as_str()).required(false));
+            config_builder =
+                config_builder.add_source(File::with_name(test_mode.as_str()).required(false));
         }
 
         let settings = config_builder
@@ -212,7 +212,7 @@ impl DashboardSettings {
                 Environment::with_prefix("APP")
                     .prefix_separator("_")
                     .separator("__")
-                    .try_parsing(true)
+                    .try_parsing(true),
             )
             .build()?;
 

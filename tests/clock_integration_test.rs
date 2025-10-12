@@ -1,8 +1,7 @@
 /// Integration tests demonstrating time-controlled testing with FixedClock
-/// 
+///
 /// These tests show how to use the Clock trait abstraction to write
 /// deterministic tests for time-dependent functionality.
-
 use chrono::{Datelike, TimeZone, Timelike, Utc};
 use pi_inky_weather_epd::clock::{Clock, FixedClock};
 
@@ -56,7 +55,7 @@ fn test_fixed_clock_from_rfc3339_string() {
     // Demonstrates creating FixedClock from ISO 8601 string
     // (useful for loading test fixtures from JSON)
     let clock = FixedClock::from_rfc3339("2025-06-21T10:30:00Z").unwrap();
-    
+
     let now = clock.now_utc();
     assert_eq!(now.year(), 2025);
     assert_eq!(now.month(), 6);
@@ -81,7 +80,7 @@ fn test_multiple_calls_return_consistent_time() {
 }
 
 /// Example of how to test a function that depends on current time
-/// 
+///
 /// In production code, you would:
 /// 1. Accept `&dyn Clock` as parameter
 /// 2. Call `clock.now_local()` or `clock.now_utc()` instead of `Local::now()`

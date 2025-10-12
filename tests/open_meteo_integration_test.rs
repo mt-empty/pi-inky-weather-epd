@@ -1,5 +1,5 @@
 //! Layer 2 Integration Tests: Open-Meteo Provider Behavior and Domain Conversion
-//! 
+//!
 //! These tests verify:
 //! 1. Conversion from Open-Meteo API models to domain models
 //! 2. Array-to-struct transformation correctness
@@ -7,7 +7,7 @@
 //! 4. Edge cases and data consistency
 
 use pi_inky_weather_epd::apis::open_metro::models::OpenMeteoHourlyResponse;
-use pi_inky_weather_epd::domain::models::{HourlyForecast, DailyForecast};
+use pi_inky_weather_epd::domain::models::{DailyForecast, HourlyForecast};
 use std::fs;
 
 /// Test conversion from Open-Meteo response to hourly domain models
@@ -15,16 +15,20 @@ use std::fs;
 fn test_open_meteo_hourly_conversion() {
     let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
         .expect("Failed to read Open-Meteo forecast fixture");
-    
+
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
     let expected_count = response.hourly.time.len();
-    
+
     // Convert to domain models
     let domain_forecasts: Vec<HourlyForecast> = response.into();
-    
+
     // Verify conversion happened
-    assert_eq!(domain_forecasts.len(), expected_count, "Should convert all hourly entries");
-    
+    assert_eq!(
+        domain_forecasts.len(),
+        expected_count,
+        "Should convert all hourly entries"
+    );
+
     // Spot check first forecast
     let first = &domain_forecasts[0];
     assert!(first.temperature.value > -50.0 && first.temperature.value < 60.0);
@@ -37,21 +41,25 @@ fn test_open_meteo_hourly_conversion() {
 fn test_open_meteo_daily_conversion() {
     let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
         .expect("Failed to read Open-Meteo forecast fixture");
-    
+
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
     let expected_count = response.daily.time.len();
-    
+
     // Convert to domain models
     let domain_forecasts: Vec<DailyForecast> = response.into();
-    
+
     // Verify conversion happened
-    assert_eq!(domain_forecasts.len(), expected_count, "Should convert all daily entries");
-    
+    assert_eq!(
+        domain_forecasts.len(),
+        expected_count,
+        "Should convert all daily entries"
+    );
+
     // Spot check first forecast
     let first = &domain_forecasts[0];
     assert!(first.temp_max.is_some());
     assert!(first.temp_min.is_some());
-    
+
     if let (Some(max), Some(min)) = (first.temp_max, first.temp_min) {
         assert!(max.value >= min.value, "Max temp should be >= min temp");
     }
@@ -108,18 +116,18 @@ fn test_open_meteo_array_consistency() {
             "precipitation_probability_max": [60]
         }
     }"#;
-    
+
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
     let domain: Vec<HourlyForecast> = response.into();
-    
+
     // Verify each hourly forecast has correct values from arrays
     assert_eq!(domain.len(), 2);
-    
+
     assert_eq!(domain[0].temperature.value, 18.5);
     assert_eq!(domain[0].apparent_temperature.value, 15.1);
     assert_eq!(domain[0].precipitation.chance, Some(10));
     assert_eq!(domain[0].wind.speed_kmh, 15);
-    
+
     assert_eq!(domain[1].temperature.value, 19.2);
     assert_eq!(domain[1].apparent_temperature.value, 16.0);
     assert_eq!(domain[1].precipitation.chance, Some(20));
@@ -177,12 +185,12 @@ fn test_open_meteo_extreme_values() {
             "precipitation_probability_max": [100]
         }
     }"#;
-    
+
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
     let domain: Vec<HourlyForecast> = response.into();
-    
+
     let forecast = &domain[0];
-    
+
     // Verify extreme values are preserved
     assert_eq!(forecast.temperature.value, 48.5);
     assert_eq!(forecast.apparent_temperature.value, 55.0);
@@ -197,10 +205,10 @@ fn test_open_meteo_extreme_values() {
 fn test_open_meteo_daily_temp_relationship() {
     let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
         .expect("Failed to read Open-Meteo forecast fixture");
-    
+
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
     let domain_forecasts: Vec<DailyForecast> = response.into();
-    
+
     // Verify every daily forecast has max >= min
     for forecast in &domain_forecasts {
         if let (Some(max), Some(min)) = (forecast.temp_max, forecast.temp_min) {
@@ -265,12 +273,12 @@ fn test_open_meteo_zero_precipitation() {
             "precipitation_probability_max": [0]
         }
     }"#;
-    
+
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
     let domain: Vec<HourlyForecast> = response.into();
-    
+
     let forecast = &domain[0];
-    
+
     // Verify zero precipitation is handled
     assert_eq!(forecast.precipitation.chance, Some(0));
     // Note: Open-Meteo doesn't provide min/max per hour, just total
@@ -281,14 +289,14 @@ fn test_open_meteo_zero_precipitation() {
 fn test_open_meteo_conversion_preserves_order() {
     let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
         .expect("Failed to read Open-Meteo forecast fixture");
-    
+
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
     let domain_forecasts: Vec<HourlyForecast> = response.into();
-    
+
     // Verify chronological order is preserved
     for i in 1..domain_forecasts.len() {
         assert!(
-            domain_forecasts[i].time > domain_forecasts[i-1].time,
+            domain_forecasts[i].time > domain_forecasts[i - 1].time,
             "Order should be preserved after conversion"
         );
     }
