@@ -1,9 +1,10 @@
 use anyhow::Error;
+use std::cell::RefCell;
 use std::path::PathBuf;
 
 use crate::{
     apis::open_metro::models::OpenMeteoHourlyResponse,
-    constants::{DAILY_CACHE_SUFFIX, HOURLY_CACHE_SUFFIX, OPEN_METEO_ENDPOINT},
+    constants::{CACHE_SUFFIX, OPEN_METEO_ENDPOINT},
     domain::models::{DailyForecast, HourlyForecast},
     providers::{
         fetcher::{FetchOutcome, Fetcher},
@@ -13,51 +14,48 @@ use crate::{
 
 pub struct OpenMeteoProvider {
     fetcher: Fetcher,
+    cached_response: RefCell<Option<OpenMeteoHourlyResponse>>,
 }
 
 impl OpenMeteoProvider {
     pub fn new(cache_path: PathBuf) -> Self {
         Self {
             fetcher: Fetcher::new(cache_path),
+            cached_response: RefCell::new(None),
         }
+    }
+    pub fn fetch_response(&self) -> Result<FetchResult<OpenMeteoHourlyResponse>, Error> {
+        if let Some(cached) = self.cached_response.borrow().as_ref() {
+            return Ok(FetchResult::fresh(cached.clone()));
+        }
+
+        // OpenMeteo doesn't have custom error format, use None for error_checker
+        let result = match self.fetcher.fetch_data::<OpenMeteoHourlyResponse, ()>(
+            OPEN_METEO_ENDPOINT.clone(),
+            &self.generate_cache_filename(CACHE_SUFFIX),
+            None,
+        )? {
+            FetchOutcome::Fresh(data) => {
+                self.cached_response.borrow_mut().replace(data.clone());
+                FetchResult::fresh(data)
+            }
+            FetchOutcome::Stale { data, error } => {
+                self.cached_response.borrow_mut().replace(data.clone());
+                FetchResult::stale(data, error)
+            }
+        };
+
+        Ok(result)
     }
 }
 
 impl WeatherProvider for OpenMeteoProvider {
     fn fetch_hourly_forecast(&self) -> Result<FetchResult<Vec<HourlyForecast>>, Error> {
-        // OpenMeteo doesn't have custom error format, use None for error_checker
-        match self.fetcher.fetch_data::<OpenMeteoHourlyResponse, ()>(
-            OPEN_METEO_ENDPOINT.clone(),
-            &self.get_cache_filename(HOURLY_CACHE_SUFFIX),
-            None,
-        )? {
-            FetchOutcome::Fresh(data) => {
-                let domain_data: Vec<HourlyForecast> = data.into();
-                Ok(FetchResult::fresh(domain_data))
-            }
-            FetchOutcome::Stale { data, error } => {
-                let domain_data: Vec<HourlyForecast> = data.into();
-                Ok(FetchResult::stale(domain_data, error))
-            }
-        }
+        Ok(self.fetch_response()?.map(|response| response.into()))
     }
 
     fn fetch_daily_forecast(&self) -> Result<FetchResult<Vec<DailyForecast>>, Error> {
-        // OpenMeteo doesn't have custom error format, use None for error_checker
-        match self.fetcher.fetch_data::<OpenMeteoHourlyResponse, ()>(
-            OPEN_METEO_ENDPOINT.clone(),
-            &self.get_cache_filename(DAILY_CACHE_SUFFIX),
-            None,
-        )? {
-            FetchOutcome::Fresh(data) => {
-                let domain_data: Vec<DailyForecast> = data.into();
-                Ok(FetchResult::fresh(domain_data))
-            }
-            FetchOutcome::Stale { data, error } => {
-                let domain_data: Vec<DailyForecast> = data.into();
-                Ok(FetchResult::stale(domain_data, error))
-            }
-        }
+        Ok(self.fetch_response()?.map(|response| response.into()))
     }
 
     fn provider_name(&self) -> &str {

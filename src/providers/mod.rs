@@ -28,6 +28,17 @@ impl<T> FetchResult<T> {
             warning: Some(error),
         }
     }
+
+    /// Transform the data inside FetchResult while preserving the warning state
+    pub fn map<U, F>(self, f: F) -> FetchResult<U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        FetchResult {
+            data: f(self.data),
+            warning: self.warning,
+        }
+    }
 }
 
 pub trait WeatherProvider {
@@ -43,7 +54,7 @@ pub trait WeatherProvider {
     ///
     /// # Returns
     /// * Full cache filename (e.g., "bom_hourly_forecast.json")
-    fn get_cache_filename(&self, suffix: &str) -> String {
+    fn generate_cache_filename(&self, suffix: &str) -> String {
         format!("{}{}", self.provider_filename_prefix(), suffix)
     }
 }

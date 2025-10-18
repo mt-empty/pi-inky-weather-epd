@@ -8,6 +8,7 @@ pub const DEFAULT_AXIS_LABEL_FONT_SIZE: u16 = 19;
 
 pub const HOURLY_CACHE_SUFFIX: &str = "hourly_forecast.json";
 pub const DAILY_CACHE_SUFFIX: &str = "daily_forecast.json";
+pub const CACHE_SUFFIX: &str = "forecast.json";
 
 const BASE_WEATHER_URL: &str = "https://api.weather.bom.gov.au/v1/locations";
 const NOT_AVAILABLE_ICON_NAME: &str = "not-available.svg";
