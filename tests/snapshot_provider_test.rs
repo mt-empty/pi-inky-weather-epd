@@ -14,15 +14,15 @@
 //!
 //! **Default (Open-Meteo)**:
 //! ```bash
-//! TEST_MODE=config/test cargo test --test snapshot_provider_test
+//! RUN_MODE=test cargo test --test snapshot_provider_test
 //! ```
 //!
 //! **BOM Provider** (requires override):
 //! ```bash
-//! TEST_MODE=config/test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
+//! RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
 //! ```
 //!
-//! **Important**: Set `TEST_MODE=config/test` to load test configuration.
+//! **Important**: Set `RUN_MODE=test` to load test configuration.
 //! This loads `config/test.toml` which sets:
 //! - `provider = "open_meteo"` (default test provider)
 //! - `disable_weather_api_requests = true` (use fixtures, no real API calls)
@@ -32,7 +32,7 @@
 //!
 //! On first run or after intentional changes:
 //! ```bash
-//! TEST_MODE=config/test cargo test --test snapshot_provider_test
+//! RUN_MODE=test cargo test --test snapshot_provider_test
 //! cargo insta review  # Review and accept/reject changes
 //! ```
 
@@ -67,7 +67,7 @@ fn snapshot_open_meteo_dashboard() {
     // Verify test configuration is loaded
     assert!(
         CONFIG.debugging.disable_weather_api_requests,
-        "Test requires TEST_MODE=config/test environment variable"
+        "Test requires RUN_MODE=test environment variable"
     );
     assert_eq!(
         CONFIG.misc.weather_data_cache_path.to_str().unwrap(),
@@ -125,7 +125,7 @@ fn snapshot_open_meteo_dashboard() {
 
 /// Test BOM provider dashboard generation with fixed time and fixtures
 ///
-/// **Prerequisites**: Run with `TEST_MODE=config/test` environment variable
+/// **Prerequisites**: Run with `RUN_MODE=test` environment variable
 ///
 /// **Fixed Time**: Oct 9, 2025, 10:00 PM UTC = Oct 10, 2025, 9:00 AM Melbourne (AEDT)
 ///
@@ -149,7 +149,7 @@ fn snapshot_open_meteo_dashboard() {
 ///
 /// **NOTE**: This test requires APP_API__PROVIDER environment variable override:
 /// ```bash
-/// TEST_MODE=config/test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
+/// RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
 /// cargo insta review
 /// ```
 /// Note: Double underscore __ is used as separator for nested config keys (api.provider -> API__PROVIDER)
@@ -159,7 +159,7 @@ fn snapshot_bom_dashboard() {
     // Verify test configuration is loaded (fail fast if TEST_MODE not set)
     assert!(
         CONFIG.debugging.disable_weather_api_requests,
-        "Test requires TEST_MODE=config/test environment variable"
+        "Test requires RUN_MODE=test environment variable"
     );
     assert_eq!(
         CONFIG.misc.weather_data_cache_path.to_str().unwrap(),

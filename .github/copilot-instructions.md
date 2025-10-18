@@ -19,7 +19,7 @@ Provider Factory → WeatherProvider Trait → Domain Models → Template Contex
 ```
 
 - **Domain Layer** (`src/domain/`): API-agnostic models (`HourlyForecastAbs`, `DailyForecastAbs`, `Temperature`, `Wind`, `Precipitation`)
-- **Provider Layer** (`src/providers/`): 
+- **Provider Layer** (`src/providers/`):
   - `WeatherProvider` trait - common interface for all APIs
   - `Fetcher` - shared HTTP client with caching/fallback
   - `BomProvider`, `OpenMeteoProvider` - concrete implementations
@@ -75,8 +75,8 @@ resvg → PNG
 Hierarchical merge via `config` crate:
 1. `config/default.toml` (base)
 2. `~/.config/pi-inky-weather-epd.toml` (user)
-3. `config/{RUN_MODE}.toml` (environment - default: "development")
-4. `config/local.toml` (dev override, gitignored)
+3. **If `RUN_MODE=test`**: Load `config/test.toml` (skip development/local)
+4. **Otherwise**: Load `config/development.toml` → `config/local.toml` (dev override, gitignored)
 5. Environment variables with `APP_` prefix (e.g., `APP_API__PROVIDER=bom`)
 
 **Global access**: `CONFIG` lazy static in `src/lib.rs` - initialized on first access, panics if invalid

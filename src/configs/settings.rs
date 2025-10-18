@@ -171,37 +171,38 @@ pub struct DashboardSettings {
 impl DashboardSettings {
     pub(crate) fn new() -> Result<Self, ConfigError> {
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
+        let is_test_mode = run_mode == "test";
 
         let root = std::env::current_dir().map_err(|e| ConfigError::Message(e.to_string()))?;
 
         let default_config_path = root.join(CONFIG_DIR).join(DEFAULT_CONFIG_NAME);
-        let run_mode_path = root.join(CONFIG_DIR).join(&run_mode);
+        let development_config_path = root.join(CONFIG_DIR).join("development");
         let local_config_path = root.join(CONFIG_DIR).join("local");
+        let test_config_path = root.join(CONFIG_DIR).join("test");
 
         // user config path is located at ~/.config/pi-inky-weather-epd.toml
         let home_dir = env::var("HOME").unwrap();
         let user_config_path = std::path::PathBuf::from(&home_dir)
             .join(".config")
-            .join(format!("{}.toml", env!("CARGO_PKG_NAME")));
+            .join(env!("CARGO_PKG_NAME"));
 
         let mut config_builder = Config::builder()
             // Start off by merging in the "default" configuration file
             .add_source(File::with_name(default_config_path.to_str().unwrap()))
             // Add in user configuration file
-            .add_source(File::with_name(user_config_path.to_str().unwrap()).required(false))
-            // Add in the current environment file
-            // Default to 'development' env
-            // Note that this file is _optional_
-            .add_source(File::with_name(run_mode_path.to_str().unwrap()).required(false))
-            // Add in a local configuration file
-            // This file shouldn't be checked in to git
-            .add_source(File::with_name(local_config_path.to_str().unwrap()).required(false));
+            .add_source(File::with_name(user_config_path.to_str().unwrap()).required(false));
 
-        // Add optional test config file only if TEST_MODE environment variable is set
-        // Example: TEST_MODE=config/test cargo test
-        if let Ok(test_mode) = env::var("TEST_MODE") {
-            config_builder =
-                config_builder.add_source(File::with_name(test_mode.as_str()).required(false));
+        // If running tests (RUN_MODE=test), load test.toml and skip development/local
+        // Otherwise, load development.toml and local.toml
+        if is_test_mode {
+            config_builder = config_builder
+                .add_source(File::with_name(test_config_path.to_str().unwrap()).required(false));
+        } else {
+            config_builder = config_builder
+                // Add in development configuration file
+                .add_source(File::with_name(development_config_path.to_str().unwrap()).required(false))
+                // Add in local configuration file (for dev overrides, not checked into git)
+                .add_source(File::with_name(local_config_path.to_str().unwrap()).required(false));
         }
 
         let settings = config_builder
@@ -210,19 +211,17 @@ impl DashboardSettings {
             // Note: Single underscore _ separates prefix from key, double __ for nesting
             .add_source(
                 Environment::with_prefix("APP")
-                    .prefix_separator("_")
-                    .separator("__")
-                    .try_parsing(true),
+                    .prefix_separator("_")  // Separator between prefix and key (APP_api)
+                    .separator("__")        // Separator for nested keys (api__provider)
+                    .try_parsing(true),             // Parse values to correct types
             )
             .build()?;
-
         let final_settings: Result<DashboardSettings, ConfigError> = settings.try_deserialize();
 
         // Validate the settings after deserializing
         if let Err(error) = &final_settings {
             return Err(ConfigError::Message(format!(
-                "Configuration validation failed: {:?}",
-                error
+                "Configuration validation failed: {error:?}"
             )));
         }
 

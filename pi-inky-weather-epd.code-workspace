@@ -116,7 +116,7 @@
 				"options": {
 					"cwd": "${workspaceFolder}",
 					"env": {
-						"TEST_MODE": "config/test"
+						"RUN_MODE": "test"
 					}
 				},
 				"problemMatcher": ["$rustc"],
@@ -130,8 +130,8 @@
 				"options": {
 					"cwd": "${workspaceFolder}",
 					"env": {
-						"TEST_MODE": "config/test",
-						"APP_API__PROVIDER": "bom",
+						"RUN_MODE": "test",
+						"APP_API__PROVIDER": "bom"
 					}
 				},
 				"problemMatcher": ["$rustc"],

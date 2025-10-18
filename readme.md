@@ -178,10 +178,10 @@ cp config/development.toml config/local.toml
 cargo run
 
 ## Run all tests with default open-meteo config
-TEST_MODE=config/test cargo test
+RUN_MODE=test cargo test
 
 ## Test BOM API
-TEST_MODE=config/test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
+RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
 ```
 
 ### Compile for target release

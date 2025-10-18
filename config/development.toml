@@ -5,13 +5,24 @@ download_base_url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/do
 update_interval_days = 0
 
 [api]
-provider = "bom"    # bom or open_meteo
+provider = "open_meteo"    # bom or open_meteo
 latitude = -37.8136
 longitude = 144.9631
 
 # supported colours for 7.3 inky display
 # [black, white, green, blue, red, yellow, orange]
 [colours]
+# background_colour   = "black"    # solid black – no dithering
+# text_colour         = "white"    # bright white for max legibility
+
+# x_axis_colour       = "white"   # high-contrast tick/label grid
+# y_left_axis_colour  = "red"      # temperature axis
+# y_right_axis_colour = "blue"     # matches rain scale
+
+# actual_temp_colour  = "red"      # solid line for real temp
+# feels_like_colour   = "green"    # dashed “feels-like” line
+# rain_colour         = "blue"     # shaded rain bars
+
 background_colour = "white"
 text_colour = "black"
 x_axis_colour = "black"
@@ -37,7 +48,7 @@ generated_png_name = "dashboard.png"
 svg_icons_directory = "static/fill-svg-static/"
 
 [debugging]
-disable_weather_api_requests = false # if true, the weather data will be loaded from a cached file instead of the API, make you ran the application at least once with this set to false 
+disable_weather_api_requests = false # if true, the weather data will be loaded from a cached file instead of the API, make you ran the application at least once with this set to false
 disable_png_output = false
 allow_pre_release_version = true
 
