@@ -1,16 +1,48 @@
 {
 	"folders": [
 		{
-			"path": "."
+			"path": "/workspaces/inky-weather-display"
 		}
 	],
 	"settings": {
+		// Editor Settings
+		"editor.formatOnSave": true,
+		"editor.defaultFormatter": "rust-lang.rust-analyzer",
+		"[rust]": {
+			"editor.formatOnSave": true,
+			"editor.defaultFormatter": "rust-lang.rust-analyzer"
+		},
+		"files.trimTrailingWhitespace": true,
+		"files.insertFinalNewline": true,
+		"files.trimFinalNewlines": true,
+
+		// SVG Settings
 		"svg.preview.background": "dark-transparent",
+
+		// Search Settings
 		"explorer.excludeGitIgnore": false,
 		"search.useParentIgnoreFiles": false,
 		"search.useIgnoreFiles": false,
+
+		// Rust Settings
+		"rust-analyzer.check.command": "clippy",
+		"rust-analyzer.cargo.features": "all",
+		"rust-analyzer.rustfmt.extraArgs": [
+			"+nightly"
+		],
+
+		// Spell Check
 		"cSpell.words": [
-			"meteo"
+			"meteo",
+			"aarch",
+			"gnueabihf",
+			"inky",
+			"pimoroni",
+			"resvg",
+			"chrono",
+			"nutype",
+			"geohash",
+			"fontdb"
 		]
 	},
 	"extensions": {
@@ -18,6 +50,93 @@
 			"rust-lang.rust-analyzer",
 			"jock.svg",
 			"tamasfe.even-better-toml",
+			"mitsuhiko.insta",
+			"Gruntfuggly.todo-tree",
+        	"chanhx.crabviz",
+        	"streetsidesoftware.code-spell-checker-australian-english"
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"type": "lldb",
+				"request": "launch",
+				"name": "Debug executable 'pi-inky-weather-epd'",
+				"program": "${workspaceFolder}/target/debug/pi-inky-weather-epd",
+				"args": [],
+				"cwd": "${workspaceFolder}",
+				"preLaunchTask": "cargo-build",
+				"sourceLanguages": ["rust"]
+			},
+			{
+				"type": "lldb",
+				"request": "launch",
+				"name": "Run without debugging",
+				"program": "${workspaceFolder}/target/debug/pi-inky-weather-epd",
+				"args": [],
+				"cwd": "${workspaceFolder}",
+				"preLaunchTask": "cargo-build",
+				"sourceLanguages": ["rust"]
+			}
+		]
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"type": "shell",
+				"label": "cargo-build",
+				"command": "cargo",
+				"args": ["build", "--bin=pi-inky-weather-epd"],
+				"options": {
+					"cwd": "${workspaceFolder}"
+				},
+				"problemMatcher": ["$rustc"],
+				"group": {
+					"kind": "build",
+					"isDefault": true
+				}
+			},
+			{
+				"type": "shell",
+				"label": "cargo-run",
+				"command": "cargo",
+				"args": ["run", "--bin=pi-inky-weather-epd"],
+				"options": {
+					"cwd": "${workspaceFolder}"
+				},
+				"problemMatcher": ["$rustc"]
+			},
+			{
+				"type": "shell",
+				"label": "cargo-test(open_meteo)",
+				"command": "cargo",
+				"args": ["test"],
+				"options": {
+					"cwd": "${workspaceFolder}",
+					"env": {
+						"TEST_MODE": "config/test"
+					}
+				},
+				"problemMatcher": ["$rustc"],
+				"group": "test"
+			},
+			{
+				"type": "shell",
+				"label": "cargo-test(bom only)",
+				"command": "cargo",
+				"args": ["test", "--test", "snapshot_provider_test", "snapshot_bom_dashboard", "--", "--ignored"],
+				"options": {
+					"cwd": "${workspaceFolder}",
+					"env": {
+						"TEST_MODE": "config/test",
+						"APP_API__PROVIDER": "bom",
+					}
+				},
+				"problemMatcher": ["$rustc"],
+				"group": "test"
+			}
 		]
 	}
 }

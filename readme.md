@@ -11,7 +11,7 @@ This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper
 
 ![](./misc/dashboard-case.png)
 
-## Setup on Raspberry Pi 
+## Setup on Raspberry Pi
 
 1. Install the Inky library:
    ```bash
@@ -176,6 +176,12 @@ Your local config should go into `config/local.toml`:
 ```bash
 cp config/development.toml config/local.toml
 cargo run
+
+## Run all tests with default open-meteo config
+TEST_MODE=config/test cargo test
+
+## Test BOM API
+TEST_MODE=config/test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
 ```
 
 ### Compile for target release
@@ -183,7 +189,7 @@ cargo run
 Example for Raspberry Pi Zero:
 
 ```bash
-cross build --release --target arm-unknown-linux-gnueabihf 
+cross build --release --target arm-unknown-linux-gnueabihf
 ```
 
 ### Using mDNS for Easy Access
@@ -213,7 +219,7 @@ Host pizero
 
 ssh into it by running `ssh pizero`
 
-### Sending image to pi over ssh 
+### Sending image to pi over ssh
 
 Once you have your ssh setup:
 
@@ -228,13 +234,13 @@ cargo run
 - Execute the ./pi-inky-weather-epd separately and observe the logs for any errors, then open the generated image to see if it is correct.
 - Run the cron script manually to see if there are any errors
 
-#### Issues with latest version of Inky 
+#### Issues with latest version of Inky
 
 If you encounter issues with the latest version of Inky, try manually installing version **1.5.0** release of the inky library, refer to the official [documentation](https://github.com/pimoroni/inky?tab=readme-ov-file#install-stable-library-from-pypi-and-configure-manually)
 
 ### Special Instructions for DietPi
 
-For **DietPi** distro working with version **1.5**, you may need to set `include-system-site-packages = true` in your Python virtual environment.  
+For **DietPi** distro working with version **1.5**, you may need to set `include-system-site-packages = true` in your Python virtual environment.
 To do this, after creating your virtual environment (e.g., with `python3 -m venv /path/to/env`), open the file:
 
 ```
