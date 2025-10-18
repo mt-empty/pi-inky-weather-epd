@@ -1,10 +1,7 @@
-name: Release Pi Inky Weather EPD
+name: Release Build
 
 on:
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: write
@@ -17,7 +14,7 @@ jobs:
       matrix:
         target:
           - arm-unknown-linux-gnueabihf   # Raspberry Pi Zero
-          # - armv7-unknown-linux-gnueabihf # Raspberry Pi Zero 2
+          - armv7-unknown-linux-gnueabihf # Raspberry Pi Zero 2
           - aarch64-unknown-linux-gnu     # Raspberry Pi 4 and above
           - x86_64-unknown-linux-gnu      # x86
     steps:
@@ -40,13 +37,6 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
-          components: rustfmt, clippy
-
-      - name: Run cargo fmt
-        run: cargo fmt -- --check
-
-      - name: Run cargo check
-        run: cargo check
 
       - name: Install cross
         run: |
@@ -58,9 +48,6 @@ jobs:
 
       - name: Build binary with cross
         run: cross build --release --target=${{ matrix.target }}
-
-      - name: Test binary with cross
-        run: cross test --target=${{ matrix.target }}
 
       - name: Prepare artifact
         run: |
@@ -78,7 +65,6 @@ jobs:
           overwrite: true
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     steps:

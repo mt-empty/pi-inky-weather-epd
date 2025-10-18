@@ -1,4 +1,4 @@
-name: Test 
+name: Test
 
 on:
   pull_request:
@@ -16,13 +16,30 @@ on:
       - '**/*.md'
       - 'mics/**'
   workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target architecture to test'
+        required: false
+        default: 'arm-unknown-linux-gnueabihf'
+        type: choice
+        options:
+          - arm-unknown-linux-gnueabihf
+          - aarch64-unknown-linux-gnu
+          - x86_64-unknown-linux-gnu
+  workflow_call:
+    inputs:
+      target:
+        description: 'Target architecture to test'
+        required: false
+        default: 'arm-unknown-linux-gnueabihf'
+        type: string
 
 env:
-  TARGET: arm-unknown-linux-gnueabihf
+  TARGET: ${{ inputs.target || 'arm-unknown-linux-gnueabihf' }}
 
 jobs:
-  build:
-    runs-on: ubuntu-latest # TODO: change to arm once it is no longer in public preview 
+  test:
+    runs-on: ubuntu-latest # TODO: change to arm once it is no longer in public preview
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,6 +69,9 @@ jobs:
       - name: Run cargo check
         run: cargo check
 
+      - name: Run cargo clippy
+        run: cargo clippy -- -D warnings
+
       - name: Install cross
         run: |
           if ! command -v cross &> /dev/null; then
@@ -64,7 +84,7 @@ jobs:
         run: cross build --release --target=${{ env.TARGET }}
 
       - name: Test binary with cross (Open-Meteo)
-        run: TEST_MODE=config/test cross test --target=${{ env.TARGET }}
+        run: RUN_MODE=test cross test --target=${{ env.TARGET }}
 
       - name: Test BOM snapshot (ignored by default)
-        run: TEST_MODE=config/test APP_API__PROVIDER=bom cross test --target=${{ env.TARGET }} --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
+        run: RUN_MODE=test APP_API__PROVIDER=bom cross test --target=${{ env.TARGET }} --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
