@@ -1,6 +1,6 @@
 # Pi Inky Weather Display
 
-This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper (aka E-ink) display. Weather data is obtained from the Australian Bureau of Meteorology API.
+This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper (aka E-ink) display.
 
 ![](./misc/timelapse.gif)
 
@@ -11,7 +11,7 @@ This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper
 
 ![](./misc/dashboard-case.png)
 
-## Setup on Raspberry Pi 
+## Setup on Raspberry Pi
 
 1. Install the Inky library:
    ```bash
@@ -24,28 +24,24 @@ This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper
    unzip <YOUR_DOWNLOAD_RELEASE>.tar.gz
    chmod +x pi-inky-weather-epd
    ```
-3. Australia -> Bom API
-   1. Obtain a six-character geohash of your location from https://geohash.softeng.co
-   2. Create a configuration file with your geohash:
-   ```bash
-   echo -e '[api]\nlocation = "YOUR_GEOHASH"' > ~/.config/pi-inky-weather-epd.toml
-   ```
-   Worldwide -> Open-Metro (WIP)
-   1. Obtain a Longitude and Latitude of your location from https://geohash.softeng.co
-   2. Create a configuration file with your geohash:
-   ```bash
-   echo -e '[api]\lon_lat = "LON,Lat"' > ~/.config/pi-inky-weather-epd.toml
-   ```
 
+3. Configure your weather data provider and location:
 
-4. Create a configuration file with your geohash:
+   Get your latitude and longitude from https://www.latlong.net/ and create a configuration file:
+
    ```bash
-   echo -e '[api]\nlocation = "YOUR_GEOHASH"' > ~/.config/pi-inky-weather-epd.toml
+   mkdir -p ~/.config
+   cat > ~/.config/pi-inky-weather-epd.toml << EOF
+   [api]
+   provider = "open_meteo"           # "open_meteo" (worldwide) or "bom" (Australia only)
+   latitude = YOUR_LATITUDE   # e.g., -47.8136
+   longitude = YOUR_LONGITUDE # e.g., 114.9631
+   EOF
    ```
 
-   See [./config/development.toml](./config/default.toml) for example cities and their geohashes.
+   See [./config/development.toml](./config/development.toml) for more configuration examples.
 
-5. Set up an hourly cron job to update the display:
+4. Set up an hourly cron job to update the display:
    ```bash
    (crontab -l 2>/dev/null; echo "0 * * * * cd /path/to/extracted/files && ./pi-inky-weather-epd && sudo PYTHON_PATH IMAGE_SCRIPT_PATH --file dashboard.png --saturation SATURATION") | crontab -
    ```
@@ -67,7 +63,7 @@ You can override the default configs located at [./config/](./config/) by creati
 ~/.config/pi-inky-weather-epd.toml
 ```
 
-### Example configuration
+### Example Configuration Files
 Here are example configurations, note some of these images are slightly outdated:
 
 ### Default configuration file
@@ -176,10 +172,26 @@ Any Contributions are welcome!
 
 ### Setup
 
-Your local config should go into `config/local.toml`:
+1. **Install Git hooks** (pre-push checks for formatting, tests, and version tags):
+```bash
+./scripts/setup-git-hooks.sh
+```
+
+2. **Create local config** in `config/local.toml`:
 ```bash
 cp config/development.toml config/local.toml
+# Edit config/local.toml with your location settings
 cargo run
+```
+
+### Running Tests
+
+```bash
+# Run all tests with default open-meteo config
+RUN_MODE=test cargo test
+
+# Test BOM API specifically
+RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
 ```
 
 ### Compile for target release
@@ -187,7 +199,7 @@ cargo run
 Example for Raspberry Pi Zero:
 
 ```bash
-cross build --release --target arm-unknown-linux-gnueabihf 
+cross build --release --target arm-unknown-linux-gnueabihf
 ```
 
 ### Using mDNS for Easy Access
@@ -217,14 +229,15 @@ Host pizero
 
 ssh into it by running `ssh pizero`
 
-### Sending image to pi over ssh 
+### Sending image to pi over ssh
 
 Once you have your ssh setup:
 
 ```bash
-chmod +x ./misc/send-img-to-pi.sh
-cargo run
-./misc/send-img-to-pi.sh
+cargo run   # to generate the image
+
+chmod +x ./scripts/send-img-to-pi.sh
+./scripts/send-img-to-pi.sh
 ```
 
 ## Troubleshooting
@@ -232,13 +245,13 @@ cargo run
 - Execute the ./pi-inky-weather-epd separately and observe the logs for any errors, then open the generated image to see if it is correct.
 - Run the cron script manually to see if there are any errors
 
-#### Issues with latest version of Inky 
+#### Issues with latest version of Inky
 
 If you encounter issues with the latest version of Inky, try manually installing version **1.5.0** release of the inky library, refer to the official [documentation](https://github.com/pimoroni/inky?tab=readme-ov-file#install-stable-library-from-pypi-and-configure-manually)
 
 ### Special Instructions for DietPi
 
-For **DietPi** distro working with version **1.5**, you may need to set `include-system-site-packages = true` in your Python virtual environment.  
+For **DietPi** distro working with version **1.5**, you may need to set `include-system-site-packages = true` in your Python virtual environment.
 To do this, after creating your virtual environment (e.g., with `python3 -m venv /path/to/env`), open the file:
 
 ```

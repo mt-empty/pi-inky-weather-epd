@@ -27,5 +27,5 @@ cached_bom_data
 test_update
 static/fonts/Roboto-Regular.ttf
 notes.md
-dashboard.svg
-dashboard.png
+dashboard*.svg
+dashboard*.png

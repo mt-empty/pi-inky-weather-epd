@@ -1,7 +1,8 @@
 use crate::{
-    apis::bom::models::{DailyEntry, HourlyForecast},
+    clock::Clock,
     constants::NOT_AVAILABLE_ICON_PATH,
     dashboard::chart::{GraphDataPath, HourlyForecastGraph},
+    domain::models::{DailyForecast, HourlyForecast},
     errors::{DashboardError, Description},
     utils::{find_max_item_between_dates, get_total_between_dates},
     weather::icons::{Icon, SunPositionIconName},
@@ -190,10 +191,15 @@ impl ContextBuilder {
         }
     }
 
-    pub fn with_daily_forecast_data(&mut self, daily_forecast_data: Vec<DailyEntry>) -> &mut Self {
+    pub fn with_daily_forecast_data(
+        &mut self,
+        daily_forecast_data: Vec<DailyForecast>,
+        clock: &dyn Clock,
+    ) -> &mut Self {
         // The date returned by Bom api is UTC, for example x:14 UTC, which translates to x:14+10:00 AEST time,
         // so we have to do some conversion
-        let local_date_truncated = Local::now()
+        let local_date_truncated = clock
+            .now_local()
             .with_hour(0)
             .unwrap()
             .with_minute(0)
@@ -242,22 +248,20 @@ impl ContextBuilder {
             );
             match day_index {
                 1 => {
-                    self.context.sunrise_time = day
-                        .astronomical
-                        .unwrap_or_default()
-                        .sunrise_time
-                        .unwrap_or_default()
-                        .with_timezone(&Local)
-                        .format("%H:%M")
-                        .to_string();
-                    self.context.sunset_time = day
-                        .astronomical
-                        .unwrap_or_default()
-                        .sunset_time
-                        .unwrap_or_default()
-                        .with_timezone(&Local)
-                        .format("%H:%M")
-                        .to_string();
+                    if let Some(ref astro) = day.astronomical {
+                        self.context.sunrise_time = astro
+                            .sunrise_time
+                            .unwrap_or_default()
+                            .with_timezone(&Local)
+                            .format("%H:%M")
+                            .to_string();
+                        self.context.sunset_time = astro
+                            .sunset_time
+                            .unwrap_or_default()
+                            .with_timezone(&Local)
+                            .format("%H:%M")
+                            .to_string();
+                    }
                 }
                 2 => {
                     self.context.day2_mintemp = min_temp_value;
@@ -314,9 +318,11 @@ impl ContextBuilder {
     pub fn with_hourly_forecast_data(
         &mut self,
         hourly_forecast_data: Vec<HourlyForecast>,
+        clock: &dyn Clock,
     ) -> &mut Self {
         let (utc_forecast_window_start, utc_forecast_window_end) = match Self::find_forecast_window(
             &hourly_forecast_data,
+            clock,
         ) {
             Some((start, end)) => (start, end),
             None => {
@@ -363,6 +369,7 @@ impl ContextBuilder {
             local_forecast_window_start,
             local_forecast_window_end,
             &mut graph,
+            clock,
         );
 
         let svg_result = graph.draw_graph().unwrap();
@@ -375,7 +382,7 @@ impl ContextBuilder {
         self.context.rain_curve_data = rain_curve_data;
 
         let axis_data_path =
-            graph.create_axis_with_labels(local_forecast_window_start.hour() as f32);
+            graph.create_axis_with_labels(local_forecast_window_start.hour() as f32, clock);
 
         self.context.x_axis_path = axis_data_path.x_axis_path;
         self.context.y_left_axis_path = axis_data_path.y_left_axis_path;
@@ -399,7 +406,7 @@ impl ContextBuilder {
             &hourly_forecast_data,
             &local_forecast_window_start,
             &local_forecast_window_end,
-            |item: &HourlyForecast| item.rain.calculate_median_rain(),
+            |item: &HourlyForecast| item.precipitation.calculate_median(),
             |item| item.time.with_timezone(&Local),
         ))
         .to_string();
@@ -409,8 +416,10 @@ impl ContextBuilder {
 
     fn find_forecast_window(
         hourly_forecast_data: &[HourlyForecast],
+        clock: &dyn Clock,
     ) -> Option<(chrono::DateTime<Utc>, chrono::DateTime<Utc>)> {
-        let current_date = chrono::Utc::now()
+        let current_date = clock
+            .now_utc()
             .with_minute(0)
             .unwrap()
             .with_second(0)
@@ -455,6 +464,7 @@ impl ContextBuilder {
         forecast_window_start: chrono::DateTime<Local>,
         forecast_window_end: chrono::DateTime<Local>,
         graph: &mut HourlyForecastGraph,
+        clock: &dyn Clock,
     ) {
         let mut x = 0;
         hourly_forecast_data
@@ -464,7 +474,7 @@ impl ContextBuilder {
             })
             .for_each(|forecast| {
                 if x == 0 {
-                    self.with_current_hour_data(forecast);
+                    self.with_current_hour_data(forecast, clock);
                     self.set_now_values_for_table(forecast)
                 } else if x >= 24 {
                     eprintln!(
@@ -477,36 +487,44 @@ impl ContextBuilder {
                     // we push this index to make scaling graph easier
                 for curve_type in &mut graph.curves.iter_mut() {
                     match curve_type {
-                        CurveType::ActualTemp(curve) => curve.add_point(x as f32, *forecast.temp),
-                        CurveType::TempFeelLike(curve) => curve.add_point(x as f32, *forecast.temp_feels_like),
-                        CurveType::RainChance(curve) => curve.add_point(x as f32, forecast.rain.chance.unwrap_or(0) as f32),
+                        CurveType::ActualTemp(curve) => curve.add_point(x as f32, *forecast.temperature),
+                        CurveType::TempFeelLike(curve) => curve.add_point(x as f32, *forecast.apparent_temperature),
+                        CurveType::RainChance(curve) => curve.add_point(x as f32, forecast.precipitation.chance.unwrap_or(0) as f32),
                     }
                 }
-                graph.uv_data[x] = forecast.uv.0;
+                graph.uv_data[x] = forecast.uv_index;
                 x += 1;
             });
     }
 
-    fn with_current_hour_data(&mut self, current_hour: &HourlyForecast) -> &mut Self {
-        self.context.current_hour_actual_temp = current_hour.temp.to_string();
+    fn with_current_hour_data(
+        &mut self,
+        current_hour: &HourlyForecast,
+        clock: &dyn Clock,
+    ) -> &mut Self {
+        self.context.current_hour_actual_temp = current_hour.temperature.to_string();
         self.context.current_hour_weather_icon = current_hour.get_icon_path();
-        self.context.current_hour_feels_like = current_hour.temp_feels_like.to_string();
-        self.context.current_day_date = chrono::Local::now().format("%A, %d %B").to_string();
+        self.context.current_hour_feels_like = current_hour.apparent_temperature.to_string();
+        self.context.current_day_date = clock.now_local().format("%A, %d %B").to_string();
         self.context.current_hour_rain_amount =
-            current_hour.rain.calculate_median_rain().to_string();
-        self.context.current_hour_rain_measure_icon = current_hour.rain.amount.get_icon_path();
+            current_hour.precipitation.calculate_median().to_string();
+        self.context.current_hour_rain_measure_icon = current_hour.precipitation.get_icon_path();
 
         self
     }
 
     fn set_now_values_for_table(&mut self, current_hour: &HourlyForecast) {
-        self.context.current_hour_wind_speed = current_hour.wind.get_speed().to_string();
+        self.context.current_hour_wind_speed = current_hour
+            .wind
+            .get_speed(CONFIG.render_options.use_gust_instead_of_wind)
+            .to_string();
         self.context.current_hour_wind_icon = current_hour.wind.get_icon_path();
-        self.context.current_hour_uv_index = current_hour.uv.0.to_string();
-        self.context.current_hour_uv_index_icon = current_hour.uv.get_icon_path();
-        self.context.current_hour_relative_humidity = current_hour.relative_humidity.0.to_string();
+        self.context.current_hour_uv_index = current_hour.uv_index.to_string();
+        self.context.current_hour_uv_index_icon =
+            crate::domain::icons::UVIndex(current_hour.uv_index).get_icon_path();
+        self.context.current_hour_relative_humidity = current_hour.relative_humidity.to_string();
         self.context.current_hour_relative_humidity_icon =
-            current_hour.relative_humidity.get_icon_path();
+            crate::domain::icons::RelativeHumidity(current_hour.relative_humidity).get_icon_path();
     }
 
     fn set_max_values_for_table(
@@ -554,8 +572,9 @@ impl ContextBuilder {
             }};
         }
 
-        let (max_wind_today, max_wind_tomorrow) =
-            max_in_today_and_tomorrow!(|item| item.wind.get_speed());
+        let (max_wind_today, max_wind_tomorrow) = max_in_today_and_tomorrow!(|item| item
+            .wind
+            .get_speed(CONFIG.render_options.use_gust_instead_of_wind));
 
         if max_wind_today > max_wind_tomorrow {
             self.context.max_gust_speed = max_wind_today.to_string();
@@ -565,12 +584,12 @@ impl ContextBuilder {
         }
 
         let (max_uv_index_today, max_uv_index_tomorrow) =
-            max_in_today_and_tomorrow!(|item| item.uv);
+            max_in_today_and_tomorrow!(|item| item.uv_index);
 
         if max_uv_index_today > max_uv_index_tomorrow {
-            self.context.max_uv_index = max_uv_index_today.0.to_string();
+            self.context.max_uv_index = max_uv_index_today.to_string();
         } else {
-            self.context.max_uv_index = max_uv_index_tomorrow.0.to_string();
+            self.context.max_uv_index = max_uv_index_tomorrow.to_string();
             self.context.max_uv_index_font_style = FontStyle::Italic.to_string();
         }
 
@@ -578,9 +597,9 @@ impl ContextBuilder {
             max_in_today_and_tomorrow!(|item| item.relative_humidity);
 
         if max_relative_humidity_today > max_relative_humidity_tomorrow {
-            self.context.max_relative_humidity = max_relative_humidity_today.0.to_string();
+            self.context.max_relative_humidity = max_relative_humidity_today.to_string();
         } else {
-            self.context.max_relative_humidity = max_relative_humidity_tomorrow.0.to_string();
+            self.context.max_relative_humidity = max_relative_humidity_tomorrow.to_string();
             self.context.max_relative_humidity_font_style = FontStyle::Italic.to_string();
         }
     }
@@ -592,6 +611,13 @@ impl ContextBuilder {
         self.context.warning_icon = error.get_icon_path().to_string();
         self.context.warning_visibility = ElementVisibility::Visible.to_string();
         eprintln!("Error: {}", error.long_description());
+        self
+    }
+
+    pub fn with_warning<E: Icon + Description>(&mut self, warning: E) -> &mut Self {
+        self.context.warning_message = warning.short_description().to_string();
+        self.context.warning_icon = warning.get_icon_path().to_string();
+        self.context.warning_visibility = ElementVisibility::Visible.to_string();
         self
     }
 }

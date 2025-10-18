@@ -10,6 +10,13 @@ const CONFIG_DIR: &str = "./config";
 const DEFAULT_CONFIG_NAME: &str = "default";
 
 #[derive(Debug, Deserialize, PartialOrd, PartialEq, Clone, Copy, Display)]
+#[serde(rename_all = "snake_case")]
+pub enum Providers {
+    Bom,
+    OpenMeteo,
+}
+
+#[derive(Debug, Deserialize, PartialOrd, PartialEq, Clone, Copy, Display)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum TemperatureUnit {
     #[strum(serialize = "C")]
@@ -57,6 +64,32 @@ impl fmt::Display for UpdateIntervalDays {
     }
 }
 
+#[nutype(
+    sanitize(),
+    validate(with = is_valid_longitude, error = ValidationError),
+    derive(Debug, Deserialize, PartialEq, Clone, Copy, AsRef)
+)]
+pub struct Longitude(f64);
+
+impl fmt::Display for Longitude {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.into_inner())
+    }
+}
+
+#[nutype(
+    sanitize(),
+    validate(with = is_valid_latitude, error = ValidationError),
+    derive(Debug, Deserialize, PartialEq, Clone, Copy, AsRef)
+)]
+pub struct Latitude(f64);
+
+impl fmt::Display for Latitude {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.into_inner())
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Release {
     pub release_info_url: Url,
@@ -66,8 +99,9 @@ pub struct Release {
 
 #[derive(Debug, Deserialize)]
 pub struct Api {
-    // #[validate(length(equal = 6, message = "Location must be a 6 character hash code"))]
-    pub location: GeoHash,
+    pub provider: Providers,
+    pub longitude: Longitude,
+    pub latitude: Latitude,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -137,43 +171,59 @@ pub struct DashboardSettings {
 impl DashboardSettings {
     pub(crate) fn new() -> Result<Self, ConfigError> {
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
+        let is_test_mode = run_mode == "test";
 
         let root = std::env::current_dir().map_err(|e| ConfigError::Message(e.to_string()))?;
 
         let default_config_path = root.join(CONFIG_DIR).join(DEFAULT_CONFIG_NAME);
-        let run_mode_path = root.join(CONFIG_DIR).join(&run_mode);
+        let development_config_path = root.join(CONFIG_DIR).join("development");
         let local_config_path = root.join(CONFIG_DIR).join("local");
+        let test_config_path = root.join(CONFIG_DIR).join("test");
 
         // user config path is located at ~/.config/pi-inky-weather-epd.toml
         let home_dir = env::var("HOME").unwrap();
         let user_config_path = std::path::PathBuf::from(&home_dir)
             .join(".config")
-            .join(format!("{}.toml", env!("CARGO_PKG_NAME")));
+            .join(env!("CARGO_PKG_NAME"));
 
-        let settings = Config::builder()
+        let mut config_builder = Config::builder()
             // Start off by merging in the "default" configuration file
             .add_source(File::with_name(default_config_path.to_str().unwrap()))
             // Add in user configuration file
-            .add_source(File::with_name(user_config_path.to_str().unwrap()).required(false))
-            // Add in the current environment file
-            // Default to 'development' env
-            // Note that this file is _optional_
-            .add_source(File::with_name(run_mode_path.to_str().unwrap()).required(false))
-            // Add in a local configuration file
-            // This file shouldn't be checked in to git
-            .add_source(File::with_name(local_config_path.to_str().unwrap()).required(false))
-            // Add in settings from the environment (with a prefix of APP)
-            // Eg.. `APP_DEBUG=1 ./target/app` would set the `debug` key
-            .add_source(Environment::with_prefix("app"))
-            .build()?;
+            .add_source(File::with_name(user_config_path.to_str().unwrap()).required(false));
 
+        // If running tests (RUN_MODE=test), load test.toml and skip development/local
+        // Otherwise, load development.toml and local.toml
+        if is_test_mode {
+            config_builder = config_builder
+                .add_source(File::with_name(test_config_path.to_str().unwrap()).required(false));
+        } else {
+            config_builder = config_builder
+                // Add in development configuration file
+                .add_source(
+                    File::with_name(development_config_path.to_str().unwrap()).required(false),
+                )
+                // Add in local configuration file (for dev overrides, not checked into git)
+                .add_source(File::with_name(local_config_path.to_str().unwrap()).required(false));
+        }
+
+        let settings = config_builder
+            // Add in settings from the environment (with a prefix of APP)
+            // Eg.. `APP_API__PROVIDER=open_meteo` would set the `api.provider` key
+            // Note: Single underscore _ separates prefix from key, double __ for nesting
+            .add_source(
+                Environment::with_prefix("APP")
+                    .prefix_separator("_") // Separator between prefix and key (APP_api)
+                    .separator("__") // Separator for nested keys (api__provider)
+                    .try_parsing(true), // Parse values to correct types
+            )
+            .build()?;
         let final_settings: Result<DashboardSettings, ConfigError> = settings.try_deserialize();
 
         // Validate the settings after deserializing
         if let Err(error) = &final_settings {
             return Err(ConfigError::Message(format!(
-                "Configuration validation failed: {:?}",
-                error
+                "Configuration validation failed: {error:?}"
             )));
         }
 

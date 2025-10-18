@@ -306,3 +306,23 @@ pub fn is_valid_colour(colour: &str) -> Result<(), ValidationError> {
         Err(ValidationError::new("Invalid colour format"))
     }
 }
+
+pub fn is_valid_longitude(longitude: &f64) -> Result<(), ValidationError> {
+    if (-180.0..=180.0).contains(longitude) {
+        Ok(())
+    } else {
+        Err(ValidationError::new(
+            "Longitude must be between -180.0 and 180.0",
+        ))
+    }
+}
+
+pub fn is_valid_latitude(latitude: &f64) -> Result<(), ValidationError> {
+    if (-90.0..=90.0).contains(latitude) {
+        Ok(())
+    } else {
+        Err(ValidationError::new(
+            "Latitude must be between -90.0 and 90.0",
+        ))
+    }
+}
