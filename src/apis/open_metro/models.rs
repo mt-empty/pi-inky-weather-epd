@@ -164,7 +164,7 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast
                 let uv_index = hourly_data.uv_index[i].round() as u16;
                 let relative_humidity = hourly_data.relative_humidity_2m[i];
                 let time = hourly_data.time[i];
-                let is_night = false; // TODO: Implement day/night detection
+                let is_night = response.current.is_day == 0;
 
                 crate::domain::models::HourlyForecast {
                     time,
