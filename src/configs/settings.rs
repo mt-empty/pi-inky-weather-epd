@@ -200,7 +200,9 @@ impl DashboardSettings {
         } else {
             config_builder = config_builder
                 // Add in development configuration file
-                .add_source(File::with_name(development_config_path.to_str().unwrap()).required(false))
+                .add_source(
+                    File::with_name(development_config_path.to_str().unwrap()).required(false),
+                )
                 // Add in local configuration file (for dev overrides, not checked into git)
                 .add_source(File::with_name(local_config_path.to_str().unwrap()).required(false));
         }
@@ -211,9 +213,9 @@ impl DashboardSettings {
             // Note: Single underscore _ separates prefix from key, double __ for nesting
             .add_source(
                 Environment::with_prefix("APP")
-                    .prefix_separator("_")  // Separator between prefix and key (APP_api)
-                    .separator("__")        // Separator for nested keys (api__provider)
-                    .try_parsing(true),             // Parse values to correct types
+                    .prefix_separator("_") // Separator between prefix and key (APP_api)
+                    .separator("__") // Separator for nested keys (api__provider)
+                    .try_parsing(true), // Parse values to correct types
             )
             .build()?;
         let final_settings: Result<DashboardSettings, ConfigError> = settings.try_deserialize();

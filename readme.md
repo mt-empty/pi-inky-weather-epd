@@ -172,15 +172,25 @@ Any Contributions are welcome!
 
 ### Setup
 
-Your local config should go into `config/local.toml`:
+1. **Install Git hooks** (pre-push checks for formatting, tests, and version tags):
+```bash
+./scripts/setup-git-hooks.sh
+```
+
+2. **Create local config** in `config/local.toml`:
 ```bash
 cp config/development.toml config/local.toml
+# Edit config/local.toml with your location settings
 cargo run
+```
 
-## Run all tests with default open-meteo config
+### Running Tests
+
+```bash
+# Run all tests with default open-meteo config
 RUN_MODE=test cargo test
 
-## Test BOM API
+# Test BOM API specifically
 RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
 ```
 
@@ -224,9 +234,10 @@ ssh into it by running `ssh pizero`
 Once you have your ssh setup:
 
 ```bash
-chmod +x ./misc/send-img-to-pi.sh
-cargo run
-./misc/send-img-to-pi.sh
+cargo run   # to generate the image
+
+chmod +x ./scripts/send-img-to-pi.sh
+./scripts/send-img-to-pi.sh
 ```
 
 ## Troubleshooting
