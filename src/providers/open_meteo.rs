@@ -25,7 +25,9 @@ fn check_open_meteo_error(body: &str) -> Result<(), DashboardError> {
     if api_error.error {
         eprintln!("Warning: Open-Meteo API request failed, trying to load cached data");
         eprintln!("Open-Meteo API Error: {}", api_error.reason);
-        return Err(DashboardError::ApiError(api_error.reason));
+        return Err(DashboardError::ApiError {
+            details: api_error.reason,
+        });
     }
 
     Ok(())

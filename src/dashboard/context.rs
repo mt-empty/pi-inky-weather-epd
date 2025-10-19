@@ -90,9 +90,10 @@ pub struct Context {
     pub day7_icon: String,
     pub day7_name: String,
     // warning message
-    pub warning_message: String,
-    pub warning_icon: String,
-    pub warning_visibility: String,
+    pub diagnostic_message: String,
+    pub diagnostic_visibility: String,
+    // cascading diagnostic icons (SVG fragments for multiple stacked icons)
+    pub diagnostic_icons_svg: String,
 }
 
 impl Default for Context {
@@ -173,15 +174,16 @@ impl Default for Context {
             day7_maxtemp: na.clone(),
             day7_icon: not_available_icon_path.clone(),
             day7_name: na.clone(),
-            warning_message: na,
-            warning_icon: not_available_icon_path,
-            warning_visibility: ElementVisibility::Hidden.to_string(),
+            diagnostic_message: na,
+            diagnostic_visibility: ElementVisibility::Hidden.to_string(),
+            diagnostic_icons_svg: String::new(),
         }
     }
 }
 
 pub struct ContextBuilder {
     pub context: Context,
+    diagnostics: Vec<DashboardError>,
 }
 
 impl Default for ContextBuilder {
@@ -194,7 +196,55 @@ impl ContextBuilder {
     pub fn new() -> Self {
         Self {
             context: Context::default(),
+            diagnostics: Vec::new(),
         }
+    }
+
+    /// Updates the warning display fields based on the highest priority diagnostic.
+    /// Called internally after adding diagnostics.
+    fn update_warning_display(&mut self) {
+        if let Some(highest_priority_error) = self.diagnostics.iter().max_by_key(|e| e.priority()) {
+            // Show message for highest priority error only
+            self.context.diagnostic_message = highest_priority_error.short_description().to_string();
+            self.context.diagnostic_visibility = ElementVisibility::Visible.to_string();
+
+            // Generate cascading icons SVG for all diagnostics (sorted by priority)
+            self.context.diagnostic_icons_svg = self.generate_cascading_icons_svg();
+        } else {
+            // No diagnostics - hide warning
+            self.context.diagnostic_visibility = ElementVisibility::Hidden.to_string();
+            self.context.diagnostic_icons_svg = String::new();
+        }
+    }
+
+    /// Generates SVG fragments for cascading diagnostic icons.
+    /// Icons are stacked diagonally with offset, sorted by priority (high to low).
+    /// Highest priority appears at front (lowest x, lowest y), lowest priority at back.
+    fn generate_cascading_icons_svg(&self) -> String {
+        let mut sorted_diagnostics = self.diagnostics.clone();
+        sorted_diagnostics.sort_by_key(|e| std::cmp::Reverse(e.priority())); // High to low
+
+        let icon_size = 74;
+        let x_start = 63; // Starting X position for highest priority
+        let y_start = -10; // Starting Y position for highest priority
+        let x_offset = -5; // Move each subsequent icon left (creates depth)
+        let y_offset = -3; // Move each subsequent icon up (creates depth)
+
+        // Reverse order so lowest priority renders first (appears in back)
+        sorted_diagnostics
+            .iter()
+            .enumerate()
+            .rev()
+            .map(|(index, error)| {
+                let x_pos = x_start + (index as i32 * x_offset);
+                let y_pos = y_start + (index as i32 * y_offset);
+                format!(
+                    r#"<image x="{x_pos}" y="{y_pos}" width="{icon_size}" height="{icon_size}" href="{}"/>"#,
+                    error.get_icon_path()
+                )
+            })
+            .collect::<Vec<String>>()
+            .join("\n        ")
     }
 
     pub fn with_daily_forecast_data(
@@ -248,9 +298,7 @@ impl ContextBuilder {
                     .unwrap_or("NA".to_string())
             });
 
-            println!(
-                "{day_name_value} - Max {max_temp_value} Min {min_temp_value}"
-            );
+            println!("{day_name_value} - Max {max_temp_value} Min {min_temp_value}");
             match day_index {
                 1 => {
                     if let Some(ref astro) = day.astronomical {
@@ -313,7 +361,7 @@ impl ContextBuilder {
         if day_index < 8 {
             let details = "Warning: Less than 7 days of daily forecast data, Using Incomplete data"
                 .to_string();
-            self.set_errors(DashboardError::IncompleteData { details })
+            self.with_validation_error(DashboardError::IncompleteData { details })
         } else {
             self
         }
@@ -331,7 +379,7 @@ impl ContextBuilder {
         ) {
             Some((start, end)) => (start, end),
             None => {
-                return self.set_errors(DashboardError::IncompleteData {
+                return self.with_validation_error(DashboardError::IncompleteData {
                         details: "No hourly forecast data available, Could Not find a date later than the current date".to_string(),
                     });
             }
@@ -605,20 +653,33 @@ impl ContextBuilder {
         }
     }
 
-    pub fn set_errors<E: Icon + Description + std::error::Error>(&mut self, error: E) -> &mut Self {
-        self.context.warning_message = error.short_description().to_string();
-        // TODO: at the moment the last error will overwrite the previous ones, so need to
-        // display the errors in a list, front to back in cascading icons style
-        self.context.warning_icon = error.get_icon_path().to_string();
-        self.context.warning_visibility = ElementVisibility::Visible.to_string();
+    /// Sets a validation error detected internally during context building.
+    ///
+    /// This method is used when data validation fails (e.g., incomplete forecast data).
+    /// It logs the error to stderr, adds it to the diagnostics collection, and updates
+    /// the warning display to show the highest priority error.
+    ///
+    /// Use this for internal validation errors. For external API warnings, use `with_warning`.
+    pub fn with_validation_error(&mut self, error: DashboardError) -> &mut Self {
         eprintln!("Error: {}", error.long_description());
+        self.diagnostics.push(error);
+        self.update_warning_display();
         self
     }
 
-    pub fn with_warning<E: Icon + Description>(&mut self, warning: E) -> &mut Self {
-        self.context.warning_message = warning.short_description().to_string();
-        self.context.warning_icon = warning.get_icon_path().to_string();
-        self.context.warning_visibility = ElementVisibility::Visible.to_string();
+    /// Sets a warning message propagated from external sources (e.g., API issues).
+    ///
+    /// This method is used when external dependencies have issues but fallback data is available
+    /// (e.g., using stale cached data because API is unreachable).
+    ///
+    /// Unlike `with_validation_error`, this does NOT log to stderr because the caller
+    /// is expected to have already logged the warning.
+    ///
+    /// Adds the warning to the diagnostics collection and updates the display to show
+    /// the highest priority diagnostic.
+    pub fn with_warning(&mut self, warning: DashboardError) -> &mut Self {
+        self.diagnostics.push(warning);
+        self.update_warning_display();
         self
     }
 }

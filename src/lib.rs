@@ -4,7 +4,7 @@ pub mod configs;
 pub mod constants;
 pub mod dashboard;
 pub mod domain;
-mod errors;
+pub mod errors;
 mod providers;
 mod update;
 pub mod utils;

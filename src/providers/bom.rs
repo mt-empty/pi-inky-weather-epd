@@ -21,16 +21,18 @@ fn check_bom_error(body: &str) -> Result<(), DashboardError> {
         Ok(err) => err,
         Err(_) => return Ok(()), // Not an error response format, continue processing
     };
-    
+
     // If we have errors, report them and return the first one
     if let Some(first_error) = api_error.errors.first() {
         eprintln!("Warning: BOM API request failed, trying to load cached data");
         for (i, error) in api_error.errors.iter().enumerate() {
             eprintln!("BOM API Error {}: {}", i + 1, error.detail);
         }
-        return Err(DashboardError::ApiError(first_error.detail.clone()));
+        return Err(DashboardError::ApiError {
+            details: first_error.detail.clone(),
+        });
     }
-    
+
     Ok(())
 }
 
@@ -48,13 +50,11 @@ impl BomProvider {
 
 impl WeatherProvider for BomProvider {
     fn fetch_hourly_forecast(&self) -> Result<FetchResult<Vec<HourlyForecast>>, Error> {
-        match self
-            .fetcher
-            .fetch_data::<HourlyForecastResponse>(
-                HOURLY_FORECAST_ENDPOINT.clone(),
-                &self.generate_cache_filename(HOURLY_CACHE_SUFFIX),
-                Some(check_bom_error),
-            )? {
+        match self.fetcher.fetch_data::<HourlyForecastResponse>(
+            HOURLY_FORECAST_ENDPOINT.clone(),
+            &self.generate_cache_filename(HOURLY_CACHE_SUFFIX),
+            Some(check_bom_error),
+        )? {
             FetchOutcome::Fresh(data) => {
                 // Convert BOM models to domain models
                 let domain_data: Vec<HourlyForecast> =

@@ -33,7 +33,8 @@ impl Fetcher {
                 "Weather data cache file not found at {:?}: {}. \
                  If this is your first time running, set 'disable_weather_api_requests = false' \
                  in the configuration so data can be cached.",
-                file_path, e
+                file_path,
+                e
             )
         })?;
         let data = serde_json::from_str(&cached).map_err(Error::msg)?;
