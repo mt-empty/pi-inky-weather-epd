@@ -60,18 +60,17 @@ impl Description for DashboardError {
         match self {
             DashboardError::NoInternet { details } => {
                 format!(
-                    "The application is unable to reach the API server. Details: {}",
-                    details
+                    "The application is unable to reach the API server. Details: {details}"
                 )
             }
             DashboardError::ApiError(msg) => {
-                format!("The API returned an error. Details: {}", msg)
+                format!("The API returned an error. Details: {msg}")
             }
             DashboardError::IncompleteData { details } => {
-                format!("Received Incomplete data. Details: {}", details)
+                format!("Received Incomplete data. Details: {details}")
             }
             DashboardError::UpdateFailed(msg) => {
-                format!("The application failed to update. Details: {}", msg)
+                format!("The application failed to update. Details: {msg}")
             }
         }
     }
@@ -87,12 +86,11 @@ impl fmt::Display for GeohashError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             GeohashError::InvalidCoordinateRange(x, y) => {
-                write!(f, "invalid coordinate range: lat={}, lon={}", x, y)
+                write!(f, "invalid coordinate range: lat={x}, lon={y}")
             }
             GeohashError::InvalidLength(len) => write!(
                 f,
-                "Invalid length specified: {}. Accepted values are between 1 and 12, inclusive",
-                len
+                "Invalid length specified: {len}. Accepted values are between 1 and 12, inclusive"
             ),
         }
     }

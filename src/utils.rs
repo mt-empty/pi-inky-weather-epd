@@ -30,7 +30,7 @@ pub fn convert_svg_to_png(
 ) -> Result<(), Error> {
     // Read the SVG file
     let svg_data = fs::read_to_string(input_path)
-        .map_err(|e| Error::msg(format!("Failed to read SVG file: {}", e)))?;
+        .map_err(|e| Error::msg(format!("Failed to read SVG file: {e}")))?;
 
     let mut font_db = fontdb::Database::new();
     load_fonts(&mut font_db);
@@ -42,7 +42,7 @@ pub fn convert_svg_to_png(
     };
 
     let tree = usvg::Tree::from_str(&svg_data, &opts)
-        .map_err(|e| Error::msg(format!("Failed to parse SVG: {}", e)))?;
+        .map_err(|e| Error::msg(format!("Failed to parse SVG: {e}")))?;
 
     // Create a higher resolution canvas
     let pixmap_size = tree.size().to_int_size();
@@ -60,7 +60,7 @@ pub fn convert_svg_to_png(
     // Save the PNG file
     pixmap
         .save_png(output_path)
-        .map_err(|e| Error::msg(format!("Failed to save PNG: {}", e)))?;
+        .map_err(|e| Error::msg(format!("Failed to save PNG: {e}")))?;
 
     Ok(())
 }
@@ -84,8 +84,8 @@ fn load_fonts(font_db: &mut fontdb::Database) {
 
     for file in &font_files {
         match font_db.load_font_file(current_path.join(file)) {
-            Ok(_) => println!("Loaded font file: {}", file),
-            Err(e) => eprintln!("Failed to load font file: {}", e),
+            Ok(_) => println!("Loaded font file: {file}"),
+            Err(e) => eprintln!("Failed to load font file: {e}"),
         }
     }
 }

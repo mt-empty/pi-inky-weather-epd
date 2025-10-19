@@ -30,6 +30,13 @@ if ! cargo fmt -- --check; then
     exit 1
 fi
 
+# Run cargo clippy
+echo "Running cargo clippy..."
+if ! cargo clippy -- -D warnings; then
+    echo "❌ Clippy check failed. Please fix clippy warnings before pushing."
+    exit 1
+fi
+
 echo "Running cargo test with RUN_MODE=test..."
 
 if ! RUN_MODE=test cargo test; then
@@ -69,7 +76,9 @@ echo "✅ Pre-push hook installed successfully!"
 echo ""
 echo "The hook will run the following checks before each push:"
 echo "  1. Code formatting (cargo fmt)"
-echo "  2. All tests (RUN_MODE=test cargo test)"
-echo "  3. Version tag validation"
+echo "  2. Clippy linting (cargo clippy -- -D warnings)"
+echo "  3. All tests (RUN_MODE=test cargo test)"
+echo "  4. BOM snapshot tests"
+echo "  5. Version tag validation"
 echo ""
 echo "🎉 Git hooks setup complete!"

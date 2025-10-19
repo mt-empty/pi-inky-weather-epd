@@ -92,7 +92,7 @@ fn test_hourly_forecast_during_spring_dst_transition() {
     // Simulate receiving hourly forecasts around DST transition
     // Oct 4-5, 2025 transition
 
-    let forecasts = vec![
+    let forecasts = &[
         "2025-10-04T15:00:00Z", // Oct 5, 01:00 AEST (before DST)
         "2025-10-04T16:00:00Z", // Oct 5, 03:00 AEDT (after DST) - 02:00 skipped!
         "2025-10-04T17:00:00Z", // Oct 5, 04:00 AEDT
@@ -120,7 +120,7 @@ fn test_hourly_forecast_during_spring_dst_transition() {
 fn test_daily_forecast_during_fall_dst_transition() {
     // April 5-6, 2025 transition
 
-    let forecasts = vec![
+    let forecasts = &[
         "2025-04-05T15:00:00Z", // Apr 6, 02:00 AEDT (first occurrence)
         "2025-04-05T16:00:00Z", // Apr 6, 02:00 AEST (second occurrence!)
         "2025-04-05T17:00:00Z", // Apr 6, 03:00 AEST
@@ -290,7 +290,7 @@ fn test_daily_aggregation_on_25_hour_day() {
     // April 6, 2025 has 25 hours due to DST fall back
     // Verify date grouping works correctly
 
-    let utc_times = vec![
+    let utc_times = &[
         "2025-04-05T14:00:00Z", // Apr 6, 01:00 AEDT
         "2025-04-05T15:00:00Z", // Apr 6, 02:00 AEDT (first)
         "2025-04-05T16:00:00Z", // Apr 6, 02:00 AEST (second - same wall clock!)
@@ -321,7 +321,7 @@ fn test_daily_aggregation_on_23_hour_day() {
     // October 5, 2025 has only 23 hours due to DST spring forward
     // 2:00-2:59 AM doesn't exist
 
-    let utc_times = vec![
+    let utc_times = &[
         "2025-10-04T14:00:00Z", // Oct 5, 00:00 AEST
         "2025-10-04T15:00:00Z", // Oct 5, 01:00 AEST
         "2025-10-04T16:00:00Z", // Oct 5, 03:00 AEDT (2:00 skipped!)

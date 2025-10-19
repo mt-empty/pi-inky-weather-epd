@@ -25,7 +25,7 @@ fn test_bom_hourly_to_domain_conversion() {
 
     // Verify conversion happened
     assert!(
-        domain_forecasts.len() > 0,
+        !domain_forecasts.is_empty(),
         "Should have converted forecasts"
     );
 
@@ -50,7 +50,7 @@ fn test_bom_daily_to_domain_conversion() {
 
     // Verify conversion happened
     assert!(
-        domain_forecasts.len() > 0,
+        !domain_forecasts.is_empty(),
         "Should have converted forecasts"
     );
 
@@ -90,7 +90,7 @@ fn test_bom_precipitation_edge_cases() {
         }]
     }"#;
 
-    let response: HourlyForecastResponse = serde_json::from_str(&json).unwrap();
+    let response: HourlyForecastResponse = serde_json::from_str(json).unwrap();
     let domain: Vec<HourlyForecast> = response.data.into_iter().map(|bom| bom.into()).collect();
 
     let forecast = &domain[0];
@@ -126,7 +126,7 @@ fn test_bom_extreme_weather_conversion() {
         }]
     }"#;
 
-    let response: HourlyForecastResponse = serde_json::from_str(&json).unwrap();
+    let response: HourlyForecastResponse = serde_json::from_str(json).unwrap();
     let domain: Vec<HourlyForecast> = response.data.into_iter().map(|bom| bom.into()).collect();
 
     let forecast = &domain[0];
@@ -161,7 +161,7 @@ fn test_bom_daily_missing_temps() {
         }]
     }"#;
 
-    let response: DailyForecastResponse = serde_json::from_str(&json).unwrap();
+    let response: DailyForecastResponse = serde_json::from_str(json).unwrap();
     let domain: Vec<DailyForecast> = response.data.into_iter().map(|bom| bom.into()).collect();
 
     let forecast = &domain[0];

@@ -117,7 +117,7 @@ fn test_open_meteo_array_consistency() {
         }
     }"#;
 
-    let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
+    let response: OpenMeteoHourlyResponse = serde_json::from_str(json).unwrap();
     let domain: Vec<HourlyForecast> = response.into();
 
     // Verify each hourly forecast has correct values from arrays
@@ -186,7 +186,7 @@ fn test_open_meteo_extreme_values() {
         }
     }"#;
 
-    let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
+    let response: OpenMeteoHourlyResponse = serde_json::from_str(json).unwrap();
     let domain: Vec<HourlyForecast> = response.into();
 
     let forecast = &domain[0];
@@ -274,7 +274,7 @@ fn test_open_meteo_zero_precipitation() {
         }
     }"#;
 
-    let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
+    let response: OpenMeteoHourlyResponse = serde_json::from_str(json).unwrap();
     let domain: Vec<HourlyForecast> = response.into();
 
     let forecast = &domain[0];

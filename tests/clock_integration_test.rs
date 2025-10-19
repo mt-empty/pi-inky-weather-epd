@@ -91,7 +91,7 @@ fn test_time_dependent_function_example() {
     fn is_business_hours(clock: &dyn Clock) -> bool {
         let now = clock.now_utc();
         let hour = now.hour();
-        hour >= 9 && hour < 17
+        (9..17).contains(&hour)
     }
 
     // Test during business hours

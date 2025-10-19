@@ -348,7 +348,7 @@ impl HourlyForecastGraph {
 
             // Label (align to the start since it's on the right side)
             let label_x = y_right_axis_x + 10.0;
-            let label_str = format!("{:.0}%", y_val);
+            let label_str = format!("{y_val:.0}%");
             y_right_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}" fill="{colour}"  font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" text-anchor="start" dy="4">{text}</text>"#,
                 x = label_x,
@@ -385,10 +385,10 @@ impl HourlyForecastGraph {
 
             // Label: placed to the left of the y-axis
             let label_x = y_axis_x - 10.0;
-            let mut label_str = format!("{:.1}°", y_val);
+            let mut label_str = format!("{y_val:.1}°");
             let mut font_size = DEFAULT_AXIS_LABEL_FONT_SIZE;
             if j == 0 || j == self.y_left_ticks {
-                label_str = format!("{:.0}°", y_val);
+                label_str = format!("{y_val:.0}°");
                 font_size = 35;
             }
             y_left_labels.push_str(&format!(
@@ -403,6 +403,7 @@ impl HourlyForecastGraph {
         y_left_labels
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn generate_x_axis_labels(
         &self,
         current_hour: f32,
@@ -435,8 +436,7 @@ impl HourlyForecastGraph {
             // do not draw guideline if it overlaps with tomorrow's line
             if x_val != (24.0 - current_hour) {
                 x_axis_guideline_path.push_str(&format!(
-                    r#" M {} {} v -{} m 0 2 v -2"#,
-                    xs, x_guideline_len, x_guideline_len
+                    r#" M {xs} {x_guideline_len} v -{x_guideline_len} m 0 2 v -2"#
                 ));
             }
             // Label: placed below the x-axis line
@@ -451,7 +451,7 @@ impl HourlyForecastGraph {
             } else {
                 hour
             };
-            let label_str = format!("{:.0}{}", display_hour, period);
+            let label_str = format!("{display_hour:.0}{period}");
 
             x_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" text-anchor="middle">{text}</text>"#,
@@ -539,8 +539,7 @@ impl HourlyForecastGraph {
             let offset = (i as f32 / 23.0) * 100.0;
             let colour = UVIndexCategory::from_u8(uv).to_colour();
             gradient.push_str(&format!(
-                r#"<stop offset="{:.2}%" stop-color="{}"/>"#,
-                offset, colour
+                r#"<stop offset="{offset:.2}%" stop-color="{colour}"/>"#
             ));
         }
 

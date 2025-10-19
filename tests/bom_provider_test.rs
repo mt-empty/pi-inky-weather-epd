@@ -25,7 +25,7 @@ fn test_load_bom_hourly_fixture() {
 
     let response = result.unwrap();
     assert!(
-        response.data.len() > 0,
+        !response.data.is_empty(),
         "Expected at least one hourly forecast entry"
     );
 
@@ -56,7 +56,7 @@ fn test_load_bom_daily_fixture() {
 
     let response = result.unwrap();
     assert!(
-        response.data.len() > 0,
+        !response.data.is_empty(),
         "Expected at least one daily forecast entry"
     );
 

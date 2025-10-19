@@ -3,14 +3,33 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 
 use crate::{
-    apis::open_metro::models::OpenMeteoHourlyResponse,
+    apis::open_metro::models::{OpenMeteoError, OpenMeteoHourlyResponse},
     constants::{CACHE_SUFFIX, OPEN_METEO_ENDPOINT},
     domain::models::{DailyForecast, HourlyForecast},
+    errors::DashboardError,
     providers::{
         fetcher::{FetchOutcome, Fetcher},
         FetchResult, WeatherProvider,
     },
 };
+
+/// Open-Meteo-specific error checker
+fn check_open_meteo_error(body: &str) -> Result<(), DashboardError> {
+    // Try to parse as error response; if it's not an error format, that's fine (return Ok)
+    let api_error = match serde_json::from_str::<OpenMeteoError>(body) {
+        Ok(err) => err,
+        Err(_) => return Ok(()), // Not an error response format, continue processing
+    };
+
+    // OpenMeteoError.error field indicates if this is actually an error
+    if api_error.error {
+        eprintln!("Warning: Open-Meteo API request failed, trying to load cached data");
+        eprintln!("Open-Meteo API Error: {}", api_error.reason);
+        return Err(DashboardError::ApiError(api_error.reason));
+    }
+
+    Ok(())
+}
 
 pub struct OpenMeteoProvider {
     fetcher: Fetcher,
@@ -29,11 +48,10 @@ impl OpenMeteoProvider {
             return Ok(FetchResult::fresh(cached.clone()));
         }
 
-        // OpenMeteo doesn't have custom error format, use None for error_checker
-        let result = match self.fetcher.fetch_data::<OpenMeteoHourlyResponse, ()>(
+        let result = match self.fetcher.fetch_data::<OpenMeteoHourlyResponse>(
             OPEN_METEO_ENDPOINT.clone(),
             &self.generate_cache_filename(CACHE_SUFFIX),
-            None,
+            Some(check_open_meteo_error),
         )? {
             FetchOutcome::Fresh(data) => {
                 self.cached_response.borrow_mut().replace(data.clone());

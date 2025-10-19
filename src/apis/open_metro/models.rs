@@ -1,6 +1,12 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{self, Deserialize, Deserializer};
 
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct OpenMeteoError {
+    pub error: bool,
+    pub reason: String,
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenMeteoHourlyResponse {
@@ -213,11 +219,11 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
                 };
 
                 let precipitation = {
-                    let amount_max = Some(response.daily.precipitation_sum[i].round() as u16);
-                    let chance = Some(response.daily.precipitation_probability_max[i]);
+                    let amount_max = response.daily.precipitation_sum[i].round() as u16;
+                    let chance = response.daily.precipitation_probability_max[i];
 
-                    if amount_max.unwrap_or(0) > 0 || chance.unwrap_or(0) > 0 {
-                        Some(Precipitation::new(chance, None, amount_max))
+                    if amount_max > 0 || chance > 0 {
+                        Some(Precipitation::new(Some(chance), None, Some(amount_max)))
                     } else {
                         None
                     }
@@ -317,7 +323,7 @@ where
         .into_iter()
         .map(|date_str| {
             // Combine the date string with the fixed time
-            let datetime_str = format!("{}T13:00:00Z", date_str);
+            let datetime_str = format!("{date_str}T13:00:00Z");
             // Parse the datetime string
             NaiveDateTime::parse_from_str(&datetime_str, "%Y-%m-%dT%H:%M:%SZ")
                 .map(|naive| DateTime::from_naive_utc_and_offset(naive, Utc))

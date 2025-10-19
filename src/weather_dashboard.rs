@@ -48,7 +48,7 @@ fn render_dashboard_template(context: &Context, dashboard_svg: String) -> Result
     let tt_name = "dashboard";
 
     if let Err(e) = tt.add_template(tt_name, &dashboard_svg) {
-        println!("Failed to add template: {}", e);
+        println!("Failed to add template: {e}");
         return Err(e.into());
     }
     tt.set_default_formatter(&format_unescaped);
@@ -60,7 +60,7 @@ fn render_dashboard_template(context: &Context, dashboard_svg: String) -> Result
             Ok(())
         }
         Err(e) => {
-            println!("Failed to render template: {}", e);
+            println!("Failed to render template: {e}");
             Err(e.into())
         }
     }
@@ -98,7 +98,7 @@ pub fn generate_weather_dashboard_with_clock(clock: &dyn Clock) -> Result<(), Er
         Err(e) => {
             println!("Current directory: {}", current_dir.display());
             println!("Template path: {}", &CONFIG.misc.template_path.display());
-            println!("Failed to read template file: {}", e);
+            println!("Failed to read template file: {e}");
             return Err(e.into());
         }
     };

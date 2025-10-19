@@ -1,5 +1,12 @@
 # Pi Inky Weather Display - AI Coding Agent Instructions
 
+## Quick Reference
+
+**Build**: `cargo build` | **Run**: `cargo run` | **Test**: `RUN_MODE=test cargo test`
+**Format**: `cargo fmt` | **Lint**: `cargo clippy -- -D warnings`
+**Entry**: `src/main.rs` → `run_weather_dashboard()` → `generate_weather_dashboard()`
+**Config**: Hierarchical merge from `config/*.toml` + `~/.config/pi-inky-weather-epd.toml` + env vars
+
 ## Project Overview
 
 A Rust application that generates weather dashboards for Raspberry Pi with 7.3" e-paper displays. Supports multiple weather APIs (BOM, Open-Meteo) through a provider pattern, renders SVG templates with TinyTemplate, and converts to PNG using resvg for display on Inky Impression 7.3" hardware.
@@ -135,6 +142,48 @@ OpenSSL is vendored (`Cargo.toml` feature) to avoid cross-compilation issues.
 
 ## Development Workflows
 
+### VSCode Development Environment
+
+This project includes comprehensive VSCode configuration in `pi-inky-weather-epd.code-workspace`:
+
+**Recommended Extensions**:
+- `rust-lang.rust-analyzer` - Rust language support with clippy integration
+- `jock.svg` - SVG preview for dashboard templates
+- `mitsuhiko.insta` - Snapshot test review UI
+- `tamasfe.even-better-toml` - TOML syntax highlighting for configs
+- `Gruntfuggly.todo-tree` - TODO comment tracking
+- `chanhx.crabviz` - Rust project visualization
+
+**Editor Settings**:
+- Format on save enabled (uses `rust-analyzer`)
+- Clippy as default check command: `rust-analyzer.check.command = "clippy"`
+- SVG preview background: `dark-transparent` for dashboard debugging
+
+**Available Tasks** (Run with `Ctrl+Shift+B` or Command Palette):
+- `cargo-build` (default build task) - Build debug binary
+- `cargo-run` - Run application locally
+- `cargo-test(open_meteo)` - Run all tests with `RUN_MODE=test`
+- `cargo-test(bom only)` - Run BOM-specific snapshot test with overrides
+
+**Launch Configurations**:
+- Debug/run with `lldb` debugger configured
+- Automatically runs `cargo-build` as pre-launch task
+
+### Code Quality Standards
+
+**CI enforces these checks** (`.github/workflows/test.yml`):
+1. `cargo fmt -- --check` - Code formatting (no warnings)
+2. `cargo check` - Compilation check
+3. `cargo clippy -- -D warnings` - **Zero clippy warnings allowed**
+4. Cross-compilation for ARM targets
+5. Test suite with both providers
+
+**Local pre-push hook** (install with `scripts/setup-git-hooks.sh`):
+- Runs `cargo fmt --check`
+- Runs all tests (Open-Meteo + BOM snapshots)
+- Validates version tag matches `Cargo.toml`
+- **Blocks push if any check fails**
+
 ### Local Development
 ```bash
 # Create local config (gitignored)
@@ -148,6 +197,8 @@ cargo run
 - `disable_png_output = true`: Skip PNG generation for faster iteration
 
 ### Testing
+
+**Test Philosophy**: All tests use fixtures (pre-captured API responses) or mocked time via `Clock` abstraction. No live API calls to ensure deterministic, reproducible results.
 
 **Run all tests**:
 ```bash
@@ -169,6 +220,23 @@ cargo test --test daylight_saving_test
 cargo test --test clock_integration_test
 ```
 
+**Snapshot Testing with Insta**:
+
+The project uses `insta` crate for SVG output verification. Workflow:
+
+1. **Make code changes** that affect dashboard rendering
+2. **Run tests**: `RUN_MODE=test cargo test --test snapshot_provider_test`
+3. **Review changes**: `cargo insta review` (interactive UI)
+   - Shows diff of old vs new SVG output
+   - Accept changes that are intentional improvements
+   - Reject changes that indicate bugs
+4. **Commit snapshots**: Snapshot files in `tests/snapshots/` must be committed
+
+**Snapshot files** (`tests/snapshots/snapshot_provider_test__*.snap`):
+- Contain complete SVG output for provider-specific tests
+- Named by test function (e.g., `snapshot_open_meteo_dashboard.snap`)
+- Critical for regression testing - changes here indicate dashboard output changed
+
 **Review snapshot changes**:
 ```bash
 RUN_MODE=test cargo test --test snapshot_provider_test
@@ -181,8 +249,17 @@ cargo insta review  # Interactive review of SVG snapshots
 
 **Test structure**:
 - `tests/fixtures/`: Pre-captured API responses for deterministic tests
+  - `open_meteo_forecast.json` - Combined hourly/daily data from Open-Meteo API
+  - `bom_hourly_forecast.json`, `bom_daily_forecast.json` - Separate BOM endpoints
 - `tests/snapshots/`: Insta snapshot files for SVG output verification
 - `cached_bom_data/`: Development cache directory (not used in tests)
+
+**Test Configuration** (`config/test.toml`):
+```toml
+disable_weather_api_requests = true  # Never call real APIs
+weather_data_cache_path = "tests/fixtures/"  # Load from fixtures
+provider = "open_meteo"  # Default test provider
+```
 
 **No live API integration tests** - all tests use fixtures or cached data to ensure reproducibility.
 
@@ -328,17 +405,46 @@ When `update_interval_days > 0`:
 
 ## Notes for AI Agents
 
+### Core Workflow Understanding
 - **Entry point**: `src/main.rs` → `run_weather_dashboard()` → `generate_weather_dashboard()` in `src/weather_dashboard.rs`
+- **Provider instantiation**: `create_provider()` in `src/providers/factory.rs` returns `Box<dyn WeatherProvider>` based on `CONFIG.api.provider`
+- **Data flow**: Provider → Domain models → ContextBuilder → Template vars → TinyTemplate → SVG string → resvg → PNG
+
+### Critical Patterns to Follow
 - **Temperature handling**: Always check `CONFIG.render_options.temp_unit` - conversion happens at deserialization
 - **Time zones**: API returns UTC, convert to local using `src/utils.rs::utc_timestamp_to_local_*` functions
 - **Clock injection**: For any time-dependent code, accept `&dyn Clock` parameter and use `clock.now_local()/now_utc()` instead of `chrono::Local::now()`
 - **Config changes**: Modify TOML files, not hardcoded values - system merges configs hierarchically
-- **SVG debugging**: Set `disable_png_output = true` and inspect `dashboard.svg` directly
-- **Adding weather icons**: Create SVG in `static/fill-svg-static/`, add enum variant in `src/weather/icons.rs`, implement `Icon` trait in `src/domain/icons.rs` if needed
+- **Error handling**: Return `Result<T, Error>` for internal functions; use `DashboardError` enum for user-facing errors with icon support
+
+### Development Tips
+- **SVG debugging**: Set `disable_png_output = true` in config and inspect `dashboard.svg` directly
+- **Skip API calls**: Set `disable_weather_api_requests = true` to use cached JSON (requires one successful fetch first)
+- **Adding weather icons**:
+  1. Create SVG in `static/fill-svg-static/`
+  2. Add enum variant in `src/weather/icons.rs`
+  3. Implement `Icon` trait in `src/domain/icons.rs` if needed (for domain model icon resolution)
 - **Geohash**: Use https://geohash.softeng.co for location codes (Australia + BOM API only)
+
+### Testing Requirements
 - **Test environment**: Always set `RUN_MODE=test` when running tests to load `config/test.toml` with fixtures
 - **Snapshot testing**: Use `insta` crate - review changes with `cargo insta review` after modifying dashboard generation
 - **Provider testing**: Default tests use Open-Meteo; override with `APP_API__PROVIDER=bom` for BOM-specific tests
+- **Time mocking**: Use `FixedClock` for deterministic time in tests - never use `chrono::Local::now()` in testable code
+
+### Code Quality Checklist
+Before committing:
+1. Run `cargo fmt` (enforced by CI and pre-push hook)
+2. Run `cargo clippy -- -D warnings` (zero warnings policy)
+3. Run `RUN_MODE=test cargo test` (all tests must pass)
+4. Review snapshot changes with `cargo insta review` if dashboard output changed
+5. Ensure version in `Cargo.toml` matches git tag if cutting a release
+
+### Common Pitfalls
+- **resvg text positioning**: Avoid `tspan` with `dx`/`dy` attributes - resvg doesn't handle properly (see SVG comments)
+- **Config environment vars**: Use double underscores for nested keys (`APP_API__PROVIDER`, not `APP_API_PROVIDER`)
+- **Provider enum**: Must be exact match - use `"open_meteo"` not `"OpenMeteo"` in config
+- **Fetcher pattern**: Always handle both `FetchOutcome::Fresh` and `FetchOutcome::Stale` cases when using `Fetcher::fetch_data()`
 
 ## Current Development Focus
 

@@ -70,7 +70,7 @@ impl From<Temperature> for i16 {
 impl Display for Temperature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let rounded: i16 = self.value.round() as i16;
-        write!(f, "{}", rounded)
+        write!(f, "{rounded}")
     }
 }
 

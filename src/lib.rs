@@ -23,11 +23,11 @@ pub use crate::weather_dashboard::generate_weather_dashboard_with_clock;
 
 pub static CONFIG: Lazy<DashboardSettings> = Lazy::new(|| match DashboardSettings::new() {
     Ok(config) => {
-        println!("## Configuration: {:#?}", config);
+        println!("## Configuration: {config:#?}");
         config
     }
     Err(e) => {
-        eprintln!("Failed to load config: {}", e);
+        eprintln!("Failed to load config: {e}");
         std::process::exit(1);
     }
 });

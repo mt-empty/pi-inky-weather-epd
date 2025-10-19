@@ -184,6 +184,12 @@ pub struct ContextBuilder {
     pub context: Context,
 }
 
+impl Default for ContextBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ContextBuilder {
     pub fn new() -> Self {
         Self {
@@ -209,10 +215,10 @@ impl ContextBuilder {
             .with_nanosecond(0)
             .unwrap();
 
-        println!("Local date truncated: {:?}", local_date_truncated);
+        println!("Local date truncated: {local_date_truncated:?}");
         let utc_converted_date: DateTime<Utc> = local_date_truncated.with_timezone(&Utc);
 
-        println!("UTC converted date  : {:?}", utc_converted_date);
+        println!("UTC converted date  : {utc_converted_date:?}");
 
         let mut day_index: i32 = 1;
 
@@ -243,8 +249,7 @@ impl ContextBuilder {
             });
 
             println!(
-                "{} - Max {} Min {}",
-                day_name_value, max_temp_value, min_temp_value
+                "{day_name_value} - Max {max_temp_value} Min {min_temp_value}"
             );
             match day_index {
                 1 => {
@@ -333,8 +338,7 @@ impl ContextBuilder {
         };
 
         println!(
-            "24h UTC forecast window: start = {:?}, end = {:?}",
-            utc_forecast_window_start, utc_forecast_window_end
+            "24h UTC forecast window: start = {utc_forecast_window_start:?}, end = {utc_forecast_window_end:?}"
         );
 
         let local_forecast_window_start: DateTime<Local> =
@@ -351,8 +355,7 @@ impl ContextBuilder {
             + chrono::Duration::days(1);
 
         println!(
-            "Local forecast window: start = {:?}, end = {:?}",
-            local_forecast_window_start, local_forecast_window_end
+            "Local forecast window: start = {local_forecast_window_start:?}, end = {local_forecast_window_end:?}"
         );
 
         // println!("Day end: {:?}", day_end);
@@ -426,7 +429,7 @@ impl ContextBuilder {
             .unwrap()
             .with_nanosecond(0)
             .unwrap();
-        println!("Current time (UTC, to the hour)     : {:?}", current_date);
+        println!("Current time (UTC, to the hour)     : {current_date:?}");
 
         let first_date = hourly_forecast_data.iter().find_map(|forecast| {
             if forecast.time >= current_date {
@@ -539,16 +542,14 @@ impl ContextBuilder {
             .signed_duration_since(forecast_window_start)
             .num_hours();
         println!(
-            "Today's Forecast Window: start = {:?}, end = {:?}, duration = {} hours",
-            forecast_window_start, day_end, today_duration
+            "Today's Forecast Window: start = {forecast_window_start:?}, end = {day_end:?}, duration = {today_duration} hours"
         );
 
         let tomorrow_duration = forecast_window_end
             .signed_duration_since(day_end)
             .num_hours();
         println!(
-            "Tomorrow's Forecast Window: start = {:?}, end = {:?}, duration = {} hours",
-            day_end, forecast_window_end, tomorrow_duration
+            "Tomorrow's Forecast Window: start = {day_end:?}, end = {forecast_window_end:?}, duration = {tomorrow_duration} hours"
         );
 
         macro_rules! max_in_today_and_tomorrow {

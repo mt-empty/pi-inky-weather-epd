@@ -43,19 +43,19 @@ struct GithubRelease {
 /// if the latest version cannot be parsed, or if the release cannot be downloaded and extracted.
 fn fetch_latest_release() -> Result<(), anyhow::Error> {
     let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
-    println!("Current version: {}", current_version);
+    println!("Current version: {current_version}");
 
     let client = reqwest::blocking::Client::new();
-    let header_value = format!("{}/{}", PACKAGE_NAME, current_version);
+    let header_value = format!("{PACKAGE_NAME}/{current_version}");
     let release_info = fetch_release_info(&client, &header_value)?;
     let latest_version = parse_latest_version(&release_info)?;
 
     if latest_version > current_version {
-        println!("Newer version available: {}", latest_version);
+        println!("Newer version available: {latest_version}");
 
         // return early if CONFIG.debugging.allow_pre_release_version is false and the latest version is a pre-release
         if !latest_version.pre.is_empty() && !CONFIG.debugging.allow_pre_release_version {
-            println!("Skipping pre-release version: {}", latest_version);
+            println!("Skipping pre-release version: {latest_version}");
             return Ok(());
         }
         download_and_extract_release(&client, &header_value, &latest_version)?;
@@ -236,8 +236,8 @@ fn download_and_extract_release(
         let mut u = CONFIG.release.download_base_url.clone();
         u.path_segments_mut()
             .unwrap()
-            .push(&format!("v{}", latest_version))
-            .push(&format!("{}.zip", TARGET_ARTIFACT));
+            .push(&format!("v{latest_version}"))
+            .push(&format!("{TARGET_ARTIFACT}.zip"));
         u
     };
 
@@ -247,7 +247,7 @@ fn download_and_extract_release(
         tempfile::tempdir_in(&base_dir).context("Failed to create temporary directory")?;
 
     let bin_path = base_dir.join(PACKAGE_NAME);
-    let backup_link = base_dir.join(format!("{}.old", PACKAGE_NAME));
+    let backup_link = base_dir.join(format!("{PACKAGE_NAME}.old"));
 
     // Extract archive
     let mut archive = ZipArchive::new(temp_zip.as_file())?;
@@ -257,7 +257,7 @@ fn download_and_extract_release(
     swap_in_new_files(temp_dir.path(), &base_dir)?;
     set_executable_permissions(&bin_path)?;
 
-    println!("Updated to version {}", latest_version);
+    println!("Updated to version {latest_version}");
     Ok(())
 }
 
@@ -316,7 +316,7 @@ pub fn update_app() -> Result<(), anyhow::Error> {
             );
             // We delete the backup link here because we couldn't delete it in the update function
             // This is a workaround for the fact that we can't delete the file while it's in use.
-            let backup_link = base_dir.join(format!("{}.old", PACKAGE_NAME));
+            let backup_link = base_dir.join(format!("{PACKAGE_NAME}.old"));
             if backup_link.exists() {
                 println!("Deleting old backup link: {}", backup_link.display());
                 fs::remove_file(&backup_link)?;

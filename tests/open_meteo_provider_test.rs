@@ -27,7 +27,7 @@ fn test_load_open_meteo_fixture() {
 
     // Validate hourly data
     assert!(
-        response.hourly.time.len() > 0,
+        !response.hourly.time.is_empty(),
         "Expected at least one hourly forecast entry"
     );
     assert_eq!(
@@ -38,7 +38,7 @@ fn test_load_open_meteo_fixture() {
 
     // Validate daily data
     assert!(
-        response.daily.time.len() > 0,
+        !response.daily.time.is_empty(),
         "Expected at least one daily forecast entry"
     );
     assert_eq!(
@@ -81,18 +81,18 @@ fn test_open_meteo_hourly_fields() {
         // Verify precipitation amount
         let precip = hourly.precipitation[i];
         assert!(
-            precip >= 0.0 && precip < 500.0,
+            (0.0..500.0).contains(&precip),
             "Precipitation should be reasonable"
         );
 
         // Verify UV index
         let uv = hourly.uv_index[i];
-        assert!(uv >= 0.0 && uv < 20.0, "UV index should be < 20");
+        assert!((0.0..20.0).contains(&uv), "UV index should be < 20");
 
         // Verify wind speed
         let wind = hourly.wind_speed_10m[i];
         assert!(
-            wind >= 0.0 && wind < 500.0,
+            (0.0..500.0).contains(&wind),
             "Wind speed should be reasonable"
         );
 
@@ -134,7 +134,7 @@ fn test_open_meteo_daily_fields() {
         // Verify precipitation
         let precip_sum = daily.precipitation_sum[i];
         assert!(
-            precip_sum >= 0.0 && precip_sum < 500.0,
+            (0.0..500.0).contains(&precip_sum),
             "Precipitation sum should be reasonable"
         );
 

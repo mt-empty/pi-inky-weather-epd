@@ -5,6 +5,9 @@ use url::Url;
 
 use crate::{errors::DashboardError, CONFIG};
 
+/// Type alias for API-specific error checking function
+pub type ErrorChecker = fn(&str) -> Result<(), DashboardError>;
+
 /// Represents the outcome of a fetch operation
 pub enum FetchOutcome<T> {
     /// Fresh data successfully fetched from API
@@ -25,9 +28,12 @@ impl Fetcher {
 
     /// Load cached data from file
     fn load_cached<T: for<'de> Deserialize<'de>>(&self, file_path: &PathBuf) -> Result<T, Error> {
-        let cached = fs::read_to_string(file_path).map_err(|_| {
-            Error::msg(
-                "Weather data JSON file not found. If this is your first time running the application, please ensure 'disable_weather_api_requests' is set to false in the configuration so data can be cached.",
+        let cached = fs::read_to_string(file_path).map_err(|e| {
+            anyhow::anyhow!(
+                "Weather data cache file not found at {:?}: {}. \
+                 If this is your first time running, set 'disable_weather_api_requests = false' \
+                 in the configuration so data can be cached.",
+                file_path, e
             )
         })?;
         let data = serde_json::from_str(&cached).map_err(Error::msg)?;
@@ -53,15 +59,14 @@ impl Fetcher {
     /// * `endpoint` - API endpoint URL
     /// * `cache_filename` - Name of cache file (e.g., "hourly_forecast.json")
     /// * `error_checker` - Optional function to check response for API-specific errors
-    pub fn fetch_data<T, E>(
+    pub fn fetch_data<T>(
         &self,
         endpoint: Url,
         cache_filename: &str,
-        error_checker: Option<fn(&str) -> Result<(), DashboardError>>,
+        error_checker: Option<ErrorChecker>,
     ) -> Result<FetchOutcome<T>, Error>
     where
         T: for<'de> Deserialize<'de>,
-        E: for<'de> Deserialize<'de>,
     {
         let file_path = self.cache_path.join(cache_filename);
 
@@ -74,7 +79,7 @@ impl Fetcher {
             let response = match client.get(endpoint).send() {
                 Ok(res) => res,
                 Err(e) => {
-                    eprintln!("API request failed: {}", e);
+                    eprintln!("API request failed: {e}");
                     return self.fallback(
                         &file_path,
                         DashboardError::NoInternet {
