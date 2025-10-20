@@ -205,7 +205,8 @@ impl ContextBuilder {
     fn update_warning_display(&mut self) {
         if let Some(highest_priority_error) = self.diagnostics.iter().max_by_key(|e| e.priority()) {
             // Show message for highest priority error only
-            self.context.diagnostic_message = highest_priority_error.short_description().to_string();
+            self.context.diagnostic_message =
+                highest_priority_error.short_description().to_string();
             self.context.diagnostic_visibility = ElementVisibility::Visible.to_string();
 
             // Generate cascading icons SVG for all diagnostics (sorted by priority)

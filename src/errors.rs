@@ -20,9 +20,8 @@ pub enum DashboardError {
     ApiError { details: String },
     #[error("Incomplete data")]
     IncompleteData { details: String },
-    // TODO: to use this error, we need to call the update function before rendering the SVG
-    // #[error("Update failed")]
-    // UpdateFailed { details: String },
+    #[error("Update failed")]
+    UpdateFailed { details: String },
 }
 
 #[derive(Debug, Display)]
@@ -33,8 +32,8 @@ pub enum DashboardErrorIconName {
     ApiError,
     #[strum(to_string = "code-yellow.svg")]
     IncompleteData,
-    // #[strum(to_string = "code-green.svg")]
-    // UpdateFailed,
+    #[strum(to_string = "code-green.svg")]
+    UpdateFailed,
 }
 
 pub trait Description {
@@ -48,7 +47,7 @@ impl Icon for DashboardError {
             DashboardError::NoInternet { .. } => DashboardErrorIconName::NoInternet,
             DashboardError::ApiError { .. } => DashboardErrorIconName::ApiError,
             DashboardError::IncompleteData { .. } => DashboardErrorIconName::IncompleteData,
-            // DashboardError::UpdateFailed { .. } => DashboardErrorIconName::UpdateFailed,
+            DashboardError::UpdateFailed { .. } => DashboardErrorIconName::UpdateFailed,
         }
         .to_string()
     }
@@ -62,6 +61,7 @@ impl DashboardError {
             DashboardError::ApiError { .. } => DiagnosticPriority::High,
             DashboardError::NoInternet { .. } => DiagnosticPriority::Medium,
             DashboardError::IncompleteData { .. } => DiagnosticPriority::Low,
+            DashboardError::UpdateFailed { .. } => DiagnosticPriority::Low,
         }
     }
 }
@@ -72,6 +72,7 @@ impl Description for DashboardError {
             DashboardError::NoInternet { .. } => "API unreachable -> Stale Data",
             DashboardError::ApiError { .. } => "API error -> Stale Data",
             DashboardError::IncompleteData { .. } => "Incomplete Data",
+            DashboardError::UpdateFailed { .. } => "Update Failed",
         }
     }
 
@@ -85,9 +86,10 @@ impl Description for DashboardError {
             }
             DashboardError::IncompleteData { details } => {
                 format!("Received Incomplete data. Details: {details}")
-            } // DashboardError::UpdateFailed { details } => {
-              //     format!("The application failed to update. Details: {details}")
-              // }
+            }
+            DashboardError::UpdateFailed { details } => {
+                format!("The application failed to update. Details: {details}")
+            }
         }
     }
 }

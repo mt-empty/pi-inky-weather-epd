@@ -6,7 +6,7 @@ pub mod dashboard;
 pub mod domain;
 pub mod errors;
 mod providers;
-mod update;
+pub mod update;
 pub mod utils;
 pub mod weather;
 pub mod weather_dashboard;

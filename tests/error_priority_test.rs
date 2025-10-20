@@ -127,7 +127,10 @@ fn test_order_doesnt_matter_highest_priority_wins() {
         builder1.context.diagnostic_icons_svg,
         builder2.context.diagnostic_icons_svg
     );
-    assert!(builder1.context.diagnostic_icons_svg.contains("code-red.svg"));
+    assert!(builder1
+        .context
+        .diagnostic_icons_svg
+        .contains("code-red.svg"));
 }
 
 #[test]

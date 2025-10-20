@@ -2,6 +2,7 @@ use crate::clock::{Clock, SystemClock};
 use crate::dashboard::context::{Context, ContextBuilder};
 use crate::errors::DashboardError;
 use crate::providers::factory::create_provider;
+use crate::update::read_last_update_status;
 use crate::{utils, CONFIG};
 use anyhow::Error;
 use std::fs;
@@ -15,6 +16,13 @@ fn update_forecast_context(
 ) -> Result<(), Error> {
     let provider = create_provider()?;
     let mut warnings: Vec<DashboardError> = Vec::new();
+
+    // Check if the last update failed and add warning if so
+    if let Some(error_details) = read_last_update_status() {
+        warnings.push(DashboardError::UpdateFailed {
+            details: error_details,
+        });
+    }
 
     println!("## Using provider: {}", provider.provider_name());
 
@@ -34,10 +42,9 @@ fn update_forecast_context(
     }
     context_builder.with_hourly_forecast_data(hourly_result.data, clock);
 
-    // If any warnings occurred, set the warning message
-    if !warnings.is_empty() {
-        // Use the first warning for display (could combine multiple in future)
-        context_builder.with_warning(warnings[0].clone());
+    // Add all accumulated warnings to the context
+    for warning in warnings {
+        context_builder.with_warning(warning);
     }
 
     Ok(())
