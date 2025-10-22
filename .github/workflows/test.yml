@@ -40,6 +40,8 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest # TODO: change to arm once it is no longer in public preview
+    env:
+      TZ: 'Australia/Melbourne'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
