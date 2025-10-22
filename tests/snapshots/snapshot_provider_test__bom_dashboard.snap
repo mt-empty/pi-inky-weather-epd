@@ -1,5 +1,6 @@
 ---
 source: tests/snapshot_provider_test.rs
+assertion_line: 205
 expression: svg_content
 ---
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
@@ -52,9 +53,11 @@ expression: svg_content
         </tspan>
     </text>
 
-    <!-- Warning Message -->
+    <!-- Diagnostic Message -->
     <svg x="580" y="0" width="200" height="100" text-anchor="middle" visibility="visible">
-        <image x="63" y="-10" width="74" height="74" href="static/fill-svg-static/code-yellow.svg" />
+        <!-- Cascading diagnostic icons (stacked by priority) -->
+        <image x="63" y="-10" width="74" height="74" href="static/fill-svg-static/code-yellow.svg"/>
+        <!-- Message for highest priority error only -->
         <text x="100" y="60" width="200" font-size="12">
             Incomplete Data
         </text>
@@ -228,12 +231,12 @@ expression: svg_content
             src: url('static/fonts/Roboto-Regular.ttf') format('truetype');
         }
 
-        @font-face { 
+        @font-face {
             font-family: 'Roboto-Regular-Dashed';
             src: url('static/fonts/Roboto-Regular-Dashed.ttf') format('truetype');
         }
 
-        .line { 
+        .line {
             stroke: black;
             stroke-width: 2;
             stroke-linecap: round;
