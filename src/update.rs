@@ -13,6 +13,7 @@ use url::Url;
 use zip::ZipArchive;
 
 const LAST_CHECKED_FILE_NAME: &str = "last_checked";
+const UPDATE_STATUS_FILE_NAME: &str = "update_status.txt";
 const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 
 #[cfg(target_arch = "arm")]
@@ -43,19 +44,19 @@ struct GithubRelease {
 /// if the latest version cannot be parsed, or if the release cannot be downloaded and extracted.
 fn fetch_latest_release() -> Result<(), anyhow::Error> {
     let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
-    println!("Current version: {}", current_version);
+    println!("Current version: {current_version}");
 
     let client = reqwest::blocking::Client::new();
-    let header_value = format!("{}/{}", PACKAGE_NAME, current_version);
+    let header_value = format!("{PACKAGE_NAME}/{current_version}");
     let release_info = fetch_release_info(&client, &header_value)?;
     let latest_version = parse_latest_version(&release_info)?;
 
     if latest_version > current_version {
-        println!("Newer version available: {}", latest_version);
+        println!("Newer version available: {latest_version}");
 
         // return early if CONFIG.debugging.allow_pre_release_version is false and the latest version is a pre-release
         if !latest_version.pre.is_empty() && !CONFIG.debugging.allow_pre_release_version {
-            println!("Skipping pre-release version: {}", latest_version);
+            println!("Skipping pre-release version: {latest_version}");
             return Ok(());
         }
         download_and_extract_release(&client, &header_value, &latest_version)?;
@@ -236,8 +237,8 @@ fn download_and_extract_release(
         let mut u = CONFIG.release.download_base_url.clone();
         u.path_segments_mut()
             .unwrap()
-            .push(&format!("v{}", latest_version))
-            .push(&format!("{}.zip", TARGET_ARTIFACT));
+            .push(&format!("v{latest_version}"))
+            .push(&format!("{TARGET_ARTIFACT}.zip"));
         u
     };
 
@@ -247,7 +248,7 @@ fn download_and_extract_release(
         tempfile::tempdir_in(&base_dir).context("Failed to create temporary directory")?;
 
     let bin_path = base_dir.join(PACKAGE_NAME);
-    let backup_link = base_dir.join(format!("{}.old", PACKAGE_NAME));
+    let backup_link = base_dir.join(format!("{PACKAGE_NAME}.old"));
 
     // Extract archive
     let mut archive = ZipArchive::new(temp_zip.as_file())?;
@@ -257,7 +258,7 @@ fn download_and_extract_release(
     swap_in_new_files(temp_dir.path(), &base_dir)?;
     set_executable_permissions(&bin_path)?;
 
-    println!("Updated to version {}", latest_version);
+    println!("Updated to version {latest_version}");
     Ok(())
 }
 
@@ -284,11 +285,11 @@ pub fn update_app() -> Result<(), anyhow::Error> {
     let base_dir = get_base_dir_path()?;
     let last_checked_path = base_dir.join(LAST_CHECKED_FILE_NAME);
 
-    if !Path::new(&last_checked_path).exists() {
+    let update_result = if !Path::new(&last_checked_path).exists() {
         // File doesn't exist; create it with the current timestamp
         let now_str = Utc::now().to_rfc3339();
         fs::write(&last_checked_path, now_str)?;
-        fetch_latest_release()?;
+        fetch_latest_release()
     } else {
         //  File exists; read and parse the timestamp
         let contents = fs::read_to_string(&last_checked_path)?;
@@ -306,9 +307,13 @@ pub fn update_app() -> Result<(), anyhow::Error> {
                 CONFIG.release.update_interval_days,
                 elapsed.num_days()
             );
-            fetch_latest_release()?;
+            let result = fetch_latest_release();
 
-            fs::write(&last_checked_path, now_utc.to_rfc3339())?;
+            if result.is_ok() {
+                fs::write(&last_checked_path, now_utc.to_rfc3339())?;
+            }
+
+            result
         } else {
             println!(
                 "{:.1} days have passed since last check, skipping update.",
@@ -316,12 +321,61 @@ pub fn update_app() -> Result<(), anyhow::Error> {
             );
             // We delete the backup link here because we couldn't delete it in the update function
             // This is a workaround for the fact that we can't delete the file while it's in use.
-            let backup_link = base_dir.join(format!("{}.old", PACKAGE_NAME));
+            let backup_link = base_dir.join(format!("{PACKAGE_NAME}.old"));
             if backup_link.exists() {
                 println!("Deleting old backup link: {}", backup_link.display());
                 fs::remove_file(&backup_link)?;
             }
+            Ok(())
         }
+    };
+
+    // Write the update status for the dashboard to read
+    write_update_status(&base_dir, &update_result);
+
+    update_result
+}
+
+/// Writes the update status to a file for later retrieval
+///
+/// This allows the dashboard to display update errors without blocking on the update process.
+/// The status file contains either "success" or "failed: <error message>".
+///
+/// # Arguments
+/// * `base_dir` - The directory where the status file will be written
+/// * `result` - The result of the update operation
+pub fn write_update_status(base_dir: &Path, result: &Result<(), Error>) {
+    let status_path = base_dir.join(UPDATE_STATUS_FILE_NAME);
+    let status = match result {
+        Ok(_) => "success".to_string(),
+        Err(e) => format!("failed: {e}"),
+    };
+
+    if let Err(e) = fs::write(&status_path, status) {
+        eprintln!("Failed to write update status: {e}");
     }
-    Ok(())
+}
+
+/// Reads the last update status from the status file in the given directory
+///
+/// Returns Some(error_message) if the last update failed, None otherwise.
+///
+/// # Arguments
+/// * `base_dir` - The directory where the status file is located
+pub fn read_update_status_from_dir(base_dir: &Path) -> Option<String> {
+    let status_path = base_dir.join(UPDATE_STATUS_FILE_NAME);
+    let status = fs::read_to_string(status_path).ok()?;
+
+    status
+        .strip_prefix("failed: ")
+        .map(|error_msg| error_msg.to_string())
+}
+
+/// Reads the last update status from the status file
+///
+/// Returns Some(error_message) if the last update failed, None otherwise.
+/// This is used by the dashboard to display update failures.
+pub fn read_last_update_status() -> Option<String> {
+    let base_dir = get_base_dir_path().ok()?;
+    read_update_status_from_dir(&base_dir)
 }

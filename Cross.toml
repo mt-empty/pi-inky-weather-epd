@@ -1,5 +1,17 @@
 [build]
 default-target = "x86_64-unknown-linux-gnu"
+pre-build = [
+  "apt-get update",
+  "DEBIAN_FRONTEND=noninteractive apt-get install --assume-yes tzdata"
+]
+
+[build.env]
+passthrough = [
+    "RUN_MODE",
+    "APP_API__PROVIDER",
+    "RUSTFLAGS",
+    "TZ",
+]
 
 # [target.x86_64-unknown-linux-gnu]
 # pre-build = [

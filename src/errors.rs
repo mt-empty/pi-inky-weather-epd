@@ -1,19 +1,27 @@
+use std::fmt;
 use strum_macros::Display;
 use thiserror::Error;
 
 use crate::weather::icons::Icon;
 
+/// Priority levels for dashboard diagnostics (higher value = higher priority)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum DiagnosticPriority {
+    Low = 1,    // IncompleteData - yellow
+    Medium = 2, // NoInternet - orange
+    High = 3,   // ApiError - red
+}
+
 #[derive(Error, Debug, Clone)]
 pub enum DashboardError {
     #[error("No internet connection")]
     NoInternet { details: String },
-    #[error("API error: {0}")]
-    ApiError(String),
-    #[error("Incomplete data:")]
+    #[error("API error")]
+    ApiError { details: String },
+    #[error("Incomplete data")]
     IncompleteData { details: String },
-    // TODO: to use this error, we need to call the update function before rendering the SVG
-    #[error("Update failed: {0}")]
-    UpdateFailed(String),
+    #[error("Update failed")]
+    UpdateFailed { details: String },
 }
 
 #[derive(Debug, Display)]
@@ -37,11 +45,24 @@ impl Icon for DashboardError {
     fn get_icon_name(&self) -> String {
         match self {
             DashboardError::NoInternet { .. } => DashboardErrorIconName::NoInternet,
-            DashboardError::ApiError(_) => DashboardErrorIconName::ApiError,
+            DashboardError::ApiError { .. } => DashboardErrorIconName::ApiError,
             DashboardError::IncompleteData { .. } => DashboardErrorIconName::IncompleteData,
-            DashboardError::UpdateFailed(_) => DashboardErrorIconName::UpdateFailed,
+            DashboardError::UpdateFailed { .. } => DashboardErrorIconName::UpdateFailed,
         }
         .to_string()
+    }
+}
+
+impl DashboardError {
+    /// Returns the priority of this error for display purposes.
+    /// Higher priority errors take precedence when multiple errors occur.
+    pub fn priority(&self) -> DiagnosticPriority {
+        match self {
+            DashboardError::ApiError { .. } => DiagnosticPriority::High,
+            DashboardError::NoInternet { .. } => DiagnosticPriority::Medium,
+            DashboardError::IncompleteData { .. } => DiagnosticPriority::Low,
+            DashboardError::UpdateFailed { .. } => DiagnosticPriority::Low,
+        }
     }
 }
 
@@ -49,29 +70,46 @@ impl Description for DashboardError {
     fn short_description(&self) -> &'static str {
         match self {
             DashboardError::NoInternet { .. } => "API unreachable -> Stale Data",
-            DashboardError::ApiError(_) => "API error -> Stale Data",
+            DashboardError::ApiError { .. } => "API error -> Stale Data",
             DashboardError::IncompleteData { .. } => "Incomplete Data",
-            DashboardError::UpdateFailed(_) => "Update failed",
+            DashboardError::UpdateFailed { .. } => "Update Failed",
         }
     }
 
     fn long_description(&self) -> String {
         match self {
             DashboardError::NoInternet { details } => {
-                format!(
-                    "The application is unable to reach the API server. Details: {}",
-                    details
-                )
+                format!("The application is unable to reach the API server. Details: {details}")
             }
-            DashboardError::ApiError(msg) => {
-                format!("The API returned an error. Details: {}", msg)
+            DashboardError::ApiError { details } => {
+                format!("The API returned an error. Details: {details}")
             }
             DashboardError::IncompleteData { details } => {
-                format!("Received Incomplete data. Details: {}", details)
+                format!("Received Incomplete data. Details: {details}")
             }
-            DashboardError::UpdateFailed(msg) => {
-                format!("The application failed to update. Details: {}", msg)
+            DashboardError::UpdateFailed { details } => {
+                format!("The application failed to update. Details: {details}")
             }
+        }
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum GeohashError {
+    InvalidCoordinateRange(f64, f64),
+    InvalidLength(usize),
+}
+
+impl fmt::Display for GeohashError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            GeohashError::InvalidCoordinateRange(x, y) => {
+                write!(f, "invalid coordinate range: lat={x}, lon={y}")
+            }
+            GeohashError::InvalidLength(len) => write!(
+                f,
+                "Invalid length specified: {len}. Accepted values are between 1 and 12, inclusive"
+            ),
         }
     }
 }

@@ -48,11 +48,13 @@
         </tspan>
     </text>
 
-    <!-- Warning Message -->
-    <svg x="580" y="0" width="200" height="100" text-anchor="middle" visibility="{warning_visibility}">
-        <image x="63" y="-10" width="74" height="74" href="{warning_icon}" />
+    <!-- Diagnostic Message -->
+    <svg x="580" y="0" width="200" height="100" text-anchor="middle" visibility="{diagnostic_visibility}">
+        <!-- Cascading diagnostic icons (stacked by priority) -->
+        {diagnostic_icons_svg}
+        <!-- Message for highest priority error only -->
         <text x="100" y="60" width="200" font-size="12">
-            {warning_message}
+            {diagnostic_message}
         </text>
     </svg>
 
@@ -223,12 +225,12 @@
             src: url('static/fonts/Roboto-Regular.ttf') format('truetype');
         }
 
-        @font-face \{ 
+        @font-face \{
             font-family: 'Roboto-Regular-Dashed';
             src: url('static/fonts/Roboto-Regular-Dashed.ttf') format('truetype');
         }
 
-        .line \{ 
+        .line \{
             stroke: {text_colour};
             stroke-width: 2;
             stroke-linecap: round;

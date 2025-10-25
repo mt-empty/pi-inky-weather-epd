@@ -1,0 +1,21 @@
+name: Deploy Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Run Tests
+    uses: ./.github/workflows/test.yml
+
+  release:
+    name: Build and Release
+    needs: test
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: write

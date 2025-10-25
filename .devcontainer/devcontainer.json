@@ -9,10 +9,20 @@
 			"extensions": [
 				"jock.svg",
 				"rust-lang.rust-analyzer",
-				"tamasfe.even-better-toml"
+				"tamasfe.even-better-toml",
+				"mitsuhiko.insta",
+				"Gruntfuggly.todo-tree",
+				"streetsidesoftware.code-spell-checker-australian-english",
+				"chanhx.crabviz"
 			]
 		}
-	}
+	},
+
+	// Mount host timezone so container uses Melbourne time (or whatever the host uses)
+	"mounts": [
+		"source=/etc/localtime,target=/etc/localtime,type=bind,consistency=cached",
+		"source=/etc/timezone,target=/etc/timezone,type=bind,consistency=cached"
+	],
 
 	// Use 'mounts' to make the cargo cache persistent in a Docker Volume.
 	// "mounts": [
@@ -24,13 +34,15 @@
 	// ]
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+	"features": {
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
+	}
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "rustc --version",
+	// "postCreateCommand": "curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash",
 
 	// Configure tool-specific properties.
 	// "customizations": {},

@@ -4,26 +4,25 @@ download_base_url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/do
 # set to 0 to disable auto-updating
 update_interval_days = 0
 
-## Extremes
-# Babinda, QLD: "rhzv2d" # wettest place in Australia
-# Marble Bar, NSW: "qgph8w" # hottest place in Australia
-# Tasmanian heights, TAS: "r283sf" # coldest place in Tasmania 
-
-## Major Cities
-# Darwin: "qvv117"
-# Sydney: "r3gx2f"
-# Melbourne: "r1r0fs"
-# Brisbane: "r7hgd6"
-# Perth: "r28ekz"
-# Adelaide: "r1f93c"
-# Hobart: "r22u0d"
-# Canberra: "r3dp32"
 [api]
-location = "r3gx2f" # uses GeoHash, must be 6 characters
+provider = "open_meteo"    # bom or open_meteo
+latitude = -37.8136
+longitude = 144.9631
 
 # supported colours for 7.3 inky display
 # [black, white, green, blue, red, yellow, orange]
 [colours]
+# background_colour   = "black"    # solid black – no dithering
+# text_colour         = "white"    # bright white for max legibility
+
+# x_axis_colour       = "white"   # high-contrast tick/label grid
+# y_left_axis_colour  = "red"      # temperature axis
+# y_right_axis_colour = "blue"     # matches rain scale
+
+# actual_temp_colour  = "red"      # solid line for real temp
+# feels_like_colour   = "green"    # dashed “feels-like” line
+# rain_colour         = "blue"     # shaded rain bars
+
 background_colour = "white"
 text_colour = "black"
 x_axis_colour = "black"
@@ -49,6 +48,53 @@ generated_png_name = "dashboard.png"
 svg_icons_directory = "static/fill-svg-static/"
 
 [debugging]
-disable_weather_api_requests = false # if true, the weather data will be loaded from a cached file instead of the API, make you ran the application at least once with this set to false 
+disable_weather_api_requests = false # if true, the weather data will be loaded from a cached file instead of the API, make you ran the application at least once with this set to false
 disable_png_output = false
 allow_pre_release_version = true
+
+
+### Extreme
+## Babinda, QLD
+# latitude = -17.3447
+# longitude = 145.9259
+
+## Marble Bar, NSW
+# latitude = -27.2983
+# longitude = 133.6212
+
+## Tasmanian heights, TAS
+# latitude = -41.9101
+# longitude = 146.8158
+
+## Major Cities
+## Darwin
+# latitude = -12.4612
+# longitude = 130.8417
+
+## Sydney
+# latitude = -33.8681
+# longitude = 151.2103
+
+## Melbourne
+# latitude = -37.8122
+# longitude = 144.9591
+
+## Brisbane
+# latitude = -27.4960
+# longitude = 153.0341
+
+## Perth
+# latitude = -41.5750
+# longitude = 147.1674
+
+## Adelaide
+# latitude = -34.9283
+# longitude = 138.5980
+
+## Hobart
+# latitude = -42.8769
+# longitude = 147.3322
+
+## Canberra
+# latitude = -35.2853
+# longitude = 149.1229

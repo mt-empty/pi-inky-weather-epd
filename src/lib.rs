@@ -1,10 +1,13 @@
-mod apis;
-mod configs;
+pub mod apis;
+pub mod clock;
+pub mod configs;
 pub mod constants;
-mod dashboard;
-mod errors;
-mod update;
-mod utils;
+pub mod dashboard;
+pub mod domain;
+pub mod errors;
+mod providers;
+pub mod update;
+pub mod utils;
 pub mod weather;
 pub mod weather_dashboard;
 
@@ -15,19 +18,16 @@ use anyhow::Result;
 use once_cell::sync::Lazy;
 use update::update_app;
 
-// #[cfg(debug_assertions)]
-// mod dev;
-
-// #[cfg(debug_assertions)]
-// use dev::create_striped_png;
+// Re-export for testing
+pub use crate::weather_dashboard::generate_weather_dashboard_with_clock;
 
 pub static CONFIG: Lazy<DashboardSettings> = Lazy::new(|| match DashboardSettings::new() {
     Ok(config) => {
-        println!("## Configuration: {:#?}", config);
+        println!("## Configuration: {config:#?}");
         config
     }
     Err(e) => {
-        eprintln!("Failed to load config: {}", e);
+        eprintln!("Failed to load config: {e}");
         std::process::exit(1);
     }
 });

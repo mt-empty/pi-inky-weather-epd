@@ -1,4 +1,4 @@
-use crate::{constants::DEFAULT_AXIS_LABEL_FONT_SIZE, weather::icons::UVIndexIcon};
+use crate::{clock::Clock, constants::DEFAULT_AXIS_LABEL_FONT_SIZE, weather::icons::UVIndexIcon};
 use anyhow::Error;
 use strum_macros::Display;
 
@@ -233,7 +233,7 @@ pub struct AxisPaths {
 
 /// Create the axis paths and labels for the graph
 impl HourlyForecastGraph {
-    pub fn create_axis_with_labels(&self, current_hour: f32) -> AxisPaths {
+    pub fn create_axis_with_labels(&self, current_hour: f32, clock: &dyn Clock) -> AxisPaths {
         let range_x = self.ending_x - self.starting_x + 1.0; // +1 because last hour is 23
         let range_y_left = self.max_y - self.min_y;
         let range_y_right = 100.0; // Rain data is in percentage
@@ -297,6 +297,7 @@ impl HourlyForecastGraph {
             &mut x_axis_path,
             &mut x_axis_guideline_path,
             x_step,
+            clock,
         );
 
         // Y-axis ticks and labels (left)
@@ -347,7 +348,7 @@ impl HourlyForecastGraph {
 
             // Label (align to the start since it's on the right side)
             let label_x = y_right_axis_x + 10.0;
-            let label_str = format!("{:.0}%", y_val);
+            let label_str = format!("{y_val:.0}%");
             y_right_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}" fill="{colour}"  font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" text-anchor="start" dy="4">{text}</text>"#,
                 x = label_x,
@@ -384,10 +385,10 @@ impl HourlyForecastGraph {
 
             // Label: placed to the left of the y-axis
             let label_x = y_axis_x - 10.0;
-            let mut label_str = format!("{:.1}°", y_val);
+            let mut label_str = format!("{y_val:.1}°");
             let mut font_size = DEFAULT_AXIS_LABEL_FONT_SIZE;
             if j == 0 || j == self.y_left_ticks {
-                label_str = format!("{:.0}°", y_val);
+                label_str = format!("{y_val:.0}°");
                 font_size = 35;
             }
             y_left_labels.push_str(&format!(
@@ -402,6 +403,7 @@ impl HourlyForecastGraph {
         y_left_labels
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn generate_x_axis_labels(
         &self,
         current_hour: f32,
@@ -410,6 +412,7 @@ impl HourlyForecastGraph {
         x_axis_path: &mut String,
         x_axis_guideline_path: &mut String,
         x_step: f32,
+        clock: &dyn Clock,
     ) -> String {
         let mut x_val: f32 = 0.0;
         let mut x_labels = String::new();
@@ -433,8 +436,7 @@ impl HourlyForecastGraph {
             // do not draw guideline if it overlaps with tomorrow's line
             if x_val != (24.0 - current_hour) {
                 x_axis_guideline_path.push_str(&format!(
-                    r#" M {} {} v -{} m 0 2 v -2"#,
-                    xs, x_guideline_len, x_guideline_len
+                    r#" M {xs} {x_guideline_len} v -{x_guideline_len} m 0 2 v -2"#
                 ));
             }
             // Label: placed below the x-axis line
@@ -449,7 +451,7 @@ impl HourlyForecastGraph {
             } else {
                 hour
             };
-            let label_str = format!("{:.0}{}", display_hour, period);
+            let label_str = format!("{display_hour:.0}{period}");
 
             x_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" text-anchor="middle">{text}</text>"#,
@@ -462,13 +464,17 @@ impl HourlyForecastGraph {
 
         // Add tomorrow day name vertically in the graph just like the guidelines
         if current_hour != 0.0 {
-            x_labels.push_str(self.draw_tomorrow_line(map_x(24.0 - current_hour)).as_str());
+            x_labels.push_str(
+                self.draw_tomorrow_line(map_x(24.0 - current_hour), clock)
+                    .as_str(),
+            );
         }
         x_labels
     }
 
-    fn draw_tomorrow_line(&self, x_coor: f32) -> String {
-        let tomorrow_day_name = chrono::Local::now()
+    fn draw_tomorrow_line(&self, x_coor: f32, clock: &dyn Clock) -> String {
+        let tomorrow_day_name = clock
+            .now_local()
             .checked_add_days(chrono::Days::new(1))
             .map(|d| d.format("%A").to_string())
             .unwrap_or_else(|| "Tomorrow".to_string());
@@ -533,8 +539,7 @@ impl HourlyForecastGraph {
             let offset = (i as f32 / 23.0) * 100.0;
             let colour = UVIndexCategory::from_u8(uv).to_colour();
             gradient.push_str(&format!(
-                r#"<stop offset="{:.2}%" stop-color="{}"/>"#,
-                offset, colour
+                r#"<stop offset="{offset:.2}%" stop-color="{colour}"/>"#
             ));
         }
 

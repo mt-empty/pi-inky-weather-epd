@@ -60,17 +60,17 @@ impl From<Temperature> for i16 {
 impl Display for Temperature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let rounded: i16 = self.value.round() as i16;
-        write!(f, "{}", rounded)
+        write!(f, "{rounded}")
     }
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Wind {
-    speed_kilometre: u16,
+    pub speed_kilometre: u16,
     // pub speed_knot: u16,
     // pub direction: String,
     // pub gust_speed_knot: Option<u16>,
-    gust_speed_kilometre: u16,
+    pub gust_speed_kilometre: u16,
 }
 
 impl Wind {

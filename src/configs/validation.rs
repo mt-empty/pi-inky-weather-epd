@@ -188,7 +188,7 @@ const NAMED_COLOURS: [&str; 147] = [
 const SPECIAL_COLOURS: [&str; 4] = ["currentColor", "inherit", "transparent", "initial"];
 
 fn is_named_colour(colour: &str) -> bool {
-    NAMED_COLOURS.iter().any(|&c| c == colour)
+    NAMED_COLOURS.contains(&colour)
 }
 fn is_hex_colour(colour: &str) -> bool {
     // This regex matches hex colours in the format "#FFF" or "#FFFFFF"
@@ -288,7 +288,7 @@ fn is_hsla_colour(colour: &str) -> bool {
 }
 
 fn is_special_colour(colour: &str) -> bool {
-    SPECIAL_COLOURS.iter().any(|&c| c == colour)
+    SPECIAL_COLOURS.contains(&colour)
 }
 pub fn is_valid_colour(colour: &str) -> Result<(), ValidationError> {
     let clean_colour = colour.trim().to_ascii_lowercase();
@@ -304,5 +304,25 @@ pub fn is_valid_colour(colour: &str) -> Result<(), ValidationError> {
         Ok(())
     } else {
         Err(ValidationError::new("Invalid colour format"))
+    }
+}
+
+pub fn is_valid_longitude(longitude: &f64) -> Result<(), ValidationError> {
+    if (-180.0..=180.0).contains(longitude) {
+        Ok(())
+    } else {
+        Err(ValidationError::new(
+            "Longitude must be between -180.0 and 180.0",
+        ))
+    }
+}
+
+pub fn is_valid_latitude(latitude: &f64) -> Result<(), ValidationError> {
+    if (-90.0..=90.0).contains(latitude) {
+        Ok(())
+    } else {
+        Err(ValidationError::new(
+            "Latitude must be between -90.0 and 90.0",
+        ))
     }
 }

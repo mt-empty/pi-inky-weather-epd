@@ -1,157 +1,52 @@
-use crate::apis::bom::models::*;
+use crate::clock::{Clock, SystemClock};
 use crate::dashboard::context::{Context, ContextBuilder};
-use crate::{constants::*, errors, utils, CONFIG};
+use crate::errors::DashboardError;
+use crate::providers::factory::create_provider;
+use crate::update::read_last_update_status;
+use crate::{utils, CONFIG};
 use anyhow::Error;
-use errors::*;
-use serde::Deserialize;
+use std::fs;
 use std::io::Write;
-use std::{fs, path::PathBuf};
 use tinytemplate::{format_unescaped, TinyTemplate};
-use url::Url;
 pub use utils::*;
 
-enum FetchOutcome<T> {
-    Fresh(T),
-    Stale { data: T, error: DashboardError },
-}
+fn update_forecast_context(
+    context_builder: &mut ContextBuilder,
+    clock: &dyn Clock,
+) -> Result<(), Error> {
+    let provider = create_provider()?;
+    let mut warnings: Vec<DashboardError> = Vec::new();
 
-fn load_cached<T: for<'de> Deserialize<'de>>(file_path: &PathBuf) -> Result<T, Error> {
-    let cached = fs::read_to_string(file_path).map_err(|_| {
-        Error::msg(
-            "Weather data JSON file not found. If this is your first time running the application. Please ensure 'disable_weather_api_requests' is set to false in the configuration so data can be cached.",
-        )
-    }).map_err(|_| {
-        DashboardError::NoInternet {
-            details: "No hourly forecast data available".to_string(),
-        }
-    })?;
-    let data = serde_json::from_str(&cached).map_err(Error::msg)?;
-    Ok(data)
-}
-
-fn fallback<T: for<'de> Deserialize<'de>>(
-    file_path: &PathBuf,
-    dashboard_error: DashboardError,
-) -> Result<FetchOutcome<T>, Error> {
-    let data = load_cached(file_path)?;
-    Ok(FetchOutcome::Stale {
-        data,
-        error: dashboard_error,
-    })
-}
-
-fn fetch_data<T: for<'de> Deserialize<'de>>(
-    endpoint: Url,
-    file_path: &PathBuf,
-) -> Result<FetchOutcome<T>, Error> {
-    if !file_path.exists() {
-        fs::create_dir_all(file_path.parent().unwrap())?;
+    // Check if the last update failed and add warning if so
+    if let Some(error_details) = read_last_update_status() {
+        warnings.push(DashboardError::UpdateFailed {
+            details: error_details,
+        });
     }
-    // TODO: delegate the Config::debugging.disable_weather_api_requests to a different function
-    if !CONFIG.debugging.disable_weather_api_requests {
-        let client = reqwest::blocking::Client::new();
-        let response = match client.get(endpoint).send() {
-            Ok(res) => res,
-            Err(e) => {
-                eprintln!("API request failed: {}", e);
 
-                return fallback(
-                    file_path,
-                    DashboardError::NoInternet {
-                        details: e.to_string(),
-                    },
-                );
-            }
-        };
+    println!("## Using provider: {}", provider.provider_name());
 
-        let body = response.text().map_err(Error::msg)?;
-
-        if let Ok(api_error) = serde_json::from_str::<BomError>(&body) {
-            if let Some(first_error) = api_error.errors.first() {
-                eprintln!("Warning: API request failed, double check your api configs, trying to load cached data");
-                let first_error_detail = first_error.detail.clone();
-                for (i, error) in api_error.errors.iter().enumerate() {
-                    eprintln!("API Errors, {}: {}", i + 1, error.detail);
-                }
-
-                return fallback(file_path, DashboardError::ApiError(first_error_detail));
-            }
-        }
-
-        fs::write(file_path, &body)?;
-        let data = serde_json::from_str(&body).map_err(Error::msg)?;
-        Ok(FetchOutcome::Fresh(data))
-    } else {
-        Ok(FetchOutcome::Fresh(load_cached(file_path)?))
+    println!("## Fetching daily forecast...");
+    let daily_result = provider.fetch_daily_forecast()?;
+    if let Some(warning) = daily_result.warning {
+        println!("⚠️  Warning: Using stale daily forecast data");
+        warnings.push(warning);
     }
-}
+    context_builder.with_daily_forecast_data(daily_result.data, clock);
 
-fn fetch_daily_forecast_data() -> Result<FetchOutcome<DailyForecastResponse>, Error> {
-    let file_path = CONFIG
-        .misc
-        .weather_data_cache_path
-        .join("daily_forecast.json");
-    fetch_data(DAILY_FORECAST_ENDPOINT.clone(), &file_path)
-}
+    println!("## Fetching hourly forecast...");
+    let hourly_result = provider.fetch_hourly_forecast()?;
+    if let Some(warning) = hourly_result.warning {
+        println!("⚠️  Warning: Using stale hourly forecast data");
+        warnings.push(warning);
+    }
+    context_builder.with_hourly_forecast_data(hourly_result.data, clock);
 
-fn fetch_hourly_forecast_data() -> Result<FetchOutcome<HourlyForecastResponse>, Error> {
-    let file_path = CONFIG
-        .misc
-        .weather_data_cache_path
-        .join("hourly_forecast.json");
-    fetch_data(HOURLY_FORECAST_ENDPOINT.clone(), &file_path)
-}
+    // Add all accumulated warnings to the context
+    for warning in warnings {
+        context_builder.with_warning(warning);
+    }
 
-fn update_daily_forecast_data(context_builder: &mut ContextBuilder) -> Result<(), Error> {
-    match fetch_daily_forecast_data() {
-        Ok(FetchOutcome::Fresh(data)) => {
-            context_builder.with_daily_forecast_data(data.data);
-        }
-        Ok(FetchOutcome::Stale { data, error }) => {
-            eprintln!("Warning: Using stale data");
-            context_builder
-                .set_errors(error)
-                .with_daily_forecast_data(data.data);
-        }
-        Err(e) => return Err(e),
-    };
-    Ok(())
-}
-
-fn update_hourly_forecast_data(context_builder: &mut ContextBuilder) -> Result<(), Error> {
-    match fetch_hourly_forecast_data() {
-        Ok(FetchOutcome::Fresh(data)) => {
-            context_builder.with_hourly_forecast_data(data.data);
-        }
-        Ok(FetchOutcome::Stale { data, error }) => {
-            eprintln!("Warning: Using stale data");
-            context_builder
-                .set_errors(error)
-                .with_hourly_forecast_data(data.data);
-        }
-        Err(e) => return Err(e),
-    };
-
-    Ok(())
-}
-
-fn update_forecast_context(context_builder: &mut ContextBuilder) -> Result<(), Error> {
-    println!("## Daily forecast ...");
-    match update_daily_forecast_data(context_builder) {
-        Ok(context) => context,
-        Err(e) => {
-            eprintln!("Failed to update daily forecast");
-            return Err(e);
-        }
-    };
-    println!("## Hourly forecast ...");
-    match update_hourly_forecast_data(context_builder) {
-        Ok(context) => context,
-        Err(e) => {
-            eprintln!("Failed to update hourly forecast");
-            return Err(e);
-        }
-    };
     Ok(())
 }
 
@@ -160,7 +55,7 @@ fn render_dashboard_template(context: &Context, dashboard_svg: String) -> Result
     let tt_name = "dashboard";
 
     if let Err(e) = tt.add_template(tt_name, &dashboard_svg) {
-        println!("Failed to add template: {}", e);
+        println!("Failed to add template: {e}");
         return Err(e.into());
     }
     tt.set_default_formatter(&format_unescaped);
@@ -172,13 +67,36 @@ fn render_dashboard_template(context: &Context, dashboard_svg: String) -> Result
             Ok(())
         }
         Err(e) => {
-            println!("Failed to render template: {}", e);
+            println!("Failed to render template: {e}");
             Err(e.into())
         }
     }
 }
 
+/// Generate weather dashboard using the system clock (production)
 pub fn generate_weather_dashboard() -> Result<(), Error> {
+    let clock = SystemClock;
+    generate_weather_dashboard_with_clock(&clock)
+}
+
+/// Generate weather dashboard with a custom clock (for testing)
+///
+/// This function allows dependency injection of a Clock implementation,
+/// enabling deterministic testing with FixedClock.
+///
+/// # Arguments
+///
+/// * `clock` - The clock implementation to use for time-dependent operations
+///
+/// # Examples
+///
+/// ```ignore
+/// use pi_inky_weather_epd::clock::FixedClock;
+///
+/// let clock = FixedClock::from_rfc3339("2025-10-09T22:00:00Z").unwrap();
+/// generate_weather_dashboard_with_clock(&clock)?;
+/// ```
+pub fn generate_weather_dashboard_with_clock(clock: &dyn Clock) -> Result<(), Error> {
     let current_dir = std::env::current_dir()?;
     let mut context_builder = ContextBuilder::new();
 
@@ -187,11 +105,12 @@ pub fn generate_weather_dashboard() -> Result<(), Error> {
         Err(e) => {
             println!("Current directory: {}", current_dir.display());
             println!("Template path: {}", &CONFIG.misc.template_path.display());
-            println!("Failed to read template file: {}", e);
+            println!("Failed to read template file: {e}");
             return Err(e.into());
         }
     };
-    update_forecast_context(&mut context_builder)?;
+
+    update_forecast_context(&mut context_builder, clock)?;
 
     println!("## Rendering dashboard to SVG ...");
     render_dashboard_template(&context_builder.context, template_svg)?;

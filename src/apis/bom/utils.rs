@@ -25,16 +25,16 @@ where
     D: Deserializer<'de>,
 {
     let value = i16::deserialize(deserializer);
-    if value.is_err() {
-        Ok(None)
-    } else {
+    if let Ok(value) = value {
         let temp = Temperature {
-            value: value.unwrap() as f32,
+            value: value as f32,
             unit: BOM_API_TEMP_UNIT,
         };
         Ok(Some(match CONFIG.render_options.temp_unit {
             TemperatureUnit::C => temp,
             TemperatureUnit::F => temp.to_fahrenheit(),
         }))
+    } else {
+        Ok(None)
     }
 }
