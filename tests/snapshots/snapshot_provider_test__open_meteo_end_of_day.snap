@@ -1,6 +1,6 @@
 ---
 source: tests/snapshot_provider_test.rs
-assertion_line: 130
+assertion_line: 284
 expression: svg_content
 ---
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">

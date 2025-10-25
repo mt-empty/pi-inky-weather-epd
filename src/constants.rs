@@ -45,6 +45,6 @@ pub static OPEN_METEO_ENDPOINT: Lazy<Url> = Lazy::new(|| {
 pub static NOT_AVAILABLE_ICON_PATH: Lazy<PathBuf> = Lazy::new(|| {
     CONFIG
         .misc
-        .weather_data_cache_path
+        .svg_icons_directory
         .join(NOT_AVAILABLE_ICON_NAME)
 });

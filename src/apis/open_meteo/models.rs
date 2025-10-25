@@ -318,12 +318,13 @@ where
     // Deserialize the input as a vector of strings
     let date_strings: Vec<String> = Deserialize::deserialize(deserializer)?;
 
-    // Map the date strings to DateTime<Utc> with the fixed time
+    // Map the date strings to DateTime<Utc> with midnight UTC
+    // Using 00:00:00Z ensures the date doesn't shift when converted to local time
     let datetime_vec: Result<Vec<DateTime<Utc>>, D::Error> = date_strings
         .into_iter()
         .map(|date_str| {
-            // Combine the date string with the fixed time
-            let datetime_str = format!("{date_str}T13:00:00Z");
+            // Combine the date string with midnight UTC
+            let datetime_str = format!("{date_str}T00:00:00Z");
             // Parse the datetime string
             NaiveDateTime::parse_from_str(&datetime_str, "%Y-%m-%dT%H:%M:%SZ")
                 .map(|naive| DateTime::from_naive_utc_and_offset(naive, Utc))

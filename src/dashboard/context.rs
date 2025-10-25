@@ -292,11 +292,10 @@ impl ContextBuilder {
                 .map_or("NA".to_string(), |temp| temp.to_string());
             let icon_value = day.get_icon_path();
 
-            // add a day here(or you can add AEST UTC delta), because of the way the API bom api returns the date
+            // Convert UTC date to local timezone before formatting the day name
+            // This ensures the correct day is displayed regardless of timezone offset
             let day_name_value = day.date.map_or("NA".to_string(), |date| {
-                date.checked_add_signed(chrono::Duration::days(1))
-                    .map(|d| d.format("%a").to_string())
-                    .unwrap_or("NA".to_string())
+                date.with_timezone(&Local).format("%a").to_string()
             });
 
             println!("{day_name_value} - Max {max_temp_value} Min {min_temp_value}");
