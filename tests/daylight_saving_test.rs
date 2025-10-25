@@ -1,5 +1,3 @@
-#![cfg(not(ci))]
-
 /// Tests for daylight saving time (DST) transitions
 ///
 /// Australia (Melbourne/Sydney) DST:

@@ -40,8 +40,6 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest # TODO: change to arm once it is no longer in public preview
-    env:
-      RUSTFLAGS: "--cfg ci"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -86,7 +84,14 @@ jobs:
         run: cross build --release --target=${{ env.TARGET }}
 
       - name: Test binary with cross (Open-Meteo)
-        run: RUN_MODE=test cross test --target=${{ env.TARGET }}
+        env:
+          RUN_MODE: test
+          TZ: Australia/Melbourne
+        run: cross test --target=${{ env.TARGET }}
 
       - name: Test BOM snapshot (ignored by default)
-        run: RUN_MODE=test APP_API__PROVIDER=bom cross test --target=${{ env.TARGET }} --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
+        env:
+          RUN_MODE: test
+          APP_API__PROVIDER: bom
+          TZ: Australia/Melbourne
+        run: cross test --target=${{ env.TARGET }} --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
