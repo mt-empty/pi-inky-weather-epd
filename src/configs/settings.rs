@@ -116,6 +116,7 @@ pub struct Colours {
     pub rain_colour: Colour,
 }
 
+// TODO: rename the fields to indicate if it's a path or a name
 #[derive(Debug, Deserialize)]
 pub struct Misc {
     pub weather_data_cache_path: PathBuf,

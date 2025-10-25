@@ -70,13 +70,18 @@ impl Icon for Precipitation {
 impl Icon for DailyForecast {
     fn get_icon_name(&self) -> String {
         if let Some(ref precip) = self.precipitation {
-            let icon_name = format!(
-                "{}{}{}.svg",
-                precip.chance_to_name(),
-                DayNight::Day,
-                precip.amount_to_name(false)
-            );
-            icon_name
+            let chance_name = precip.chance_to_name();
+            let amount_name = precip.amount_to_name(false);
+
+            // Clear skies should never have precipitation amounts
+            // (clear-day-drizzle.svg and clear-day-rain.svg don't exist)
+            let final_amount = if matches!(chance_name, RainChanceName::Clear) {
+                RainAmountName::None
+            } else {
+                amount_name
+            };
+
+            format!("{chance_name}{}{final_amount}.svg", DayNight::Day)
         } else {
             // Default to clear day if no precipitation data
             format!("{}{}.svg", RainChanceName::Clear, DayNight::Day)
@@ -86,16 +91,23 @@ impl Icon for DailyForecast {
 
 impl Icon for HourlyForecast {
     fn get_icon_name(&self) -> String {
-        let mut icon_name = format!(
-            "{}{}{}.svg",
-            self.precipitation.chance_to_name(),
-            if self.is_night {
-                DayNight::Night
-            } else {
-                DayNight::Day
-            },
-            self.precipitation.amount_to_name(true)
-        );
+        let chance_name = self.precipitation.chance_to_name();
+        let amount_name = self.precipitation.amount_to_name(true);
+        let day_night = if self.is_night {
+            DayNight::Night
+        } else {
+            DayNight::Day
+        };
+
+        // Clear skies should never have precipitation amounts
+        // (clear-day-drizzle.svg, clear-night-drizzle.svg, etc. don't exist)
+        let final_amount = if matches!(chance_name, RainChanceName::Clear) {
+            RainAmountName::None
+        } else {
+            amount_name
+        };
+
+        let mut icon_name = format!("{chance_name}{day_night}{final_amount}.svg");
 
         if CONFIG.render_options.use_moon_phase_instead_of_clear_night
             && icon_name.ends_with(&format!("{}{}.svg", RainChanceName::Clear, DayNight::Night))
