@@ -48,7 +48,7 @@ Provider Factory → WeatherProvider Trait → Domain Models → Template Contex
 - **`src/dashboard/chart.rs`**: SVG path generation for temperature/rain graphs
 - **`src/apis/`**: API-specific models
   - `bom/models.rs` + `bom/utils.rs` - BOM API structures
-  - `open_metro/models.rs` - Open-Meteo API structures with direct domain conversions
+  - `open_meteo/models.rs` - Open-Meteo API structures with direct domain conversions
 - **`src/configs/settings.rs`**: Layered config system with `Providers` enum
 - **`src/weather/icons.rs`**: Icon enum definitions and `Icon` trait
 - **`src/update.rs`**: Self-update logic from GitHub releases
@@ -275,7 +275,7 @@ provider = "open_meteo"  # Default test provider
 ### Open-Meteo API (Global)
 - Lat/lon based, no authentication required
 - Single endpoint returns all forecast data
-- Direct conversion to domain models via `From` trait implementations in `src/apis/open_metro/models.rs`
+- Direct conversion to domain models via `From` trait implementations in `src/apis/open_meteo/models.rs`
 
 ## Provider System Architecture
 

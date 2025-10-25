@@ -6,7 +6,7 @@
 //! 3. Hourly and daily data extraction from combined response
 //! 4. Edge cases and data consistency
 
-use pi_inky_weather_epd::apis::open_metro::models::OpenMeteoHourlyResponse;
+use pi_inky_weather_epd::apis::open_meteo::models::OpenMeteoHourlyResponse;
 use pi_inky_weather_epd::domain::models::{DailyForecast, HourlyForecast};
 use std::fs;
 

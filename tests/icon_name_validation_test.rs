@@ -1,12 +1,14 @@
+use chrono::Utc;
 /// Test to verify that icon names generated for forecasts are valid
 /// and correspond to files that actually exist in the static directory.
 ///
 /// This test was created to prevent the bug where low precipitation chance
 /// (0-25% = "Clear") combined with some precipitation amount would generate
 /// invalid icon names like "clear-day-drizzle.svg" which don't exist.
-use pi_inky_weather_epd::domain::models::{DailyForecast, HourlyForecast, Precipitation, Temperature, Wind};
+use pi_inky_weather_epd::domain::models::{
+    DailyForecast, HourlyForecast, Precipitation, Temperature, Wind,
+};
 use pi_inky_weather_epd::weather::icons::Icon;
-use chrono::Utc;
 
 #[test]
 fn test_clear_sky_never_has_precipitation_suffix_hourly() {

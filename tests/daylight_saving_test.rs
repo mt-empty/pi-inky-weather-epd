@@ -216,7 +216,7 @@ fn test_bom_forecast_time_conversion_during_dst() {
 /// Open-Meteo can return times in local timezone, but we convert to UTC
 #[test]
 fn test_open_meteo_forecast_time_conversion_during_dst() {
-    use pi_inky_weather_epd::apis::open_metro::models::OpenMeteoHourlyResponse;
+    use pi_inky_weather_epd::apis::open_meteo::models::OpenMeteoHourlyResponse;
 
     // Simulate Open-Meteo hourly forecast during fall DST transition
     // Open-Meteo returns times in the specified timezone

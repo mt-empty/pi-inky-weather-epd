@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 
 use crate::{
-    apis::open_metro::models::{OpenMeteoError, OpenMeteoHourlyResponse},
+    apis::open_meteo::models::{OpenMeteoError, OpenMeteoHourlyResponse},
     constants::{CACHE_SUFFIX, OPEN_METEO_ENDPOINT},
     domain::models::{DailyForecast, HourlyForecast},
     errors::DashboardError,

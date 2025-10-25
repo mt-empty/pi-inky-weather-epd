@@ -7,7 +7,7 @@
 //! Test fixtures are stored in tests/fixtures/ directory to avoid
 //! dependency on runtime cache files from executing the binary.
 
-use pi_inky_weather_epd::apis::open_metro::models::OpenMeteoHourlyResponse;
+use pi_inky_weather_epd::apis::open_meteo::models::OpenMeteoHourlyResponse;
 use std::fs;
 
 /// Test that Open-Meteo forecast fixture deserializes
