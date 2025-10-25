@@ -1,57 +1,72 @@
 # Pi Inky Weather Display
 
-This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper (aka E-ink) display.
+A weather display powered by a Raspberry Pi and a 7.3" 7-colour E-Paper (E-ink) display.
 
-![](./misc/timelapse.gif)
+![Hourly timelapse](./misc/timelapse.gif)
 
 ## Hardware
-- Raspberry Pi (zero model requires soldering the GPIO Header)
-- [Inky impression 7.3in E-Paper display](https://shop.pimoroni.com/products/inky-impression-7-3?variant=55186435244411)
+
+- Raspberry Pi (Zero model requires soldering the GPIO header)
+- [Inky Impression 7.3" E-Paper display](https://shop.pimoroni.com/products/inky-impression-7-3?variant=55186435244411)
 - [3D printed case](https://github.com/mt-empty/inky-impression-7-3-colour-case) (optional)
 
-![](./misc/dashboard-case.png)
+![Dashboard Case](./misc/dashboard-case.png)
 
 ## Setup on Raspberry Pi
 
-1. Install the Inky library:
+1. **Install the Inky library:**
+
    ```bash
    curl https://get.pimoroni.com/inky | bash
    ```
+
    For detailed installation steps, refer to the official [documentation](https://github.com/pimoroni/inky?tab=readme-ov-file#install-stable-library-from-pypi-and-configure-manually).
 
-2. Download the latest release for your architecture from the [releases page](https://github.com/mt-empty/pi-inky-weather-epd/releases) and extract it:
+2. **Download the latest release:**
+
+   Download the latest release for your architecture from the [releases page](https://github.com/mt-empty/pi-inky-weather-epd/releases) and extract it:
+
+   Available architectures:
+   - `arm-unknown-linux-gnueabihf` - Pi 1, Pi Zero/Zero W, Compute Module 1 (ARMv6)
+   - `armv7-unknown-linux-gnueabihf` - Pi 2, Pi 3/3+/3A+, Pi 4/400, Zero 2 W, CM3/CM4 (32-bit OS, ARMv7)
+   - `aarch64-unknown-linux-gnu` - Pi 3/3+/3A+, Pi 4/400, Zero 2 W, CM3/CM4 (64-bit OS, ARMv8)
+   - `x86_64-unknown-linux-gnu` - x86 Linux
+
    ```bash
-   unzip <YOUR_DOWNLOAD_RELEASE>.tar.gz
+   unzip <YOUR_DOWNLOAD_RELEASE>.zip
    chmod +x pi-inky-weather-epd
    ```
 
-3. Configure your weather data provider and location:
+3. **Configure your weather data provider and location:**
 
-   Get your latitude and longitude from https://www.latlong.net/ and create a configuration file:
+   Get your latitude and longitude from <https://www.latlong.net/> and create a configuration file:
 
    ```bash
    mkdir -p ~/.config
    cat > ~/.config/pi-inky-weather-epd.toml << EOF
    [api]
-   provider = "open_meteo"           # "open_meteo" (worldwide) or "bom" (Australia only)
-   latitude = YOUR_LATITUDE   # e.g., -47.8136
-   longitude = YOUR_LONGITUDE # e.g., 114.9631
+   provider = "open_meteo"    # "open_meteo" (worldwide) or "bom" (Australia only)
+   latitude = YOUR_LATITUDE   # e.g., -33.8727 # Sydney
+   longitude = YOUR_LONGITUDE # e.g., 151.2057
    EOF
    ```
 
    See [./config/development.toml](./config/development.toml) for more configuration examples.
 
-4. Set up an hourly cron job to update the display:
+4. **Set up an hourly cron job to update the display:**
+
    ```bash
-   (crontab -l 2>/dev/null; echo "0 * * * * cd /path/to/extracted/files && ./pi-inky-weather-epd && sudo PYTHON_PATH IMAGE_SCRIPT_PATH --file dashboard.png --saturation SATURATION") | crontab -
+   (crontab -l 2>/dev/null; echo "0 * * * * cd /path/to/extracted/files && ./pi-inky-weather-epd && sudo <PYTHON_PATH> <IMAGE_SCRIPT_PATH> --file dashboard.png --saturation <SATURATION>") | crontab -
    ```
+
    Replace:
    - `/path/to/extracted/files` with your installation directory
-   - `PYTHON_PATH` with path to Python (e.g., `/usr/bin/python3`)
-   - `IMAGE_SCRIPT_PATH` with path to Inky's image.py (e.g., `/home/pi/Pimoroni/inky/examples/7color/image.py`)
-   - `SATURATION` with the desired saturation level (e.g., `1.0`), it is not recommended to change this for current icons
+   - `<PYTHON_PATH>` with path to Python (e.g., `/usr/bin/python3`)
+   - `<IMAGE_SCRIPT_PATH>` with path to Inky's `image.py` (e.g., `/home/pi/Pimoroni/inky/examples/7color/image.py`)
+   - `<SATURATION>` with the desired saturation level depending on your display (e.g., `1.0`). If using the Inky Impression 7 colours, it is not recommended to change this for current icons
 
-   Example of complete cron command:
+   **Example of complete cron command:**
+
    ```bash
    0 * * * * cd /home/pi/pi-inky-weather-epd && ./pi-inky-weather-epd && sudo /home/dietpi/env/bin/python3 /home/dietpi/Pimoroni/inky/examples/7color/image.py --file dashboard.png --saturation 1.0
    ```
@@ -59,29 +74,31 @@ This is a weather display powered by a Raspberry Pi and a 7.3in 7 colour E-Paper
 ## Configuration
 
 You can override the default configs located at [./config/](./config/) by creating a file at:
+
 ```bash
 ~/.config/pi-inky-weather-epd.toml
 ```
 
-### Example Configuration Files
-Here are example configurations, note some of these images are slightly outdated:
+### Configuration Examples
 
-### Default configuration file
+Here are example configurations. Note: some of these images are slightly outdated.
+
+#### Default Configuration
 
 <img src="./misc/dashboard-default.png" alt="Default configuration" width="600"/>
 
-### Enable Moon Phase when sky is clear at night
+### Use Clear night Icon instead of Moon Phase icon when Time=night and Weather=clear
 
 <img src="./misc/dashboard-without-moon-phase.png" alt="Moon phase configuration" width="600"/>
 
-When the sky is clear, the moon phase icon is used instead of the clear night icon
+When the sky is clear, the moon phase icon is used instead of the clear night icon, you can disable with:
 
 ```toml
 [render_options]
 use_moon_phase_instead_of_clear_night = false
 ```
 
-### Placement of x-axis at minimum
+#### Set X-Axis Placement to be always at y=0
 
 <img src="./misc/dashboard-x-axis-at-zero.png" alt="X-axis at minimum" width="600"/>
 
@@ -92,7 +109,7 @@ The x-axis is no longer at the bottom of the graph when the temperature is below
 x_axis_always_at_min = false
 ```
 
-### Dark theme
+#### Dark Theme
 
 <img src="./misc/dashboard-dark.png" alt="Dark theme" width="600"/>
 
@@ -110,35 +127,34 @@ feels_like_colour   = "green"
 rain_colour         = "blue"
 ```
 
-### Auto-update interval
+#### Auto-Update Interval
 
-Whether to enable auto-update when a new release is available. This is disabled by default.
+Enable auto-update when a new release is available. This is disabled by default.
 
 ```toml
 [release]
-# set to 0 to disable auto-updating
+# Set to 0 to disable auto-updating
 update_interval_days = 7
 ```
 
+## Degraded Operation
 
+The dashboard can still work using cached data for a while if the API is unreachable. A diagnostic icon and message appears on the display when issues occur.
 
-## Degraded operation
+| Diagnostic Type     | Priority | Icon                                                                                                |
+| ------------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| **API Error**       | High     | <img src="./static/fill-svg-static/code-red.svg" alt="API Error" width="32" height="32" />          |
+| **No Internet**     | Medium   | <img src="./static/fill-svg-static/code-orange.svg" alt="No Internet" width="32" height="32" />     |
+| **Incomplete Data** | Low      | <img src="./static/fill-svg-static/code-yellow.svg" alt="Incomplete Data" width="32" height="32" /> |
+| **Update Failed**   | Low      | <img src="./static/fill-svg-static/code-green.svg" alt="Update Failed" width="32" height="32" />    |
 
-The dashboard can still work using cached data for a while if the API is unreachable.
-A warning icon and a small warning message appears on the display in case of any errors.
-
-| Error Type          | Icon                                                                                                |
-| ------------------- | --------------------------------------------------------------------------------------------------- |
-| **Api Error**       | <img src="./static/fill-svg-static/code-red.svg" alt="Api Error" width="32" height="32" />          |
-| **No Internet**     | <img src="./static/fill-svg-static/code-orange.svg" alt="No Internet" width="32" height="32" />     |
-| **Incomplete Data** | <img src="./static/fill-svg-static/code-yellow.svg" alt="Incomplete Data" width="32" height="32" /> |
-
+When multiple diagnostics occur, the highest priority diagnostic is displayed, lower priority ones are cascaded.
 
 ## Inky Impression 7.3
 
-### Supported colours at 1.0 Saturation without dithering
+### Supported Colours at 1.0 Saturation (Without Dithering)
 
-```
+```rust
 [0, 0, 0],        # Black
 [255, 255, 255],  # White
 [0, 255, 0],      # Green
@@ -150,39 +166,44 @@ A warning icon and a small warning message appears on the display in case of any
 
 ## Documentation and Resources
 
-- EPD used: Inky Impression 7.3 https://shop.pimoroni.com/products/inky-impression-7-3?variant=40512683376723
-- Actual Panel: Waveshare display https://www.waveshare.com/7.3inch-e-paper-hat-f.htm
-- Panel documentation: https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)_Manual#Overview
-- BOM API: https://github.com/bremor/bureau_of_meteorology/blob/main/api%20doc/API.md
-- [Icons](./static/fill-svg-static/) have been overhauled, which were originality based on: https://bas.dev/work/meteocons
+- **EPD used:** [Inky Impression 7.3](https://shop.pimoroni.com/products/inky-impression-7-3?variant=40512683376723)
+- **Actual Panel:** [Waveshare 7.3" E-Paper HAT](https://www.waveshare.com/7.3inch-e-paper-hat-f.htm)
+- **Panel documentation:** [Waveshare Wiki](https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)_Manual#Overview)
+- **Open-Meteo API:** [Open-Meteo Weather Forecast API](https://open-meteo.com/en/docs) (default provider)
+- **BOM API:** [Bureau of Meteorology API Documentation](https://github.com/bremor/bureau_of_meteorology/blob/main/api%20doc/API.md) (Australia only)
+- **Icons:** [Custom SVG icons](./static/fill-svg-static/) overhauled from [Meteocons](https://bas.dev/work/meteocons)
 
 ## TODO
-- [ ] Testing: create a script that auto generates some/all weather variations
-  - This script should simulate different weather conditions (e.g., sunny, rainy, cloudy) and generate corresponding images for testing the display.
+
+- [ ] Testing: Create a script that auto-generates some/all weather variations
+  - This script should simulate different weather conditions (e.g., sunny, rainy, cloudy) and generate corresponding images for testing the display
 
 ### Wish List
+
 - [ ] An algorithm that is smooth and only overshoots in the x dimension
 - [ ] Rain gradient that looks like rain
-- [ ] Overhaul the [line SVG icons](./static/fill-svg-static/) to match display colours
-- [ ] Inline all SVG icons into the template and have full control over all the colours
+- [ ] Overhaul the [line SVG icons](./static/line-svg-static/) to match display colours
+- [ ] Inline all SVG icons into the template and have full control over all colours
 
-## Developing
+## Contributing
 
-Any Contributions are welcome!
+Contributions are welcome!
 
 ### Setup
 
 1. **Install Git hooks** (pre-push checks for formatting, tests, and version tags):
-```bash
-./scripts/setup-git-hooks.sh
-```
+
+   ```bash
+   ./scripts/setup-git-hooks.sh
+   ```
 
 2. **Create local config** in `config/local.toml`:
-```bash
-cp config/development.toml config/local.toml
-# Edit config/local.toml with your location settings
-cargo run
-```
+
+   ```bash
+   cp config/development.toml config/local.toml
+   # Edit config/local.toml with your location settings
+   cargo run
+   ```
 
 ### Running Tests
 
@@ -194,7 +215,7 @@ RUN_MODE=test cargo test
 RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
 ```
 
-### Compile for target release
+### Compile for Target Release
 
 Example for Raspberry Pi Zero:
 
@@ -204,34 +225,36 @@ cross build --release --target arm-unknown-linux-gnueabihf
 
 ### Using mDNS for Easy Access
 
-This is optional, but you can use **mDns** to access your pi by hostname instead of IP address.
+This is optional, but you can use **mDNS** to access your Pi by hostname instead of IP address
 
-To do this, you need to install **avahi-daemon** on your pi. This is a service that allows you to discover devices on the network using their hostname.
+To do this, you need to install **avahi-daemon** on your Pi. This is a service that allows you to discover devices on the network using their hostname
 
 ```bash
 sudo apt-get install avahi-daemon
 # Modify /etc/hosts to include your <hostname>.local
-# 127.1.1   <hostname>.local <hostname>
+# 127.0.0.1   <hostname>.local <hostname>
 sudo systemctl enable avahi-daemon
 sudo systemctl start avahi-daemon
 ```
 
-The pi should now be discoverable by `<hostname>.local`
+The Pi should now be discoverable by `<hostname>.local`
 
-```
+Add to your `~/.ssh/config`:
+
+```ssh-config
 Host pizero
   Hostname <hostname>.local
-  User <your username on the raspberry pi>
-  IdentityFile <path to your private key>
+  User <your-username>
+  IdentityFile <path-to-your-private-key>
   ServerAliveInterval 60
   ServerAliveCountMax 240
 ```
 
-ssh into it by running `ssh pizero`
+SSH into it by running `ssh pizero`
 
-### Sending image to pi over ssh
+### Sending Image to Pi Over SSH
 
-Once you have your ssh setup:
+Once you have your SSH setup:
 
 ```bash
 cargo run   # to generate the image
@@ -242,28 +265,29 @@ chmod +x ./scripts/send-img-to-pi.sh
 
 ## Troubleshooting
 
-- Execute the ./pi-inky-weather-epd separately and observe the logs for any errors, then open the generated image to see if it is correct.
-- Run the cron script manually to see if there are any errors
+- Execute `./pi-inky-weather-epd` separately and observe the logs for any errors, then open the generated image to see if it is correct
+- Run the cron script manually to see if there are any issues
 
-#### Issues with latest version of Inky
+### Issues with Latest Version of Inky
 
-If you encounter issues with the latest version of Inky, try manually installing version **1.5.0** release of the inky library, refer to the official [documentation](https://github.com/pimoroni/inky?tab=readme-ov-file#install-stable-library-from-pypi-and-configure-manually)
+If you encounter issues with the latest version of Inky, try manually installing version **1.5.0** of the Inky library. Refer to the official [documentation](https://github.com/pimoroni/inky?tab=readme-ov-file#install-stable-library-from-pypi-and-configure-manually).
 
 ### Special Instructions for DietPi
 
 For **DietPi** distro working with version **1.5**, you may need to set `include-system-site-packages = true` in your Python virtual environment.
+
 To do this, after creating your virtual environment (e.g., with `python3 -m venv /path/to/env`), open the file:
 
-```
+```text
 /path/to/env/pyvenv.cfg
 ```
 
-and add or set the following line:
+And add or set the following line:
 
-```
+```ini
 include-system-site-packages = true
 ```
 
 This allows the virtual environment to access system-wide Python packages, which may be required for the installation script to work.
 
-You may also need to modify the inky installation script so that `pip3` points to the the created environment's `pip3` instead of the system `pip3`.
+You may also need to modify the Inky installation script so that `pip3` points to the created environment's `pip3` instead of the system `pip3`.

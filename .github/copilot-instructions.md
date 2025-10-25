@@ -63,9 +63,9 @@ WeatherProvider::fetch_hourly_forecast() / fetch_daily_forecast()
     ↓
 Fetcher::fetch_data() → HTTP GET → API
     ↓ (success)
-FetchOutcome::Fresh(data)
+FetchResult { data, warning: None }
     ↓ (failure, cached exists)
-FetchOutcome::Stale { data, error }
+FetchResult { data, warning: Some(error) }
     ↓
 From trait → Domain Models (HourlyForecastAbs, DailyForecastAbs)
     ↓
@@ -76,7 +76,7 @@ TinyTemplate → SVG
 resvg → PNG
 ```
 
-**Stale Data Handling**: `FetchOutcome<T>` enum distinguishes fresh vs cached data. Falls back to cached JSON on network failure with warning context.
+**Stale Data Handling**: `FetchResult<T>` struct distinguishes fresh vs cached data. Falls back to cached JSON on network failure with warning context in the `warning` field.
 
 ### Configuration System
 Hierarchical merge via `config` crate:
@@ -133,6 +133,7 @@ Multiple SVG files contain this comment indicating known issues:
 ### Cross-Compilation Setup
 Uses `cross` for ARM targets (Pi Zero, Pi 4). Targets defined in `.github/workflows/release.yml`:
 - `arm-unknown-linux-gnueabihf` (Pi Zero)
+- `armv7-unknown-linux-gnueabihf` (Pi 3+, Pi 4 32-bit OS)
 - `aarch64-unknown-linux-gnu` (Pi 4+)
 - `x86_64-unknown-linux-gnu` (x86 dev)
 
@@ -297,15 +298,15 @@ pub struct YourProvider {
 
 impl WeatherProvider for YourProvider {
     fn fetch_hourly_forecast(&self) -> Result<Vec<HourlyForecastAbs>, Error> {
-        match self.fetcher.fetch_data::<YourApiResponse, ()>(
+        let result = self.fetcher.fetch_data::<YourApiResponse, ()>(
             endpoint, "hourly_forecast.json", None
-        )? {
-            FetchOutcome::Fresh(data) => Ok(data.into()),
-            FetchOutcome::Stale { data, error } => {
-                eprintln!("Warning: {:?}", error);
-                Ok(data.into())
-            }
+        )?;
+
+        if let Some(warning) = result.warning {
+            eprintln!("Warning: {:?}", warning);
         }
+
+        Ok(result.data.into())
     }
 }
 ```
@@ -340,8 +341,6 @@ self.fetcher.fetch_data::<Response, ()>(
     endpoint, "file.json", None  // No error checker needed
 )
 ```
-
-**Current branch (`open_meteo`)**: Experimenting with Open-Meteo as BOM alternative. Check `src/weather_dashboard.rs` for commented-out switches.
 
 ## Common Patterns to Follow
 
@@ -441,11 +440,11 @@ Before committing:
 5. Ensure version in `Cargo.toml` matches git tag if cutting a release
 
 ### Common Pitfalls
-- **resvg text positioning**: Avoid `tspan` with `dx`/`dy` attributes - resvg doesn't handle properly (see SVG comments)
 - **Config environment vars**: Use double underscores for nested keys (`APP_API__PROVIDER`, not `APP_API_PROVIDER`)
 - **Provider enum**: Must be exact match - use `"open_meteo"` not `"OpenMeteo"` in config
-- **Fetcher pattern**: Always handle both `FetchOutcome::Fresh` and `FetchOutcome::Stale` cases when using `Fetcher::fetch_data()`
+- **Fetcher pattern**: Always check `result.warning` field after calling `Fetcher::fetch_data()` to handle stale data scenarios
+- **resvg text positioning**: Avoid `tspan` with `dx`/`dy` attributes - resvg doesn't handle properly (see SVG comments)
 
-## Current Development Focus
+## Project Status
 
-Branch `open_meteo` is exploring global weather support via Open-Meteo API to supplement/replace BOM (Australia-only) API. Key changes are in `src/weather_dashboard.rs` with mapping logic in `src/apis/open_metro/models.rs`.
+The project currently supports both BOM (Australia-only) and Open-Meteo (worldwide) weather providers. Both providers are production-ready and fully tested with snapshot tests.

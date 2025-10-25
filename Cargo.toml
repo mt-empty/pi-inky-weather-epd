@@ -36,8 +36,7 @@ once_cell = "1.21"
 [dev-dependencies]
 insta = "1.43.2"
 usvg = "0.45"
-cross = "0.2" # needed for ci/cd to compile for different architectures
-mockito = "1.6"
+cross = "0.2" # needed for ci/cd to compile and test for different architectures
 
 
 [profile.dev.package]
