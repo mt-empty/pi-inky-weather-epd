@@ -46,7 +46,7 @@ fi
 
 echo "Running BOM snapshot tests..."
 
-if ! RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored; then
+if ! RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test; then
     echo "❌ BOM snapshot tests failed. Please fix failing tests before pushing."
     exit 1
 fi

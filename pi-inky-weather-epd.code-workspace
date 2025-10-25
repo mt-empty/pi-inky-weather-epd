@@ -126,7 +126,7 @@
 				"type": "shell",
 				"label": "cargo-test(bom only)",
 				"command": "cargo",
-				"args": ["test", "--test", "snapshot_provider_test", "snapshot_bom_dashboard", "--", "--ignored"],
+				"args": ["test", "--test", "snapshot_provider_test"],
 				"options": {
 					"cwd": "${workspaceFolder}",
 					"env": {

@@ -89,9 +89,9 @@ jobs:
           TZ: Australia/Melbourne
         run: cross test --target=${{ env.TARGET }}
 
-      - name: Test BOM snapshot (ignored by default)
+      - name: Test BOM snapshot
         env:
           RUN_MODE: test
           APP_API__PROVIDER: bom
           TZ: Australia/Melbourne
-        run: cross test --target=${{ env.TARGET }} --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
+        run: cross test --target=${{ env.TARGET }} --test snapshot_provider_test

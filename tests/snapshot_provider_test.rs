@@ -9,22 +9,30 @@
 //! 2. **Fixture Data**: Load pre-defined weather data (no API calls)
 //! 3. **Full Pipeline**: Run complete dashboard generation
 //! 4. **Snapshot SVG**: Capture and compare the full SVG output
+//! 5. **Auto-Skip**: Tests automatically skip if wrong provider is configured
 //!
 //! ## Running These Tests
 //!
-//! **Default (Open-Meteo)**:
+//! **Test Open-Meteo provider** (default in test.toml):
 //! ```bash
 //! RUN_MODE=test cargo test --test snapshot_provider_test
+//! # Explicitly:
+//! RUN_MODE=test APP_API__PROVIDER=open_meteo cargo test --test snapshot_provider_test
 //! ```
 //!
-//! **BOM Provider** (requires override):
+//! **Test BOM provider**:
 //! ```bash
-//! RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
+//! RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test
+//! ```
+//!
+//! **Test both providers** (for CI or comprehensive testing):
+//! ```bash
+//! RUN_MODE=test APP_API__PROVIDER=open_meteo cargo test --test snapshot_provider_test
+//! RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test
 //! ```
 //!
 //! **Important**: Set `RUN_MODE=test` to load test configuration.
 //! This loads `config/test.toml` which sets:
-//! - `provider = "open_meteo"` (default test provider)
 //! - `disable_weather_api_requests = true` (use fixtures, no real API calls)
 //! - `weather_data_cache_path = "tests/fixtures/"` (load from test fixtures)
 //!
@@ -32,7 +40,8 @@
 //!
 //! On first run or after intentional changes:
 //! ```bash
-//! RUN_MODE=test cargo test --test snapshot_provider_test
+//! RUN_MODE=test APP_API__PROVIDER=open_meteo cargo test --test snapshot_provider_test
+//! RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test
 //! cargo insta review  # Review and accept/reject changes
 //! ```
 
@@ -60,8 +69,12 @@ use std::fs;
 /// - 7-day forecast cards (only 3 days in fixture)
 /// - Sunrise/sunset times
 ///
-/// **NOTE**: This is the default test provider (config/test.toml sets provider = "open_meteo").
-/// No special environment variables needed.
+/// **Running This Test**:
+/// ```bash
+/// RUN_MODE=test cargo test --test snapshot_provider_test
+/// # Or explicitly with Open-Meteo:
+/// RUN_MODE=test APP_API__PROVIDER=open_meteo cargo test --test snapshot_provider_test
+/// ```
 #[test]
 fn snapshot_open_meteo_dashboard() {
     // Verify test configuration is loaded
@@ -74,27 +87,21 @@ fn snapshot_open_meteo_dashboard() {
         "tests/fixtures/",
         "Test config should use fixtures path"
     );
-    assert_eq!(
-        format!("{}", CONFIG.api.provider).to_lowercase(),
-        "openmeteo",
-        "Test config should use Open-Meteo provider"
-    );
+
+    // Skip test if BOM provider is configured (test is provider-specific)
+    if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
+        eprintln!(
+            "Skipping Open-Meteo test - provider is set to '{}'",
+            CONFIG.api.provider
+        );
+        return;
+    }
 
     // Fixed time: Oct 10, 2025, 1:00 AM UTC
     // In Melbourne AEDT (UTC+11): Oct 10, 2025, 12:00 PM (noon)
     // This should match mid-point of hourly forecast data
     let clock =
         FixedClock::from_rfc3339("2025-10-10T01:00:00Z").expect("Failed to create fixed clock");
-
-    // Verify test configuration is loaded
-    assert!(
-        CONFIG.debugging.disable_weather_api_requests,
-        "Test config should have disable_weather_api_requests = true"
-    );
-
-    // Temporarily override provider to Open-Meteo
-    // Note: This requires the config to be reloadable or we need a different approach
-    // For now, we'll test with whatever provider is set in test.toml
 
     // Generate the dashboard with Open-Meteo provider
     let result = generate_weather_dashboard_with_clock(&clock);
@@ -125,8 +132,6 @@ fn snapshot_open_meteo_dashboard() {
 
 /// Test BOM provider dashboard generation with fixed time and fixtures
 ///
-/// **Prerequisites**: Run with `RUN_MODE=test` environment variable
-///
 /// **Fixed Time**: Oct 9, 2025, 10:00 PM UTC = Oct 10, 2025, 9:00 AM Melbourne (AEDT)
 ///
 /// **Fixture Files Used**:
@@ -147,14 +152,13 @@ fn snapshot_open_meteo_dashboard() {
 /// - 7-day forecast cards
 /// - Sunrise/sunset times
 ///
-/// **NOTE**: This test requires APP_API__PROVIDER environment variable override:
+/// **Running This Test**:
 /// ```bash
-/// RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
+/// RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test
 /// cargo insta review
 /// ```
 /// Note: Double underscore __ is used as separator for nested config keys (api.provider -> API__PROVIDER)
 #[test]
-#[ignore] // Run separately with APP_API__PROVIDER=bom (CONFIG initializes once per test binary)
 fn snapshot_bom_dashboard() {
     // Verify test configuration is loaded (fail fast if TEST_MODE not set)
     assert!(
@@ -166,11 +170,15 @@ fn snapshot_bom_dashboard() {
         "tests/fixtures/",
         "Test config should use fixtures path"
     );
-    assert_eq!(
-        format!("{}", CONFIG.api.provider).to_lowercase(),
-        "bom",
-        "Test should use BOM provider (set APP_API__PROVIDER=bom)"
-    );
+
+    // Skip test if Open-Meteo provider is configured (test is provider-specific)
+    if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
+        eprintln!(
+            "Skipping BOM test - provider is set to '{}'",
+            CONFIG.api.provider
+        );
+        return;
+    }
 
     // Fixed time: Oct 9, 2025, 10:00 PM UTC
     // In Melbourne AEDT (UTC+11): Oct 10, 2025, 9:00 AM
