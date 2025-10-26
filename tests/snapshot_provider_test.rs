@@ -45,7 +45,7 @@
 //! cargo insta review  # Review and accept/reject changes
 //! ```
 
-use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_with_clock, CONFIG};
+use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injection, CONFIG};
 use std::fs;
 
 /// Test Open-Meteo provider dashboard generation with fixed time and fixtures
@@ -104,7 +104,9 @@ fn snapshot_open_meteo_dashboard() {
         FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");
 
     // Generate the dashboard with Open-Meteo provider
-    let result = generate_weather_dashboard_with_clock(&clock);
+    let input_template_name = &CONFIG.misc.template_path;
+    let output_svg_name = std::path::Path::new("tests/output/snapshot_open_meteo_dashboard.svg");
+    let result = generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name);
     assert!(
         result.is_ok(),
         "Failed to generate Open-Meteo dashboard: {:?}",
@@ -112,8 +114,8 @@ fn snapshot_open_meteo_dashboard() {
     );
 
     // Read the generated SVG
-    let svg_content = fs::read_to_string(CONFIG.misc.generated_svg_name.clone())
-        .expect("Failed to read generated SVG file");
+    let svg_content =
+        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
 
     // Verify SVG is not empty
     assert!(!svg_content.is_empty(), "Generated SVG should not be empty");
@@ -127,7 +129,7 @@ fn snapshot_open_meteo_dashboard() {
     // - Weather data from Open-Meteo fixtures
     // - Rendered at fixed time (12:00 PM Melbourne)
     // - All graph paths, labels, icons
-    insta::assert_snapshot!("open_meteo_dashboard", svg_content);
+    insta::assert_snapshot!(svg_content);
 }
 
 /// Test Open-Meteo at midnight boundary (date transition edge case)
@@ -148,22 +150,32 @@ fn snapshot_open_meteo_midnight_boundary() {
     );
 
     if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
-        eprintln!("Skipping Open-Meteo midnight test - provider is set to '{}'", CONFIG.api.provider);
+        eprintln!(
+            "Skipping Open-Meteo midnight test - provider is set to '{}'",
+            CONFIG.api.provider
+        );
         return;
     }
 
     // Midnight UTC on Oct 26 = 11:00 AM Melbourne
-    let clock = FixedClock::from_rfc3339("2025-10-26T00:00:00Z")
-        .expect("Failed to create fixed clock");
+    let clock =
+        FixedClock::from_rfc3339("2025-10-26T00:00:00Z").expect("Failed to create fixed clock");
 
-    let result = generate_weather_dashboard_with_clock(&clock);
-    assert!(result.is_ok(), "Dashboard generation failed: {:?}", result.err());
+    let input_template_name = &CONFIG.misc.template_path;
+    let output_svg_name =
+        std::path::Path::new("tests/output/snapshot_open_meteo_midnight_boundary.svg");
+    let result = generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name);
+    assert!(
+        result.is_ok(),
+        "Dashboard generation failed: {:?}",
+        result.err()
+    );
 
-    let svg_content = fs::read_to_string(CONFIG.misc.generated_svg_name.clone())
-        .expect("Failed to read generated SVG file");
+    let svg_content =
+        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
 
     assert!(!svg_content.is_empty() && svg_content.contains("<svg"));
-    insta::assert_snapshot!("open_meteo_midnight_boundary", svg_content);
+    insta::assert_snapshot!(svg_content);
 }
 
 /// Test Open-Meteo at end of day (late evening edge case)
@@ -183,22 +195,31 @@ fn snapshot_open_meteo_end_of_day() {
     );
 
     if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
-        eprintln!("Skipping Open-Meteo end-of-day test - provider is set to '{}'", CONFIG.api.provider);
+        eprintln!(
+            "Skipping Open-Meteo end-of-day test - provider is set to '{}'",
+            CONFIG.api.provider
+        );
         return;
     }
 
     // 13:00 UTC = Midnight Melbourne (just rolled over to Oct 26)
-    let clock = FixedClock::from_rfc3339("2025-10-25T13:00:00Z")
-        .expect("Failed to create fixed clock");
+    let clock =
+        FixedClock::from_rfc3339("2025-10-25T13:00:00Z").expect("Failed to create fixed clock");
 
-    let result = generate_weather_dashboard_with_clock(&clock);
-    assert!(result.is_ok(), "Dashboard generation failed: {:?}", result.err());
+    let input_template_name = &CONFIG.misc.template_path;
+    let output_svg_name = std::path::Path::new("tests/output/snapshot_open_meteo_end_of_day.svg");
+    let result = generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name);
+    assert!(
+        result.is_ok(),
+        "Dashboard generation failed: {:?}",
+        result.err()
+    );
 
-    let svg_content = fs::read_to_string(CONFIG.misc.generated_svg_name.clone())
-        .expect("Failed to read generated SVG file");
+    let svg_content =
+        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
 
     assert!(!svg_content.is_empty() && svg_content.contains("<svg"));
-    insta::assert_snapshot!("open_meteo_end_of_day", svg_content);
+    insta::assert_snapshot!(svg_content);
 }
 
 /// Test Open-Meteo during DST transition period
@@ -218,24 +239,33 @@ fn snapshot_open_meteo_early_morning() {
     );
 
     if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
-        eprintln!("Skipping Open-Meteo early morning test - provider is set to '{}'", CONFIG.api.provider);
+        eprintln!(
+            "Skipping Open-Meteo early morning test - provider is set to '{}'",
+            CONFIG.api.provider
+        );
         return;
     }
 
     // 16:00 UTC = 3:00 AM Melbourne
-    let clock = FixedClock::from_rfc3339("2025-10-25T16:00:00Z")
-        .expect("Failed to create fixed clock");
+    let clock =
+        FixedClock::from_rfc3339("2025-10-25T16:00:00Z").expect("Failed to create fixed clock");
 
-    let result = generate_weather_dashboard_with_clock(&clock);
-    assert!(result.is_ok(), "Dashboard generation failed: {:?}", result.err());
+    let input_template_name = &CONFIG.misc.template_path;
+    let output_svg_name =
+        std::path::Path::new("tests/output/snapshot_open_meteo_early_morning.svg");
+    let result = generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name);
+    assert!(
+        result.is_ok(),
+        "Dashboard generation failed: {:?}",
+        result.err()
+    );
 
-    let svg_content = fs::read_to_string(CONFIG.misc.generated_svg_name.clone())
-        .expect("Failed to read generated SVG file");
+    let svg_content =
+        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
 
     assert!(!svg_content.is_empty() && svg_content.contains("<svg"));
-    insta::assert_snapshot!("open_meteo_early_morning", svg_content);
+    insta::assert_snapshot!(svg_content);
 }
-
 
 /// Test BOM provider dashboard generation with fixed time and fixtures
 ///
@@ -294,7 +324,9 @@ fn snapshot_bom_dashboard() {
         FixedClock::from_rfc3339("2025-10-25T10:00:00Z").expect("Failed to create fixed clock");
 
     // Generate the dashboard with BOM provider
-    let result = generate_weather_dashboard_with_clock(&clock);
+    let input_template_name = &CONFIG.misc.template_path;
+    let output_svg_name = std::path::Path::new("tests/output/snapshot_bom_dashboard.svg");
+    let result = generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name);
     assert!(
         result.is_ok(),
         "Failed to generate BOM dashboard: {:?}",
@@ -302,8 +334,8 @@ fn snapshot_bom_dashboard() {
     );
 
     // Read the generated SVG
-    let svg_content = fs::read_to_string(CONFIG.misc.generated_svg_name.clone())
-        .expect("Failed to read generated SVG file");
+    let svg_content =
+        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
 
     // Verify SVG is not empty
     assert!(!svg_content.is_empty(), "Generated SVG should not be empty");
@@ -317,7 +349,7 @@ fn snapshot_bom_dashboard() {
     // - Weather data from BOM fixtures
     // - Rendered at fixed time (9:00 AM Melbourne)
     // - All graph paths, labels, icons
-    insta::assert_snapshot!("bom_dashboard", svg_content);
+    insta::assert_snapshot!(svg_content);
 }
 
 /// Test BOM at midnight boundary (date transition edge case)
@@ -334,22 +366,31 @@ fn snapshot_bom_midnight_boundary() {
     );
 
     if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
-        eprintln!("Skipping BOM midnight test - provider is set to '{}'", CONFIG.api.provider);
+        eprintln!(
+            "Skipping BOM midnight test - provider is set to '{}'",
+            CONFIG.api.provider
+        );
         return;
     }
 
     // Midnight UTC on Oct 26 = 11:00 AM Melbourne
-    let clock = FixedClock::from_rfc3339("2025-10-26T00:00:00Z")
-        .expect("Failed to create fixed clock");
+    let clock =
+        FixedClock::from_rfc3339("2025-10-26T00:00:00Z").expect("Failed to create fixed clock");
 
-    let result = generate_weather_dashboard_with_clock(&clock);
-    assert!(result.is_ok(), "Dashboard generation failed: {:?}", result.err());
+    let input_template_name = &CONFIG.misc.template_path;
+    let output_svg_name = std::path::Path::new("tests/output/snapshot_bom_midnight_boundary.svg");
+    let result = generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name);
+    assert!(
+        result.is_ok(),
+        "Dashboard generation failed: {:?}",
+        result.err()
+    );
 
-    let svg_content = fs::read_to_string(CONFIG.misc.generated_svg_name.clone())
-        .expect("Failed to read generated SVG file");
+    let svg_content =
+        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
 
     assert!(!svg_content.is_empty() && svg_content.contains("<svg"));
-    insta::assert_snapshot!("bom_midnight_boundary", svg_content);
+    insta::assert_snapshot!(svg_content);
 }
 
 /// Test BOM at local midnight (just after day rollover)
@@ -366,22 +407,31 @@ fn snapshot_bom_local_midnight() {
     );
 
     if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
-        eprintln!("Skipping BOM local midnight test - provider is set to '{}'", CONFIG.api.provider);
+        eprintln!(
+            "Skipping BOM local midnight test - provider is set to '{}'",
+            CONFIG.api.provider
+        );
         return;
     }
 
     // 13:00 UTC = Midnight Melbourne (Oct 26)
-    let clock = FixedClock::from_rfc3339("2025-10-25T13:00:00Z")
-        .expect("Failed to create fixed clock");
+    let clock =
+        FixedClock::from_rfc3339("2025-10-25T13:00:00Z").expect("Failed to create fixed clock");
 
-    let result = generate_weather_dashboard_with_clock(&clock);
-    assert!(result.is_ok(), "Dashboard generation failed: {:?}", result.err());
+    let input_template_name = &CONFIG.misc.template_path;
+    let output_svg_name = std::path::Path::new("tests/output/snapshot_bom_local_midnight.svg");
+    let result = generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name);
+    assert!(
+        result.is_ok(),
+        "Dashboard generation failed: {:?}",
+        result.err()
+    );
 
-    let svg_content = fs::read_to_string(CONFIG.misc.generated_svg_name.clone())
-        .expect("Failed to read generated SVG file");
+    let svg_content =
+        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
 
     assert!(!svg_content.is_empty() && svg_content.contains("<svg"));
-    insta::assert_snapshot!("bom_local_midnight", svg_content);
+    insta::assert_snapshot!(svg_content);
 }
 
 /// Test BOM during early morning hours
@@ -401,20 +451,29 @@ fn snapshot_bom_early_morning() {
     );
 
     if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
-        eprintln!("Skipping BOM early morning test - provider is set to '{}'", CONFIG.api.provider);
+        eprintln!(
+            "Skipping BOM early morning test - provider is set to '{}'",
+            CONFIG.api.provider
+        );
         return;
     }
 
     // 19:00 UTC = 6:00 AM Melbourne
-    let clock = FixedClock::from_rfc3339("2025-10-25T19:00:00Z")
-        .expect("Failed to create fixed clock");
+    let clock =
+        FixedClock::from_rfc3339("2025-10-25T19:00:00Z").expect("Failed to create fixed clock");
 
-    let result = generate_weather_dashboard_with_clock(&clock);
-    assert!(result.is_ok(), "Dashboard generation failed: {:?}", result.err());
+    let input_template_name = &CONFIG.misc.template_path;
+    let output_svg_name = std::path::Path::new("tests/output/snapshot_bom_early_morning.svg");
+    let result = generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name);
+    assert!(
+        result.is_ok(),
+        "Dashboard generation failed: {:?}",
+        result.err()
+    );
 
-    let svg_content = fs::read_to_string(CONFIG.misc.generated_svg_name.clone())
-        .expect("Failed to read generated SVG file");
+    let svg_content =
+        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
 
     assert!(!svg_content.is_empty() && svg_content.contains("<svg"));
-    insta::assert_snapshot!("bom_early_morning", svg_content);
+    insta::assert_snapshot!(svg_content);
 }

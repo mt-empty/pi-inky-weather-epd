@@ -7,6 +7,7 @@ use crate::{utils, CONFIG};
 use anyhow::Error;
 use std::fs;
 use std::io::Write;
+use std::path::Path;
 use tinytemplate::{format_unescaped, TinyTemplate};
 pub use utils::*;
 
@@ -50,7 +51,7 @@ fn update_forecast_context(
     Ok(())
 }
 
-fn render_dashboard_template(context: &Context, dashboard_svg: String) -> Result<(), Error> {
+fn render_dashboard_template(context: &Context, dashboard_svg: String, output_svg_name: &Path) -> Result<(), Error> {
     let mut tt = TinyTemplate::new();
     let tt_name = "dashboard";
 
@@ -62,7 +63,7 @@ fn render_dashboard_template(context: &Context, dashboard_svg: String) -> Result
     // Attempt to render the template
     match tt.render(tt_name, &context) {
         Ok(rendered) => {
-            let mut output = fs::File::create(&CONFIG.misc.generated_svg_name)?;
+            let mut output = fs::File::create(output_svg_name)?;
             output.write_all(rendered.as_bytes())?;
             Ok(())
         }
@@ -76,35 +77,45 @@ fn render_dashboard_template(context: &Context, dashboard_svg: String) -> Result
 /// Generate weather dashboard using the system clock (production)
 pub fn generate_weather_dashboard() -> Result<(), Error> {
     let clock = SystemClock;
-    generate_weather_dashboard_with_clock(&clock)
+    let input_template_name = &CONFIG.misc.template_path;
+    let output_svg_name = &CONFIG.misc.generated_svg_name;
+    generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name)
 }
 
-/// Generate weather dashboard with a custom clock (for testing)
+/// Generate weather dashboard with a custom clock and custom paths  (for testing)
 ///
-/// This function allows dependency injection of a Clock implementation,
+/// This function allows dependency injection of a Clock implementation and custom paths,
 /// enabling deterministic testing with FixedClock.
 ///
 /// # Arguments
 ///
 /// * `clock` - The clock implementation to use for time-dependent operations
+/// * `input_template_name` - Path to the input SVG template file
+/// * `output_svg_name` - Path to save the generated SVG file
 ///
 /// # Examples
 ///
 /// ```ignore
 /// use pi_inky_weather_epd::clock::FixedClock;
 ///
+/// let input_template_name = std::path::Path::new("templates/weather_dashboard.svg");
+/// let output_svg_name = std::path::Path::new("output/weather_dashboard.svg");
 /// let clock = FixedClock::from_rfc3339("2025-10-09T22:00:00Z").unwrap();
-/// generate_weather_dashboard_with_clock(&clock)?;
+/// generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name)?;
 /// ```
-pub fn generate_weather_dashboard_with_clock(clock: &dyn Clock) -> Result<(), Error> {
+pub fn generate_weather_dashboard_injection(
+    clock: &dyn Clock,
+    input_template_name: &Path,
+    output_svg_name: &Path,
+) -> Result<(), Error> {
     let current_dir = std::env::current_dir()?;
     let mut context_builder = ContextBuilder::new();
 
-    let template_svg = match fs::read_to_string(CONFIG.misc.template_path.clone()) {
+    let template_svg = match fs::read_to_string(input_template_name) {
         Ok(svg) => svg,
         Err(e) => {
             println!("Current directory: {}", current_dir.display());
-            println!("Template path: {}", &CONFIG.misc.template_path.display());
+            println!("Template path: {}", &input_template_name.display());
             println!("Failed to read template file: {e}");
             return Err(e.into());
         }
@@ -113,16 +124,26 @@ pub fn generate_weather_dashboard_with_clock(clock: &dyn Clock) -> Result<(), Er
     update_forecast_context(&mut context_builder, clock)?;
 
     println!("## Rendering dashboard to SVG ...");
-    render_dashboard_template(&context_builder.context, template_svg)?;
+    // Ensure the parent directory for the output SVG exists
+    if let Some(parent) = output_svg_name.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    render_dashboard_template(&context_builder.context, template_svg, output_svg_name)?;
     println!(
         "SVG has been modified and saved successfully at {}",
-        current_dir.join(&CONFIG.misc.generated_svg_name).display()
+        current_dir.join(output_svg_name).display()
     );
 
     if !CONFIG.debugging.disable_png_output {
         println!("## Converting SVG to PNG ...");
+        // Ensure the parent directory for the generated PNG exists
+        if let Some(png_parent) = CONFIG.misc.generated_png_name.parent() {
+            std::fs::create_dir_all(png_parent)?;
+        }
+
         convert_svg_to_png(
-            &CONFIG.misc.generated_svg_name,
+            &output_svg_name.to_path_buf(),
             &CONFIG.misc.generated_png_name,
             2.0,
         )?;

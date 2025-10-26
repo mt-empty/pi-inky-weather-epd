@@ -359,7 +359,7 @@ generate_weather_dashboard() // uses SystemClock internally
 
 // Testing (tests/*)
 let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 10, 10, 1, 0, 0).unwrap());
-generate_weather_dashboard_with_clock(&clock)
+generate_weather_dashboard_injection(&clock)
 ```
 
 **Thread through all time-dependent functions**: Chart rendering, context building, hour filtering all accept `&dyn Clock`. Never use `chrono::Local::now()` directly - always use `clock.now_local()`.

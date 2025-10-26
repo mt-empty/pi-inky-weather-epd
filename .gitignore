@@ -29,3 +29,4 @@ static/fonts/Roboto-Regular.ttf
 notes.md
 dashboard*.svg
 dashboard*.png
+tests/output/*

@@ -19,7 +19,7 @@ use once_cell::sync::Lazy;
 use update::update_app;
 
 // Re-export for testing
-pub use crate::weather_dashboard::generate_weather_dashboard_with_clock;
+pub use crate::weather_dashboard::generate_weather_dashboard_injection;
 
 pub static CONFIG: Lazy<DashboardSettings> = Lazy::new(|| match DashboardSettings::new() {
     Ok(config) => {
