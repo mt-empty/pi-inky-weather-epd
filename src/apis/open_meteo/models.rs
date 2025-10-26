@@ -113,10 +113,10 @@ pub struct DailyUnits {
 pub struct Daily {
     #[serde(deserialize_with = "deserialize_vec_daily_datetime")]
     pub time: Vec<DateTime<Utc>>,
-    // #[serde(deserialize_with = "deserialize_vec_iso8601_loose")]
-    pub sunrise: Vec<String>,
-    // #[serde(deserialize_with = "deserialize_vec_iso8601_loose")]
-    pub sunset: Vec<String>,
+    #[serde(deserialize_with = "deserialize_vec_iso8601_loose")]
+    pub sunrise: Vec<DateTime<Utc>>,
+    #[serde(deserialize_with = "deserialize_vec_iso8601_loose")]
+    pub sunset: Vec<DateTime<Utc>>,
     #[serde(rename = "temperature_2m_max")]
     pub temperature_2m_max: Vec<f32>,
     #[serde(rename = "temperature_2m_min")]
@@ -230,16 +230,8 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
                 };
 
                 let astronomical = {
-                    let sunrise = response.daily.sunrise.get(i).and_then(|s| {
-                        chrono::DateTime::parse_from_rfc3339(s)
-                            .ok()
-                            .map(|dt| dt.with_timezone(&chrono::Utc))
-                    });
-                    let sunset = response.daily.sunset.get(i).and_then(|s| {
-                        chrono::DateTime::parse_from_rfc3339(s)
-                            .ok()
-                            .map(|dt| dt.with_timezone(&chrono::Utc))
-                    });
+                    let sunrise = response.daily.sunrise.get(i).copied();
+                    let sunset = response.daily.sunset.get(i).copied();
 
                     if sunrise.is_some() || sunset.is_some() {
                         Some(Astronomical {
@@ -266,30 +258,15 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
 // ============================================================================
 // Custom deserializers for OpenMeteo date/time formats
 // ============================================================================
+// Note: Open-Meteo returns sunrise/sunset in UTC as "2025-10-24T19:21" format
+// This is the same format as hourly times, so we can reuse that deserializer
 pub fn deserialize_vec_iso8601_loose<'de, D>(
     deserializer: D,
 ) -> Result<Vec<DateTime<Utc>>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let raw_vec: Vec<String> = Deserialize::deserialize(deserializer)?;
-    raw_vec
-        .into_iter()
-        .map(|mut s| {
-            // If seconds missing, add ":00"
-            if s.len() == 16 {
-                s.push_str(":00");
-            }
-            // If timezone missing, assume UTC
-            if !s.ends_with('Z') && !s.contains('+') && !s.contains('-') {
-                s.push('Z');
-            }
-
-            DateTime::parse_from_rfc3339(&s)
-                .map(|dt| dt.with_timezone(&Utc))
-                .map_err(serde::de::Error::custom)
-        })
-        .collect()
+    deserialize_vec_short_datetime(deserializer)
 }
 
 pub fn deserialize_vec_short_datetime<'de, D>(

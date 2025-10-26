@@ -148,6 +148,11 @@ fn snapshot_open_meteo_midnight_boundary() {
         CONFIG.debugging.disable_weather_api_requests,
         "Test requires RUN_MODE=test environment variable"
     );
+    assert_eq!(
+        CONFIG.misc.weather_data_cache_path.to_str().unwrap(),
+        "tests/fixtures/",
+        "Test config should use fixtures path"
+    );
 
     if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
         eprintln!(
@@ -193,6 +198,11 @@ fn snapshot_open_meteo_end_of_day() {
         CONFIG.debugging.disable_weather_api_requests,
         "Test requires RUN_MODE=test environment variable"
     );
+    assert_eq!(
+        CONFIG.misc.weather_data_cache_path.to_str().unwrap(),
+        "tests/fixtures/",
+        "Test config should use fixtures path"
+    );
 
     if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
         eprintln!(
@@ -236,6 +246,11 @@ fn snapshot_open_meteo_early_morning() {
     assert!(
         CONFIG.debugging.disable_weather_api_requests,
         "Test requires RUN_MODE=test environment variable"
+    );
+    assert_eq!(
+        CONFIG.misc.weather_data_cache_path.to_str().unwrap(),
+        "tests/fixtures/",
+        "Test config should use fixtures path"
     );
 
     if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
@@ -364,6 +379,11 @@ fn snapshot_bom_midnight_boundary() {
         CONFIG.debugging.disable_weather_api_requests,
         "Test requires RUN_MODE=test environment variable"
     );
+    assert_eq!(
+        CONFIG.misc.weather_data_cache_path.to_str().unwrap(),
+        "tests/fixtures/",
+        "Test config should use fixtures path"
+    );
 
     if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
         eprintln!(
@@ -404,6 +424,11 @@ fn snapshot_bom_local_midnight() {
     assert!(
         CONFIG.debugging.disable_weather_api_requests,
         "Test requires RUN_MODE=test environment variable"
+    );
+    assert_eq!(
+        CONFIG.misc.weather_data_cache_path.to_str().unwrap(),
+        "tests/fixtures/",
+        "Test config should use fixtures path"
     );
 
     if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
@@ -448,6 +473,11 @@ fn snapshot_bom_early_morning() {
     assert!(
         CONFIG.debugging.disable_weather_api_requests,
         "Test requires RUN_MODE=test environment variable"
+    );
+    assert_eq!(
+        CONFIG.misc.weather_data_cache_path.to_str().unwrap(),
+        "tests/fixtures/",
+        "Test config should use fixtures path"
     );
 
     if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
