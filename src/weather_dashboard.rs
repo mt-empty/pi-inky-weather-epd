@@ -51,7 +51,11 @@ fn update_forecast_context(
     Ok(())
 }
 
-fn render_dashboard_template(context: &Context, dashboard_svg: String, output_svg_name: &Path) -> Result<(), Error> {
+fn render_dashboard_template(
+    context: &Context,
+    dashboard_svg: String,
+    output_svg_name: &Path,
+) -> Result<(), Error> {
     let mut tt = TinyTemplate::new();
     let tt_name = "dashboard";
 
