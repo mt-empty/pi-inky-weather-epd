@@ -1,10 +1,10 @@
 # Pi Inky Weather Display
 
-A weather display powered by a Raspberry Pi and a 7.3" 7-colour E-Paper (E-ink) display.
+A weather display powered by a Raspberry Pi and a 7.3" 7-colour E-Paper (E-ink) display. The generation of the image is abstracted away from the hardware, so it can be used with any stack.
 
 ![Hourly timelapse](./misc/timelapse.gif)
 
-Note, the gif and images are outdated, specifically UV icon colour changes depending on the UV gradient 
+Note, the gif and images are a bit outdated, specifically UV icon colour changes depending on the UV gradient.
 
 ## Hardware
 
