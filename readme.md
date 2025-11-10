@@ -87,6 +87,13 @@ Here are example configurations. Note: some of these images are slightly outdate
 
 <img src="./misc/dashboard-default.png" alt="Default configuration" width="600"/>
 
+### Imperial Units
+```toml
+[render_options]
+temp_unit = "F"
+wind_speed_unit = "mph"
+```
+
 ### Use Clear night Icon instead of Moon Phase icon when Time=night and Weather=clear
 
 <img src="./misc/dashboard-without-moon-phase.png" alt="Moon phase configuration" width="600"/>

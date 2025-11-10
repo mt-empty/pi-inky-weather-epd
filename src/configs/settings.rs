@@ -25,6 +25,19 @@ pub enum TemperatureUnit {
     F,
 }
 
+#[derive(Debug, Deserialize, PartialOrd, PartialEq, Clone, Copy, Display)]
+pub enum WindSpeedUnit {
+    #[serde(rename = "km/h")]
+    #[strum(serialize = "km/h")]
+    KmH,
+    #[serde(rename = "mph")]
+    #[strum(serialize = "mph")]
+    Mph,
+    #[serde(rename = "knots")]
+    #[strum(serialize = "knots")]
+    Knots,
+}
+
 #[nutype(
     sanitize(trim),
     validate(with = is_valid_colour, error = ValidationError),
@@ -129,6 +142,7 @@ pub struct Misc {
 #[derive(Debug, Deserialize, Clone)]
 pub struct RenderOptions {
     pub temp_unit: TemperatureUnit,
+    pub wind_speed_unit: WindSpeedUnit,
     pub use_moon_phase_instead_of_clear_night: bool,
     pub x_axis_always_at_min: bool,
     pub use_gust_instead_of_wind: bool,

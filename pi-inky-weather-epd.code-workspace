@@ -12,6 +12,12 @@
         "[rust]": {
             "editor.defaultFormatter": "rust-lang.rust-analyzer"
         },
+        "[svg]": {
+            "editor.formatOnSave": false
+        },
+        "workbench.editorAssociations": {
+            "*.svg": "default"
+        },
         "files.trimTrailingWhitespace": true,
         "files.insertFinalNewline": true,
         "files.trimFinalNewlines": true,

@@ -106,6 +106,26 @@ impl Wind {
             self.speed_kmh
         }
     }
+
+    /// Convert wind speed from km/h to the specified unit
+    pub fn convert_speed(speed_kmh: u16, unit: crate::configs::settings::WindSpeedUnit) -> u16 {
+        use crate::configs::settings::WindSpeedUnit;
+        match unit {
+            WindSpeedUnit::KmH => speed_kmh,
+            WindSpeedUnit::Mph => (speed_kmh as f64 * 0.621371).round() as u16,
+            WindSpeedUnit::Knots => (speed_kmh as f64 * 0.539957).round() as u16,
+        }
+    }
+
+    /// Get the wind speed in the configured unit
+    pub fn get_speed_in_unit(
+        &self,
+        use_gust: bool,
+        unit: crate::configs::settings::WindSpeedUnit,
+    ) -> u16 {
+        let speed_kmh = self.get_speed(use_gust);
+        Self::convert_speed(speed_kmh, unit)
+    }
 }
 
 /// Domain model for precipitation information
