@@ -33,6 +33,7 @@ pub struct Context {
     pub max_relative_humidity_font_style: String,
     pub total_rain_today: String,
     pub temp_unit: String,
+    pub current_wind_speed_unit: String,
     pub current_hour_actual_temp: String,
     pub current_hour_weather_icon: String,
     pub current_hour_feels_like: String,
@@ -121,6 +122,7 @@ impl Default for Context {
             max_relative_humidity_font_style: FontStyle::Normal.to_string(),
             total_rain_today: na.clone(),
             temp_unit: render_options.temp_unit.to_string(),
+            current_wind_speed_unit: render_options.wind_speed_unit.to_string(),
             current_hour_actual_temp: na.clone(),
             current_hour_weather_icon: not_available_icon_path.clone(),
             current_hour_feels_like: na.clone(),
@@ -567,7 +569,10 @@ impl ContextBuilder {
     fn set_now_values_for_table(&mut self, current_hour: &HourlyForecast) {
         self.context.current_hour_wind_speed = current_hour
             .wind
-            .get_speed(CONFIG.render_options.use_gust_instead_of_wind)
+            .get_speed_in_unit(
+                CONFIG.render_options.use_gust_instead_of_wind,
+                CONFIG.render_options.wind_speed_unit,
+            )
             .to_string();
         self.context.current_hour_wind_icon = current_hour.wind.get_icon_path();
         self.context.current_hour_uv_index = current_hour.uv_index.to_string();
@@ -625,10 +630,20 @@ impl ContextBuilder {
             .wind
             .get_speed(CONFIG.render_options.use_gust_instead_of_wind));
 
+        // Convert wind speed to configured unit
+        let max_wind_today_converted = crate::domain::models::Wind::convert_speed(
+            max_wind_today,
+            CONFIG.render_options.wind_speed_unit,
+        );
+        let max_wind_tomorrow_converted = crate::domain::models::Wind::convert_speed(
+            max_wind_tomorrow,
+            CONFIG.render_options.wind_speed_unit,
+        );
+
         if max_wind_today > max_wind_tomorrow {
-            self.context.max_gust_speed = max_wind_today.to_string();
+            self.context.max_gust_speed = max_wind_today_converted.to_string();
         } else {
-            self.context.max_gust_speed = max_wind_tomorrow.to_string();
+            self.context.max_gust_speed = max_wind_tomorrow_converted.to_string();
             self.context.max_gust_speed_font_style = FontStyle::Italic.to_string();
         }
 

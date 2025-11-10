@@ -47,9 +47,9 @@ Note, the gif and images are a bit outdated, specifically UV icon colour changes
    mkdir -p ~/.config
    cat > ~/.config/pi-inky-weather-epd.toml << EOF
    [api]
-   provider = "open_meteo"    # "open_meteo" (worldwide) or "bom" (Australia only)
    latitude = YOUR_LATITUDE   # e.g., -33.8727 # Sydney
    longitude = YOUR_LONGITUDE # e.g., 151.2057
+   provider = "open_meteo"    # "open_meteo" (worldwide) or "bom" (Australia only)
    EOF
    ```
 
@@ -88,6 +88,13 @@ Here are example configurations. Note: some of these images are slightly outdate
 #### Default Configuration
 
 <img src="./misc/dashboard-default.png" alt="Default configuration" width="600"/>
+
+### Imperial Units
+```toml
+[render_options]
+temp_unit = "F"
+wind_speed_unit = "mph"
+```
 
 ### Use Clear night Icon instead of Moon Phase icon when Time=night and Weather=clear
 
