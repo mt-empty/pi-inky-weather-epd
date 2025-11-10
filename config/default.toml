@@ -1,17 +1,28 @@
 [release]
 release_info_url = "https://api.github.com/repos/mt-empty/pi-inky-weather-epd/releases/latest"
 download_base_url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/download"
-# set to 0 to disable auto-updating
-update_interval_days = 7
+update_interval_days = 0  # Set to 0 to disable auto-updating
 
 [api]
-provider = "open_meteo"    # bom or open_meteo
-latitude = -37.8136
+# Note: The weather data reflects the selected location’s conditions, but all times are displayed
+# according to your device’s (local) timezone. this should be fine for almost all users.
+latitude = -37.8136      # Melbourne, Australia
 longitude = 144.9631
+provider = "open_meteo"  # Options: bom, open_meteo
 
-# supported colours for 7.3 inky display
-# [black, white, green, blue, red, yellow, orange]
 [colours]
+# Supported colours for 7.3" Inky Impression display:
+# [black, white, green, blue, red, yellow, orange]
+background_colour = "white"
+text_colour = "black"
+x_axis_colour = "black"
+y_left_axis_colour = "red"    # Temperature axis
+y_right_axis_colour = "blue"  # Rain scale
+actual_temp_colour = "red"
+feels_like_colour = "green"
+rain_colour = "blue"
+
+## Dark Mode Example
 # background_colour   = "black"    # solid black – no dithering
 # text_colour         = "white"    # bright white for max legibility
 
@@ -23,22 +34,12 @@ longitude = 144.9631
 # feels_like_colour   = "green"    # dashed “feels-like” line
 # rain_colour         = "blue"     # shaded rain bars
 
-background_colour = "white"
-text_colour = "black"
-x_axis_colour = "black"
-y_left_axis_colour = "red"
-y_right_axis_colour = "blue"
-actual_temp_colour = "red"
-feels_like_colour = "green"
-rain_colour = "blue"
 
 [render_options]
-temp_unit = "C" # options: C, F
-wind_speed_unit = "km/h" # options: km/h, mph, knots
-# When the sky is clear, the moon phase icon will be used instead of the clear night icon
-use_moon_phase_instead_of_clear_night = true
-# this controls the placement of the x-axis when the temperature is below zero
-x_axis_always_at_min = true
+temp_unit = "C"                                 # Options: C, F
+wind_speed_unit = "km/h"                        # Options: km/h, mph, knots
+use_moon_phase_instead_of_clear_night = true    # When the sky is clear, the moon phase icon will be used instead of the clear night icon
+x_axis_always_at_min = true                     # Controls x-axis placement when temp is below zero
 use_gust_instead_of_wind = false
 
 [misc]
@@ -49,6 +50,6 @@ generated_png_name = "dashboard.png"
 svg_icons_directory = "static/fill-svg-static/"
 
 [debugging]
-disable_weather_api_requests = false # if true, the weather data will be loaded from a cached file instead of the API, make you ran the application at least once with this set to false
-disable_png_output = true
+disable_weather_api_requests = false # Load cached data instead of making API requests (requires at least one successful run first)
+disable_png_output = false
 allow_pre_release_version = false

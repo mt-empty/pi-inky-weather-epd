@@ -45,9 +45,9 @@ A weather display powered by a Raspberry Pi and a 7.3" 7-colour E-Paper (E-ink) 
    mkdir -p ~/.config
    cat > ~/.config/pi-inky-weather-epd.toml << EOF
    [api]
-   provider = "open_meteo"    # "open_meteo" (worldwide) or "bom" (Australia only)
    latitude = YOUR_LATITUDE   # e.g., -33.8727 # Sydney
    longitude = YOUR_LONGITUDE # e.g., 151.2057
+   provider = "open_meteo"    # "open_meteo" (worldwide) or "bom" (Australia only)
    EOF
    ```
 
