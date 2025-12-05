@@ -196,30 +196,45 @@ impl DashboardSettings {
         let test_config_path = root.join(CONFIG_DIR).join("test");
 
         // user config path is located at ~/.config/pi-inky-weather-epd.toml
-        let home_dir = env::var("HOME").unwrap();
+        let home_dir = env::var("HOME")
+            .map_err(|_| ConfigError::Message("HOME environment variable not set".to_string()))?;
         let user_config_path = std::path::PathBuf::from(&home_dir)
             .join(".config")
             .join(env!("CARGO_PKG_NAME"));
 
+        let default_config_str = default_config_path.to_str().ok_or_else(|| {
+            ConfigError::Message("Default config path contains invalid UTF-8".to_string())
+        })?;
+        let user_config_str = user_config_path.to_str().ok_or_else(|| {
+            ConfigError::Message("User config path contains invalid UTF-8".to_string())
+        })?;
+
         let mut config_builder = Config::builder()
             // Start off by merging in the "default" configuration file
-            .add_source(File::with_name(default_config_path.to_str().unwrap()))
+            .add_source(File::with_name(default_config_str))
             // Add in user configuration file
-            .add_source(File::with_name(user_config_path.to_str().unwrap()).required(false));
+            .add_source(File::with_name(user_config_str).required(false));
 
         // If running tests (RUN_MODE=test), load test.toml and skip development/local
         // Otherwise, load development.toml and local.toml
         if is_test_mode {
-            config_builder = config_builder
-                .add_source(File::with_name(test_config_path.to_str().unwrap()).required(false));
+            let test_config_str = test_config_path.to_str().ok_or_else(|| {
+                ConfigError::Message("Test config path contains invalid UTF-8".to_string())
+            })?;
+            config_builder =
+                config_builder.add_source(File::with_name(test_config_str).required(false));
         } else {
+            let dev_config_str = development_config_path.to_str().ok_or_else(|| {
+                ConfigError::Message("Development config path contains invalid UTF-8".to_string())
+            })?;
+            let local_config_str = local_config_path.to_str().ok_or_else(|| {
+                ConfigError::Message("Local config path contains invalid UTF-8".to_string())
+            })?;
             config_builder = config_builder
                 // Add in development configuration file
-                .add_source(
-                    File::with_name(development_config_path.to_str().unwrap()).required(false),
-                )
+                .add_source(File::with_name(dev_config_str).required(false))
                 // Add in local configuration file (for dev overrides, not checked into git)
-                .add_source(File::with_name(local_config_path.to_str().unwrap()).required(false));
+                .add_source(File::with_name(local_config_str).required(false));
         }
 
         let settings = config_builder

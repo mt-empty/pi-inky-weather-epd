@@ -74,7 +74,13 @@ fn load_fonts(font_db: &mut fontdb::Database) {
     font_db.load_system_fonts();
 
     // print current path
-    let current_path = std::env::current_dir().unwrap();
+    let current_path = match std::env::current_dir() {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!("Warning: Could not get current directory for font loading: {e}");
+            return;
+        }
+    };
 
     let font_files = [
         "static/fonts/Roboto-VariableFont_wdth,wght.ttf",

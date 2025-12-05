@@ -259,14 +259,12 @@ impl ContextBuilder {
         // so we have to do some conversion
         let local_date_truncated = clock
             .now_local()
-            .with_hour(0)
-            .unwrap()
-            .with_minute(0)
-            .unwrap()
-            .with_second(0)
-            .unwrap()
-            .with_nanosecond(0)
-            .unwrap();
+            .date_naive()
+            .and_hms_opt(0, 0, 0)
+            .expect("midnight should always be valid")
+            .and_local_timezone(Local)
+            .single()
+            .expect("local midnight should be unambiguous");
 
         println!("Local date truncated: {local_date_truncated:?}");
         let utc_converted_date: DateTime<Utc> = local_date_truncated.with_timezone(&Utc);
@@ -396,12 +394,12 @@ impl ContextBuilder {
         let local_forecast_window_end: DateTime<Local> =
             utc_forecast_window_end.with_timezone(&Local);
         let day_end = local_forecast_window_start
-            .with_hour(0)
-            .unwrap()
-            .with_minute(0)
-            .unwrap()
-            .with_second(0)
-            .unwrap()
+            .date_naive()
+            .and_hms_opt(0, 0, 0)
+            .expect("midnight should always be valid")
+            .and_local_timezone(Local)
+            .single()
+            .expect("local midnight should be unambiguous")
             + chrono::Duration::days(1);
 
         println!(
@@ -425,7 +423,15 @@ impl ContextBuilder {
             clock,
         );
 
-        let svg_result = graph.draw_graph().unwrap();
+        let svg_result = match graph.draw_graph() {
+            Ok(result) => result,
+            Err(e) => {
+                eprintln!("Error drawing graph: {e}");
+                return self.with_validation_error(DashboardError::IncompleteData {
+                    details: format!("Failed to draw hourly forecast graph: {e}"),
+                });
+            }
+        };
         let (temp_curve_data, feel_like_curve_data, rain_curve_data) =
             Self::extract_curve_data(&svg_result);
         self.context.graph_height = graph.height.to_string();
@@ -471,14 +477,12 @@ impl ContextBuilder {
         hourly_forecast_data: &[HourlyForecast],
         clock: &dyn Clock,
     ) -> Option<(chrono::DateTime<Utc>, chrono::DateTime<Utc>)> {
-        let current_date = clock
-            .now_utc()
-            .with_minute(0)
-            .unwrap()
-            .with_second(0)
-            .unwrap()
-            .with_nanosecond(0)
-            .unwrap();
+        let now = clock.now_utc();
+        let current_date = now
+            .date_naive()
+            .and_hms_opt(now.hour(), 0, 0)
+            .expect("current hour should always be valid")
+            .and_utc();
         println!("Current time (UTC, to the hour)     : {current_date:?}");
 
         let first_date = hourly_forecast_data.iter().find_map(|forecast| {

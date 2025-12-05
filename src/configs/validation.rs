@@ -191,9 +191,12 @@ fn is_named_colour(colour: &str) -> bool {
     NAMED_COLOURS.contains(&colour)
 }
 fn is_hex_colour(colour: &str) -> bool {
+    use once_cell::sync::Lazy;
     // This regex matches hex colours in the format "#FFF" or "#FFFFFF"
-    let hex_colour_re = Regex::new(r"^#(?:[0-9a-fA-F]{3}){1,2}$").unwrap();
-    hex_colour_re.is_match(colour)
+    static HEX_COLOUR_RE: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(r"^#(?:[0-9a-fA-F]{3}){1,2}$").expect("Invalid hex colour regex pattern")
+    });
+    HEX_COLOUR_RE.is_match(colour)
 }
 fn is_rgb_colour(colour: &str) -> bool {
     let rgb_values: Vec<&str> = colour[4..colour.len() - 1].split(',').collect();
