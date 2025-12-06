@@ -1,5 +1,6 @@
 ---
 source: tests/snapshot_provider_test.rs
+assertion_line: 232
 expression: svg_content
 ---
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
@@ -32,7 +33,7 @@ expression: svg_content
     <!-- Current Day Information -->
     <!-- Due to resvg bug, the position is intentionally off to compensate for the bug -->
     <!-- Do not modify the x position of current_hour_temp and current_hour_feels_like, see above issue at the start of the file -->
-    <text x="270" y="50" font-size="35" fill="black">Sunday, 26 October </text>
+    <text x="400" y="50" font-size="35" fill="black" text-anchor="middle">Sunday, 26 October</text>
     <image x="0" y="0" width="200" height="180" href="static/fill-svg-static/overcast-night.svg" />
 
 

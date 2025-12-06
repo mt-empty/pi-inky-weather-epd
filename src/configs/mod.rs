@@ -1,2 +1,2 @@
 pub mod settings;
-mod validation;
+pub mod validation;

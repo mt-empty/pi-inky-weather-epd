@@ -38,6 +38,15 @@ rain_colour = "blue"
 [render_options]
 temp_unit = "C"                                 # Options: C, F
 wind_speed_unit = "km/h"                        # Options: km/h, mph, knots
+# Date format using strftime specifiers. Examples:
+#   "%A, %d %B"      -> Saturday, 06 December (default)
+#   "%B %-d, %Y"     -> December 6, 2025 (US style)
+#   "%d/%m/%Y"       -> 06/12/2025 (AU/UK)
+#   "%m/%d/%Y"       -> 12/06/2025 (US)
+#   "%Y-%m-%d"       -> 2025-12-06 (ISO 8601)
+#   "%a, %-d %b"     -> Sat, 6 Dec
+# See: https://docs.rs/chrono/latest/chrono/format/strftime/
+date_format = "%A, %d %B"
 use_moon_phase_instead_of_clear_night = true    # When the sky is clear, the moon phase icon will be used instead of the clear night icon
 x_axis_always_at_min = true                     # Controls x-axis placement when temp is below zero
 use_gust_instead_of_wind = false
