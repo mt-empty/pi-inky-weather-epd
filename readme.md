@@ -97,6 +97,25 @@ temp_unit = "F"
 wind_speed_unit = "mph"
 ```
 
+#### Date Format
+
+You can customise the date format using chrono strftime specifiers. The default is `"%A, %d %B"` (e.g., "Saturday, 06 December").
+
+```toml
+[render_options]
+# Example formats:
+# date_format = "%B %-d, %Y"     # December 6, 2025 (US style)
+# date_format = "%d/%m/%Y"       # 06/12/2025 (Australia/UK)
+# date_format = "%m/%d/%Y"       # 12/06/2025 (USA)
+# date_format = "%Y-%m-%d"       # 2025-12-06 (ISO 8601)
+# date_format = "%a, %-d %b"     # Sat, 6 Dec
+# date_format = "%d.%m.%Y"       # 06.12.2025 (Germany)
+
+date_format = "%A, %d %B"
+```
+
+See [chrono strftime documentation](https://docs.rs/chrono/latest/chrono/format/strftime/) for all available format specifiers.
+
 #### Use Clear night Icon instead of Moon Phase icon when Time=night and Weather=clear
 
 <img src="./misc/dashboard-without-moon-phase.png" alt="Moon phase configuration" width="600"/>
