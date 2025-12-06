@@ -331,7 +331,7 @@ pub fn is_valid_latitude(latitude: &f64) -> Result<(), ValidationError> {
 /// This prevents overly long strings that won't fit on the e-paper display.
 /// Based on longest reasonable format: "Wednesday, 28 September 2025" = 28 chars
 /// We allow some extra room for custom text.
-const MAX_DATE_FORMAT_OUTPUT_LENGTH: usize = 40;
+const MAX_DATE_FORMAT_OUTPUT_LENGTH: usize = 30;
 
 /// Validates a chrono strftime date format string.
 ///
@@ -375,9 +375,12 @@ pub fn is_valid_date_format(format: &str) -> Result<(), ValidationError> {
 
     // Check output length
     if formatted.len() > MAX_DATE_FORMAT_OUTPUT_LENGTH {
-        return Err(ValidationError::new(
-            "Date format produces output that is too long for display",
-        ));
+        let message = format!(
+            "Date format produces output that is too long for display, it must be {MAX_DATE_FORMAT_OUTPUT_LENGTH} characters or fewer"
+        );
+        return Err(ValidationError {
+            message: Cow::Owned(message),
+        });
     }
 
     Ok(())
