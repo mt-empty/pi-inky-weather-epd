@@ -6,7 +6,7 @@ on:
       - master
     paths-ignore:
       - '**/*.md'
-      - 'mics/**'
+      - 'misc/**'
   push:
     branches:
       - master
@@ -14,7 +14,7 @@ on:
       - 'v*'
     paths-ignore:
       - '**/*.md'
-      - 'mics/**'
+      - 'misc/**'
   workflow_dispatch:
     inputs:
       target:
@@ -35,15 +35,25 @@ on:
         default: 'arm-unknown-linux-gnueabihf'
         type: string
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   TARGET: ${{ inputs.target || 'arm-unknown-linux-gnueabihf' }}
 
 jobs:
   test:
     runs-on: ubuntu-latest # TODO: change to arm once it is no longer in public preview
+    timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
 
       - name: Cache cargo build, registry, index, and binaries
         uses: actions/cache@v4
@@ -84,13 +94,13 @@ jobs:
       - name: Build binary with cross
         run: cross build --release --target=${{ env.TARGET }}
 
-      - name: Test binary with cross (Open-Meteo)
+      - name: Run tests (Open-Meteo provider)
         env:
           RUN_MODE: test
           TZ: Australia/Melbourne
         run: cross test --target=${{ env.TARGET }}
 
-      - name: Test BOM snapshot
+      - name: Run tests (BOM provider)
         env:
           RUN_MODE: test
           APP_API__PROVIDER: bom

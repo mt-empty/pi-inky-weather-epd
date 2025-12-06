@@ -1,5 +1,7 @@
 # Pi Inky Weather Display
 
+[![Build Status](https://github.com/mt-empty/pi-inky-weather-epd/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/mt-empty/pi-inky-weather-epd/actions/workflows/test.yml)
+
 A weather display powered by a Raspberry Pi and a 7.3" 7-colour E-Paper (E-ink) display. The generation of the image is abstracted away from the hardware, so it can be used with any stack.
 
 ![Hourly timelapse](./misc/timelapse.gif)
