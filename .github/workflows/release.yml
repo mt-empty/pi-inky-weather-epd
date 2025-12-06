@@ -6,9 +6,15 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-build-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel builds in progress
+
 jobs:
   build:
+    name: Build ${{ matrix.target }}
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
       fail-fast: true
       matrix:
@@ -19,7 +25,9 @@ jobs:
           - x86_64-unknown-linux-gnu      # x86
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
 
       - name: Cache cargo build, registry, index, and binaries
         uses: actions/cache@v4
@@ -62,11 +70,14 @@ jobs:
         with:
           name: ${{ matrix.target }}
           path: artifact
+          retention-days: 7
           overwrite: true
 
   release:
+    name: Create Release
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -83,6 +94,9 @@ jobs:
       - name: Create and Upload Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
           files: |
             artifacts/arm-unknown-linux-gnueabihf.zip
             artifacts/armv7-unknown-linux-gnueabihf.zip

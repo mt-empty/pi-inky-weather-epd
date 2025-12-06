@@ -3,14 +3,41 @@ name: Deploy Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*.*.*"
 
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel release in progress
+
 jobs:
+  check-branch:
+    name: Verify tag is on master
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Need full history to check branches
+
+      - name: Check if tag is on master branch
+        run: |
+          # Get the commit SHA for this tag
+          TAG_COMMIT=$(git rev-list -n 1 ${{ github.ref_name }})
+          # Check if this commit is on master
+          if git branch -r --contains "$TAG_COMMIT" | grep -q 'origin/master'; then
+            echo "✅ Tag ${{ github.ref_name }} is on master branch"
+          else
+            echo "❌ Tag ${{ github.ref_name }} is NOT on master branch"
+            exit 1
+          fi
+
   test:
     name: Run Tests
+    needs: check-branch
     uses: ./.github/workflows/test.yml
 
   release:

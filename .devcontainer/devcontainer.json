@@ -15,7 +15,11 @@
                 "streetsidesoftware.code-spell-checker-australian-english",
                 "chanhx.crabviz",
                 "wcrichton.flowistry",
-                "oderwat.indent-rainbow"
+                "oderwat.indent-rainbow",
+                "GitHub.copilot",
+                "GitHub.copilot-chat",
+                "Upstash.context7-mcp",
+                "ms-vscode.copilot-mermaid-diagram"
             ]
         }
     },
