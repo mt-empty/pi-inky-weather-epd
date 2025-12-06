@@ -326,3 +326,59 @@ pub fn is_valid_latitude(latitude: &f64) -> Result<(), ValidationError> {
         ))
     }
 }
+
+/// Maximum allowed length for formatted date output.
+/// This prevents overly long strings that won't fit on the e-paper display.
+/// Based on longest reasonable format: "Wednesday, 28 September 2025" = 28 chars
+/// We allow some extra room for custom text.
+const MAX_DATE_FORMAT_OUTPUT_LENGTH: usize = 40;
+
+/// Validates a chrono strftime date format string.
+///
+/// # Validation Rules
+/// 1. Format string must not be empty or whitespace-only
+/// 2. Formatted output (using longest possible date) must not exceed MAX_DATE_FORMAT_OUTPUT_LENGTH
+///
+/// Note: Invalid specifiers like `%Q` will be output literally by chrono's format().
+/// This is acceptable - users will see the issue immediately on their display.
+///
+/// # Arguments
+/// * `format` - A strftime format string (e.g., "%A, %d %B" or "%m/%d/%Y")
+///
+/// # Returns
+/// * `Ok(())` if the format is valid
+/// * `Err(ValidationError)` if validation fails
+///
+/// # Examples
+/// ```
+/// use pi_inky_weather_epd::configs::validation::is_valid_date_format;
+///
+/// assert!(is_valid_date_format("%A, %d %B").is_ok());      // "Saturday, 06 December"
+/// assert!(is_valid_date_format("%m/%d/%Y").is_ok());       // "12/06/2025"
+/// assert!(is_valid_date_format("%-d %b %Y").is_ok());      // "6 Dec 2025"
+/// assert!(is_valid_date_format("").is_err());              // Empty string
+/// ```
+pub fn is_valid_date_format(format: &str) -> Result<(), ValidationError> {
+    // Check for empty or whitespace-only format
+    let trimmed = format.trim();
+    if trimmed.is_empty() {
+        return Err(ValidationError::new(
+            "Date format cannot be empty or whitespace-only",
+        ));
+    }
+
+    // Test the format by formatting the longest possible date
+    // Wednesday (9 chars) + September (9 chars) = longest day + month combination
+    use chrono::{TimeZone, Utc};
+    let longest_date = Utc.with_ymd_and_hms(2025, 9, 17, 12, 0, 0).unwrap(); // Wednesday, 17 September 2025
+    let formatted = longest_date.format(trimmed).to_string();
+
+    // Check output length
+    if formatted.len() > MAX_DATE_FORMAT_OUTPUT_LENGTH {
+        return Err(ValidationError::new(
+            "Date format produces output that is too long for display",
+        ));
+    }
+
+    Ok(())
+}
