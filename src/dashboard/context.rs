@@ -558,7 +558,10 @@ impl ContextBuilder {
         self.context.current_hour_actual_temp = current_hour.temperature.to_string();
         self.context.current_hour_weather_icon = current_hour.get_icon_path();
         self.context.current_hour_feels_like = current_hour.apparent_temperature.to_string();
-        self.context.current_day_date = clock.now_local().format("%A, %d %B").to_string();
+        self.context.current_day_date = clock
+            .now_local()
+            .format(&CONFIG.render_options.date_format)
+            .to_string();
         self.context.current_hour_rain_amount =
             current_hour.precipitation.calculate_median().to_string();
         self.context.current_hour_rain_measure_icon = current_hour.precipitation.get_icon_path();
