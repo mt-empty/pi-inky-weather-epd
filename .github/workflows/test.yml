@@ -72,7 +72,6 @@ jobs:
         with:
           toolchain: stable
           components: rustfmt, clippy
-          override: true
 
       - name: Run cargo fmt
         run: cargo fmt -- --check

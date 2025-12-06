@@ -220,6 +220,17 @@ When multiple diagnostics occur, the highest priority diagnostic is displayed, l
 
 Contributions are welcome!
 
+If you are going to work on an issue, mention so in the issue comments before you start working on the issue.
+
+
+Submitting a Pull Request
+
+Before submitting, please make sure the following is done:
+
+- That there is a related issue and it is referenced in the PR text.
+- There are tests that cover the changes.
+- Ensure cargo fmt, clippy and test passes, enable the git hooks [below](#setup).
+
 ### Setup
 
 1. **Install Git hooks** (pre-push checks for formatting, tests, and version tags):
