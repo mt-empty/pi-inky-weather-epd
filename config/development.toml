@@ -52,7 +52,7 @@ x_axis_always_at_min = true                     # Controls x-axis placement when
 use_gust_instead_of_wind = false
 
 [misc]
-weather_data_cache_path = "./cached_bom_data/"
+weather_data_cache_path = "./cached_data/"
 template_path = "dashboard-template-min.svg"
 generated_svg_name = "dashboard.svg"
 generated_png_name = "dashboard.png"

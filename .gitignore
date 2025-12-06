@@ -24,6 +24,7 @@ other
 bin/act
 config/local.toml
 cached_bom_data
+cached_data
 test_update
 static/fonts/Roboto-Regular.ttf
 notes.md
