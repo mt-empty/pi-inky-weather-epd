@@ -30,11 +30,14 @@ Note, the gif and images are a bit outdated, specifically UV icon colour changes
 
    Download the latest release for your architecture from the [releases page](https://github.com/mt-empty/pi-inky-weather-epd/releases) and extract it:
 
-   Available architectures:
+   <details>
+   <summary>Available Architectures</summary>
+
    - `arm-unknown-linux-gnueabihf` - Pi 1, Pi Zero/Zero W, Compute Module 1 (ARMv6)
    - `armv7-unknown-linux-gnueabihf` - Pi 2, Pi 3/3+/3A+, Pi 4/400, Zero 2 W, CM3/CM4 (32-bit OS, ARMv7)
    - `aarch64-unknown-linux-gnu` - Pi 3/3+/3A+, Pi 4/400, Zero 2 W, CM3/CM4 (64-bit OS, ARMv8)
    - `x86_64-unknown-linux-gnu` - x86 Linux
+   </details>
 
    ```bash
    unzip <YOUR_DOWNLOAD_RELEASE>.zip
@@ -55,7 +58,7 @@ Note, the gif and images are a bit outdated, specifically UV icon colour changes
    EOF
    ```
 
-   See [./config/development.toml](./config/development.toml) for more configuration examples.
+   See [./config/default.toml](./config/default.toml) for more configuration examples.
 
 4. **Set up an hourly cron job to update the display:**
 
@@ -160,7 +163,7 @@ rain_colour         = "blue"
 
 #### Auto-Update Interval
 
-Enable auto-update when a new release is available. This is disabled by default.
+Enable auto-update when a new release is available. This is enabled by default.
 
 ```toml
 [release]
