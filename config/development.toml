@@ -1,7 +1,7 @@
 [release]
 release_info_url = "https://api.github.com/repos/mt-empty/pi-inky-weather-epd/releases/latest"
 download_base_url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/download"
-update_interval_days = 0  # Set to 0 to disable auto-updating
+update_interval_days = 7  # Set to 0 to disable auto-updating
 
 [api]
 # Note: The weather data reflects the selected location’s conditions, but all times are displayed
