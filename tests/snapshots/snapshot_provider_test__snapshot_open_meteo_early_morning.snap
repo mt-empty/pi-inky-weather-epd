@@ -54,22 +54,22 @@ expression: svg_content
     </text>
 
     <!-- Diagnostic Message -->
-    <svg x="580" y="0" width="200" height="100" text-anchor="middle" visibility="visible">
+    <svg x="580" y="0" width="200" height="100" text-anchor="middle" visibility="hidden">
         <!-- Cascading diagnostic icons (stacked by priority) -->
-        <image x="63" y="-10" width="74" height="74" href="static/fill-svg-static/code-yellow.svg"/>
+        
         <!-- Message for highest priority error only -->
         <text x="100" y="60" width="200" font-size="12">
-            Incomplete Data
+            NA
         </text>
     </svg>
 
     <!-- Sunset/Sunrise Information -->
     <svg x="30" y="150">
         <image x="0" y="0" width="75" height="75" href="static/fill-svg-static/sunrise.svg" />
-        <text x="12" y="70" text-anchor="start" font-size="20" fill="black">06:20</text>
+        <text x="12" y="70" text-anchor="start" font-size="20" fill="black">06:21</text>
 
         <image x="70" y="0" width="75" height="75" href="static/fill-svg-static/sunset.svg" />
-        <text x="83" y="70" text-anchor="start" font-size="20" fill="black">19:48</text>
+        <text x="83" y="70" text-anchor="start" font-size="20" fill="black">19:47</text>
     </svg>
 
     <g transform="translate(-15, 0)">
@@ -134,6 +134,16 @@ expression: svg_content
 
     <!-- Forecast for the next 6 days -->
     <svg x="292" y="30">
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Sun</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day-drizzle.svg" />
+        <text y="155" font-size="20" fill="black">
+            <tspan x="52" text-anchor="end">23°</tspan>
+            <tspan x="52" text-anchor="middle">|</tspan>
+            <tspan x="52" text-anchor="start">10°</tspan>
+        </text>
+    </svg>
+
+    <svg x="373" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Mon</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
@@ -143,7 +153,7 @@ expression: svg_content
         </text>
     </svg>
 
-    <svg x="373" y="30">
+    <svg x="454" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Tue</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
@@ -153,7 +163,7 @@ expression: svg_content
         </text>
     </svg>
 
-    <svg x="454" y="30">
+    <svg x="535" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Wed</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
@@ -163,7 +173,7 @@ expression: svg_content
         </text>
     </svg>
 
-    <svg x="535" y="30">
+    <svg x="616" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Thu</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
@@ -173,23 +183,13 @@ expression: svg_content
         </text>
     </svg>
 
-    <svg x="616" y="30">
+    <svg x="697" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Fri</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">25°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
             <tspan x="52" text-anchor="start">13°</tspan>
-        </text>
-    </svg>
-
-    <svg x="697" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">NA</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/not-available.svg" />
-        <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">NA°</tspan>
-            <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">NA°</tspan>
         </text>
     </svg>
 
