@@ -255,9 +255,8 @@ impl ContextBuilder {
         daily_forecast_data: Vec<DailyForecast>,
         clock: &dyn Clock,
     ) -> &mut Self {
-        // The date returned by Bom api is UTC, for example x:14 UTC, which translates to x:14+10:00 AEST time,
-        // so we have to do some conversion
-        let local_date_truncated = clock
+        // Get today's date at midnight UTC for comparison with API dates
+        let local_midnight_time = clock
             .now_local()
             .with_hour(0)
             .unwrap()
@@ -267,22 +266,27 @@ impl ContextBuilder {
             .unwrap()
             .with_nanosecond(0)
             .unwrap();
+        let utc_midnight_time = local_midnight_time.with_timezone(&Utc);
 
-        println!("Local date truncated: {local_date_truncated:?}");
-        let utc_converted_date: DateTime<Utc> = local_date_truncated.with_timezone(&Utc);
+        println!("local Midnight time: {local_midnight_time:?}");
+        println!("UTC Midnight time: {utc_midnight_time:?}");
 
-        println!("UTC converted date  : {utc_converted_date:?}");
-
-        let mut day_index: i32 = 1;
+        // day_index tracks which forecast day we're filling (0-6 for 7 days)
+        // day_index 0 = today (day1), day_index 1 = tomorrow (day2), ... day_index 6 = day7
+        let mut day_index: i32 = 0;
 
         for day in daily_forecast_data {
-            if let Some(naive_date) = day.date {
-                if naive_date < utc_converted_date {
-                    // If the date is in the past, skip it
+            if let Some(forecast_date) = day.date {
+                // Skip any dates before today (past dates)
+                if forecast_date < utc_midnight_time {
                     continue;
-                } else if naive_date > utc_converted_date + chrono::Duration::days(7) {
-                    // If the date is more than 7 days in the future, skip it
+                }
+                // Once we have 7 days, stop processing
+                if day_index > 7 {
                     break;
+                }
+                if forecast_date >= utc_midnight_time + chrono::Days::new(7) {
+                    eprintln!("Warning: Reached day beyond 7-day forecast window: {forecast_date}. this should not happen.");
                 }
             }
 
@@ -294,21 +298,15 @@ impl ContextBuilder {
                 .map_or("NA".to_string(), |temp| temp.to_string());
             let icon_value = day.get_icon_path();
 
-            // Convert UTC date to local timezone before formatting the day name
-            // This ensures the correct day is displayed regardless of timezone offset
-            // let day_name_value = day.date.map_or("NA".to_string(), |date| {
-            //     date.with_timezone(&Local).format("%a").to_string()
-            // });
-
-            let day_name_value = (local_date_truncated
-                + chrono::Duration::days(day_index as i64 - 1))
-            .with_timezone(&Local)
-            .format("%a")
-            .to_string();
+            let day_name_value = (local_midnight_time + chrono::Duration::days(day_index as i64))
+                .with_timezone(&Local)
+                .format("%a")
+                .to_string();
 
             println!("{day_name_value} - Max {max_temp_value} Min {min_temp_value}");
             match day_index {
-                1 => {
+                0 => {
+                    // Day 0 (today) - show sunrise/sunset times
                     if let Some(ref astro) = day.astronomical {
                         self.context.sunrise_time = astro
                             .sunrise_time
@@ -324,37 +322,37 @@ impl ContextBuilder {
                             .to_string();
                     }
                 }
-                2 => {
+                1 => {
                     self.context.day2_mintemp = min_temp_value;
                     self.context.day2_maxtemp = max_temp_value;
                     self.context.day2_icon = icon_value;
                     self.context.day2_name = day_name_value;
                 }
-                3 => {
+                2 => {
                     self.context.day3_mintemp = min_temp_value;
                     self.context.day3_maxtemp = max_temp_value;
                     self.context.day3_icon = icon_value;
                     self.context.day3_name = day_name_value;
                 }
-                4 => {
+                3 => {
                     self.context.day4_mintemp = min_temp_value;
                     self.context.day4_maxtemp = max_temp_value;
                     self.context.day4_icon = icon_value;
                     self.context.day4_name = day_name_value;
                 }
-                5 => {
+                4 => {
                     self.context.day5_mintemp = min_temp_value;
                     self.context.day5_maxtemp = max_temp_value;
                     self.context.day5_icon = icon_value;
                     self.context.day5_name = day_name_value;
                 }
-                6 => {
+                5 => {
                     self.context.day6_mintemp = min_temp_value;
                     self.context.day6_maxtemp = max_temp_value;
                     self.context.day6_icon = icon_value;
                     self.context.day6_name = day_name_value;
                 }
-                7 => {
+                6 => {
                     self.context.day7_mintemp = min_temp_value;
                     self.context.day7_maxtemp = max_temp_value;
                     self.context.day7_icon = icon_value;
@@ -366,7 +364,8 @@ impl ContextBuilder {
             day_index += 1;
         }
 
-        if day_index < 8 {
+        // Verify we got all 7 days (indices 0-6 means day_index reaches 7)
+        if day_index < 7 {
             let details = "Warning: Less than 7 days of daily forecast data, Using Incomplete data"
                 .to_string();
             self.with_validation_error(DashboardError::IncompleteData { details })
