@@ -184,7 +184,7 @@ expression: svg_content
     </svg>
 
     <svg x="697" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">NA</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Sat</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/not-available.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">NA°</tspan>
