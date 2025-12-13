@@ -1,6 +1,6 @@
 [package]
 name = "pi-inky-weather-epd"
-version = "0.8.1-alpha.1"
+version = "0.8.1-alpha.2"
 edition = "2021"
 authors = ["MT"]
 description = "A weather display application for the Raspberry Pi using an EPD (e-paper display)."
