@@ -255,30 +255,41 @@ impl ContextBuilder {
         daily_forecast_data: Vec<DailyForecast>,
         clock: &dyn Clock,
     ) -> &mut Self {
-        // Get today's date at midnight UTC for comparison with API dates
-        let current_local_time = clock.now_local().date_naive();
-        let current_utc_time = clock.now_utc().date_naive();
+        // Get today's local midnight for comparison with API dates (converted to UTC)
+        let local_midnight_time = clock
+            .now_local()
+            .with_hour(0)
+            .unwrap()
+            .with_minute(0)
+            .unwrap()
+            .with_second(0)
+            .unwrap()
+            .with_nanosecond(0)
+            .unwrap();
+        let utc_midnight_time = local_midnight_time.with_timezone(&Utc);
 
-        println!("Current local time: {current_local_time:?}");
-        println!("Current UTC time: {current_utc_time:?}");
+        println!("local Midnight time: {local_midnight_time:?}");
+        println!("UTC Midnight time: {utc_midnight_time:?}");
+
+        // Pre-populate day names from local calendar (tomorrow through +6 days)
+        self.initialize_day_names(local_midnight_time);
 
         // day_index tracks which forecast day we're filling (0-6 for 7 days)
-        // day_index 0 = today (day1), day_index 1 = tomorrow (day2), ... day_index 6 = day7
+        // day_index 0 = today (sunrise/sunset only), indices 1-6 = tomorrow through +5 days (day2-day7)
         let mut day_index: i32 = 0;
 
         for day in daily_forecast_data {
             if let Some(forecast_date) = day.date {
                 // Skip any dates before today (past dates)
-                let day_utc = forecast_date.date_naive();
-                if day_utc < current_utc_time {
+                if forecast_date < utc_midnight_time {
                     continue;
                 }
                 // Once we have 7 days, stop processing
-                if day_index >= 7 {
+                if day_index > 7 {
                     break;
                 }
-                if day_utc >= current_utc_time + chrono::Days::new(7) {
-                    eprintln!("Warning: Reached day beyond 7-day forecast window: {day_utc}. this should not happen.");
+                if forecast_date >= utc_midnight_time + chrono::Days::new(7) {
+                    eprintln!("Warning: Reached day beyond 7-day forecast window: {forecast_date}. this should not happen.");
                 }
             }
 
@@ -290,13 +301,20 @@ impl ContextBuilder {
                 .map_or("NA".to_string(), |temp| temp.to_string());
             let icon_value = day.get_icon_path();
 
-            // Convert UTC date to local timezone before formatting the day name
-            // This ensures the correct day is displayed regardless of timezone offset
-            let day_name_value = day.date.map_or("NA".to_string(), |date| {
-                date.with_timezone(&Local).format("%a").to_string()
-            });
+            println!(
+                "{} - Max {max_temp_value} Min {min_temp_value}",
+                match day_index {
+                    0 => "Today",
+                    1 => &self.context.day2_name,
+                    2 => &self.context.day3_name,
+                    3 => &self.context.day4_name,
+                    4 => &self.context.day5_name,
+                    5 => &self.context.day6_name,
+                    6 => &self.context.day7_name,
+                    _ => "Unknown",
+                }
+            );
 
-            println!("{day_name_value} - Max {max_temp_value} Min {min_temp_value}");
             match day_index {
                 0 => {
                     // Day 0 (today) - show sunrise/sunset times
@@ -319,37 +337,31 @@ impl ContextBuilder {
                     self.context.day2_mintemp = min_temp_value;
                     self.context.day2_maxtemp = max_temp_value;
                     self.context.day2_icon = icon_value;
-                    self.context.day2_name = day_name_value;
                 }
                 2 => {
                     self.context.day3_mintemp = min_temp_value;
                     self.context.day3_maxtemp = max_temp_value;
                     self.context.day3_icon = icon_value;
-                    self.context.day3_name = day_name_value;
                 }
                 3 => {
                     self.context.day4_mintemp = min_temp_value;
                     self.context.day4_maxtemp = max_temp_value;
                     self.context.day4_icon = icon_value;
-                    self.context.day4_name = day_name_value;
                 }
                 4 => {
                     self.context.day5_mintemp = min_temp_value;
                     self.context.day5_maxtemp = max_temp_value;
                     self.context.day5_icon = icon_value;
-                    self.context.day5_name = day_name_value;
                 }
                 5 => {
                     self.context.day6_mintemp = min_temp_value;
                     self.context.day6_maxtemp = max_temp_value;
                     self.context.day6_icon = icon_value;
-                    self.context.day6_name = day_name_value;
                 }
                 6 => {
                     self.context.day7_mintemp = min_temp_value;
                     self.context.day7_maxtemp = max_temp_value;
                     self.context.day7_icon = icon_value;
-                    self.context.day7_name = day_name_value;
                 }
                 _ => {}
             }
@@ -365,6 +377,28 @@ impl ContextBuilder {
         } else {
             self
         }
+    }
+
+    fn initialize_day_names(&mut self, local_midnight_time: DateTime<Local>) {
+        // Pre-fill day names based on local calendar (independent of forecast data)
+        self.context.day2_name = (local_midnight_time + chrono::Duration::days(1))
+            .format("%a")
+            .to_string();
+        self.context.day3_name = (local_midnight_time + chrono::Duration::days(2))
+            .format("%a")
+            .to_string();
+        self.context.day4_name = (local_midnight_time + chrono::Duration::days(3))
+            .format("%a")
+            .to_string();
+        self.context.day5_name = (local_midnight_time + chrono::Duration::days(4))
+            .format("%a")
+            .to_string();
+        self.context.day6_name = (local_midnight_time + chrono::Duration::days(5))
+            .format("%a")
+            .to_string();
+        self.context.day7_name = (local_midnight_time + chrono::Duration::days(6))
+            .format("%a")
+            .to_string();
     }
 
     // Extrusion Pattern: force everything through one function until it resembles spaghetti
