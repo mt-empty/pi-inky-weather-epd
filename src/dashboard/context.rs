@@ -255,7 +255,7 @@ impl ContextBuilder {
         daily_forecast_data: Vec<DailyForecast>,
         clock: &dyn Clock,
     ) -> &mut Self {
-        // Get today's date at midnight for comparison with API dates
+        // Get today's local midnight for comparison with API dates (converted to UTC)
         let local_midnight_time = clock
             .now_local()
             .with_hour(0)
@@ -271,10 +271,11 @@ impl ContextBuilder {
         println!("local Midnight time: {local_midnight_time:?}");
         println!("UTC Midnight time: {utc_midnight_time:?}");
 
+        // Pre-populate day names from local calendar (tomorrow through +6 days)
         self.initialize_day_names(local_midnight_time);
 
         // day_index tracks which forecast day we're filling (0-6 for 7 days)
-        // day_index 0 = today (day1), day_index 1 = tomorrow (day2), ... day_index 6 = day7
+        // day_index 0 = today (sunrise/sunset only), indices 1-6 = tomorrow through +5 days (day2-day7)
         let mut day_index: i32 = 0;
 
         for day in daily_forecast_data {

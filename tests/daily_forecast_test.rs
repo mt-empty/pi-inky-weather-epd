@@ -2,20 +2,17 @@
 //!
 //! ## The Bug (Issue #16)
 //!
-//! The old code had a timezone conversion bug combined with off-by-one indexing:
-//! 1. Converted local midnight to UTC using `with_timezone(&Utc)` - creates offset DateTime
-//! 2. When local time is ahead of UTC (e.g., Oct 26 in Melbourne = Oct 25 UTC),
-//!    the "current day" (Oct 25) appears to be in the "past" relative to local Oct 26
-//! 3. With `day_index` starting at 1 and matching indices 1-7, Oct 25 gets skipped
-//! 4. Result: Only 6 days fill (Oct 26-31), day 7 slot remains "NA"
+//! The old code had a timezone conversion bug:
+//!
+//! 1. The forecast date names where based on the date returned by the UTC date returned by the API
+//! 2. However the time component return by open meteo is different than the one returned by BOM
+//! 3. So when the date+time was converted to local time, the date could shift to the previous or next day
 //!
 //! ## The Fix
 //!
-//! Use `date_naive()` to compare dates without timezone conversion:
-//! - `clock.now_utc().date_naive()` - gets UTC date as NaiveDate
-//! - `forecast_date.date_naive()` - extracts date from DateTime<Utc>
-//! - Start `day_index` at 0, use indices 0-6 for exactly 7 days
-//! - Check `day_index < 7` instead of `< 8`
+//! 1. Get current local midnight date
+//! 2. Pre-initialize day names from local calendar (tomorrow through +6 days) using the midnight date
+//! 3. So now dates are based on local calendar days, and forecast data is matched accordingly
 //!
 //! ## How to Verify the Fix
 //!
@@ -46,7 +43,7 @@ fn create_mock_daily_forecast(start_date: NaiveDate, num_days: usize) -> Vec<Dai
     (0..num_days)
         .map(|i| {
             let date = start_date + chrono::Days::new(i as u64);
-            // Create DateTime at midnight UTC - this is how Open-Meteo returns daily dates
+            // Create DateTime at 22:00 UTC to simulate API data with time component
             let datetime = date.and_hms_opt(22, 0, 0).unwrap().and_utc();
 
             DailyForecast {
@@ -67,23 +64,16 @@ fn create_mock_daily_forecast(start_date: NaiveDate, num_days: usize) -> Vec<Dai
 ///
 /// This test specifically targets the timezone conversion bug where:
 /// - Clock time: Oct 25, 2025, 22:00 UTC = Oct 26, 9:00 AM Melbourne (UTC+11)
-/// - API returns 7 days starting from Oct 25, 00:00 UTC
-/// - Old buggy code converts local midnight (Oct 26) back to UTC incorrectly
-/// - This causes later days to be filtered out as "too far in future"
+/// - API returns 7 days starting from Oct 25, 22:00 UTC
+/// - Day names must match local calendar days (not UTC dates)
 ///
-/// With the OLD buggy code at 22:00 UTC (9 AM Melbourne next day):
-/// - local_date_truncated = Oct 26, 00:00 Melbourne
-/// - utc_converted_date = Oct 25, 13:00 UTC
-/// - Check: `naive_date > utc_converted_date + 7 days` = `> Nov 1, 13:00 UTC`
-/// - Oct 31, 00:00 UTC < Nov 1, 13:00 UTC ✓ passes
-/// - BUT with day_index starting at 1, indices 1-7 are used
-/// - Index 1 gets Oct 25 (today already passed by clock)
-/// - So we're actually off by one and miss the last day
-///
-/// With the FIXED code:
-/// - current_utc_time = Oct 25 (naive date at clock time)
-/// - Starts from Oct 25, fills indices 0-6
-/// - All 7 days fill correctly
+/// With the FIXED code at 22:00 UTC (9 AM Melbourne next day):
+/// - local_midnight_time = Oct 26, 00:00 Melbourne
+/// - utc_midnight_time = Oct 25, 13:00 UTC (local midnight converted to UTC)
+/// - Day names pre-initialized: day2=Mon (Oct 27), day3=Tue (Oct 28), etc.
+/// - Forecast dates >= Oct 25, 13:00 UTC are kept
+/// - day_index 0 = today (Oct 25 22:00 UTC) for sunrise/sunset
+/// - day_index 1-6 fill day2-day7 with temp/icon data
 #[test]
 fn test_timezone_bug_causes_missing_seventh_day() {
     assert!(
@@ -108,20 +98,20 @@ fn test_timezone_bug_causes_missing_seventh_day() {
     let context = &builder.context;
 
     // Verify all 7 days are populated with expected values
-    // The logic calculates day names from local_date_truncated (Oct 26) + (day_index - 1)
-    // day_index=1 is used for sunrise/sunset (today), day2-day7 show the next 6 days
+    // Day names are pre-initialized from local calendar: tomorrow (Oct 27) through +6 days
+    // day_index 0 = today (sunrise/sunset only), day_index 1-6 fill day2-day7
 
-    // Day 2 (Oct 27 Mon) - day_index=2, forecast data index 2
+    // Day 2 (Oct 27 Mon) - day_index=1, forecast data index 1
     assert_eq!(context.day2_name, "Mon", "Day 2 should be Monday (Oct 27)");
     assert_eq!(context.day2_mintemp, "11", "Day 2 min temp should be 11");
     assert_eq!(context.day2_maxtemp, "21", "Day 2 max temp should be 21");
 
-    // Day 3 (Oct 28 Tue) - day_index=3, forecast data index 3
+    // Day 3 (Oct 28 Tue) - day_index=2, forecast data index 2
     assert_eq!(context.day3_name, "Tue", "Day 3 should be Tuesday (Oct 28)");
     assert_eq!(context.day3_mintemp, "12", "Day 3 min temp should be 12");
     assert_eq!(context.day3_maxtemp, "22", "Day 3 max temp should be 22");
 
-    // Day 4 (Oct 29 Wed) - day_index=4, forecast data index 4
+    // Day 4 (Oct 29 Wed) - day_index=3, forecast data index 3
     assert_eq!(
         context.day4_name, "Wed",
         "Day 4 should be Wednesday (Oct 29)"
@@ -129,7 +119,7 @@ fn test_timezone_bug_causes_missing_seventh_day() {
     assert_eq!(context.day4_mintemp, "13", "Day 4 min temp should be 13");
     assert_eq!(context.day4_maxtemp, "23", "Day 4 max temp should be 23");
 
-    // Day 5 (Oct 30 Thu) - day_index=5, forecast data index 5
+    // Day 5 (Oct 30 Thu) - day_index=4, forecast data index 4
     assert_eq!(
         context.day5_name, "Thu",
         "Day 5 should be Thursday (Oct 30)"
@@ -137,13 +127,12 @@ fn test_timezone_bug_causes_missing_seventh_day() {
     assert_eq!(context.day5_mintemp, "14", "Day 5 min temp should be 14");
     assert_eq!(context.day5_maxtemp, "24", "Day 5 max temp should be 24");
 
-    // Day 6 (Oct 31 Fri) - day_index=6, forecast data index 6
+    // Day 6 (Oct 31 Fri) - day_index=5, forecast data index 5
     assert_eq!(context.day6_name, "Fri", "Day 6 should be Friday (Oct 31)");
     assert_eq!(context.day6_mintemp, "15", "Day 6 min temp should be 15");
     assert_eq!(context.day6_maxtemp, "25", "Day 6 max temp should be 25");
 
-    // Day 7 (Nov 1 Sat) - day_index=7, would need forecast data index 7 (8th day)
-    // This should fail with the old buggy code because it runs out of data
+    // Day 7 (Nov 1 Sat) - day_index=6, forecast data index 6
     assert_eq!(context.day7_name, "Sat", "Day 7 should be Saturday (Nov 1)");
     assert_eq!(context.day7_mintemp, "16", "Day 7 min temp should be 16");
     assert_eq!(context.day7_maxtemp, "26", "Day 7 max temp should be 26");
