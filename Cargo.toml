@@ -36,7 +36,8 @@ once_cell = "1.21"
 [dev-dependencies]
 insta = "1.43.2"
 usvg = "0.45"
-cross = "0.2"    # needed for ci/cd to compile and test for different architectures
+cross = "0.2"       # needed for ci/cd to compile and test for different architectures
+serial_test = "3.2"
 
 
 [profile.dev.package]
