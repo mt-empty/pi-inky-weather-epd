@@ -280,15 +280,19 @@ impl ContextBuilder {
 
         for day in daily_forecast_data {
             if let Some(forecast_date) = day.date {
+                // Convert forecast date to local date for comparison (ignore time component)
+                let forecast_local_date = forecast_date.with_timezone(&Local).date_naive();
+                let today_local_date = local_midnight_time.date_naive();
+
                 // Skip any dates before today (past dates)
-                if forecast_date < utc_midnight_time {
+                if forecast_local_date < today_local_date {
                     continue;
                 }
                 // Once we have 7 days, stop processing
-                if day_index > 7 {
+                if day_index >= 7 {
                     break;
                 }
-                if forecast_date >= utc_midnight_time + chrono::Days::new(7) {
+                if forecast_local_date >= today_local_date + chrono::Days::new(7) {
                     eprintln!("Warning: Reached day beyond 7-day forecast window: {forecast_date}. this should not happen.");
                 }
             }
@@ -304,7 +308,7 @@ impl ContextBuilder {
             println!(
                 "{} - Max {max_temp_value} Min {min_temp_value}",
                 match day_index {
-                    0 => "Today",
+                    0 => "Today daily forecast",
                     1 => &self.context.day2_name,
                     2 => &self.context.day3_name,
                     3 => &self.context.day4_name,

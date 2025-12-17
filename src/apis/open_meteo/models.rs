@@ -200,8 +200,18 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
             .iter()
             .enumerate()
             .map(|(i, date)| {
+                let raw_temp_max = response.daily.temperature_2m_max[i];
+                let raw_temp_min = response.daily.temperature_2m_min[i];
+
+                println!(
+                    "### API Raw Data: {} - Max {:.1}°C, Min {:.1}°C",
+                    date.format("%Y-%m-%d"),
+                    raw_temp_max,
+                    raw_temp_min
+                );
+
                 let temp_max = {
-                    let val = response.daily.temperature_2m_max[i];
+                    let val = raw_temp_max;
                     let temp = DomainTemp::new(val, crate::configs::settings::TemperatureUnit::C);
                     Some(match unit {
                         crate::configs::settings::TemperatureUnit::C => temp,
@@ -210,7 +220,7 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
                 };
 
                 let temp_min = {
-                    let val = response.daily.temperature_2m_min[i];
+                    let val = raw_temp_min;
                     let temp = DomainTemp::new(val, crate::configs::settings::TemperatureUnit::C);
                     Some(match unit {
                         crate::configs::settings::TemperatureUnit::C => temp,
@@ -295,13 +305,14 @@ where
     // Deserialize the input as a vector of strings
     let date_strings: Vec<String> = Deserialize::deserialize(deserializer)?;
 
-    // Map the date strings to DateTime<Utc> with midnight UTC
-    // Using 00:00:00Z ensures the date doesn't shift when converted to local time
+    // Map the date strings to DateTime<Utc> with noon UTC
+    // Using 12:00:00Z (noon) ensures the date represents the correct calendar day
+    // regardless of local timezone offset (+/- 12 hours max)
     let datetime_vec: Result<Vec<DateTime<Utc>>, D::Error> = date_strings
         .into_iter()
         .map(|date_str| {
-            // Combine the date string with midnight UTC
-            let datetime_str = format!("{date_str}T00:00:00Z");
+            // Combine the date string with noon UTC
+            let datetime_str = format!("{date_str}T12:00:00Z");
             // Parse the datetime string
             NaiveDateTime::parse_from_str(&datetime_str, "%Y-%m-%dT%H:%M:%SZ")
                 .map(|naive| DateTime::from_naive_utc_and_offset(naive, Utc))
