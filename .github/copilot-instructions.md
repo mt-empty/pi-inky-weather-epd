@@ -11,13 +11,15 @@
 
 A Rust application that generates weather dashboards for Raspberry Pi with 7.3" e-paper displays. Supports multiple weather APIs (BOM, Open-Meteo) through a provider pattern, renders SVG templates with TinyTemplate, and converts to PNG using resvg for display on Inky Impression 7.3" hardware.
 
+**Current Version**: v0.8.1-alpha.3
+
 **Core Flow**: Provider Factory → Fetch API data → Convert to domain models → Build context → Render SVG template → Convert to PNG → Display via Python script
 
 **Entry Point**: `src/main.rs` calls `run_weather_dashboard()` in `src/lib.rs`, which orchestrates dashboard generation and optional self-updates.
 
 ## Architecture & Key Components
 
-### Provider Pattern (NEW in v0.5.5)
+### Provider Pattern
 
 The application uses a **domain-driven architecture** with pluggable weather providers:
 
@@ -366,9 +368,14 @@ generate_weather_dashboard_injection(&clock)
 
 **DST Testing**: 12 comprehensive tests in `tests/daylight_saving_test.rs` verify UTC→Local conversions during Australian DST transitions (AEST ↔ AEDT).
 
-### Error Handling
+### Error Handling & Diagnostics
 - `DashboardError` enum for user-facing errors with icons (`src/errors.rs`)
 - Descriptive errors via `anyhow::Error` with context
+- **Priority-based display**: Errors have priority levels (High/Medium/Low) - highest priority error message is shown
+- **Cascading icons**: Multiple diagnostics are displayed as stacked SVG icons (highest priority at front, lowest at back)
+- **ContextBuilder patterns**:
+  - `with_validation_error()` - Internal validation errors (logs to stderr + adds to diagnostics)
+  - `with_warning()` - External warnings (e.g., stale data from API failure, caller already logged)
 - Display error indicators in dashboard corner with icon + message
 
 ### Icon System
@@ -383,6 +390,18 @@ Manual SVG path construction in `src/dashboard/chart.rs`:
 - Generate Bézier curves for smooth lines (temperature)
 - Linear segments for stepped data (rain chance)
 - Axis positioning respects `x_axis_always_at_min` config
+
+### Structured Logging Pattern
+**Logger module** (`src/logger.rs`) provides professional console output with visual indicators:
+```rust
+logger::section("Major step")      // Blue header with ▶ symbol
+logger::subsection("Minor step")   // Cyan arrow with → symbol
+logger::success("Operation done")  // Green ✓
+logger::warning("Issue detected")  // Yellow ⚠
+logger::error("Failed")            // Red ✗
+logger::detail("Debug info")       // Gray bullet • (only shown when debugging enabled)
+```
+**Usage pattern**: Use throughout the application for user-facing console output. Never use raw `println!` for logs - always use logger functions for consistent formatting.
 
 ## Dependencies & Constraints
 

@@ -518,7 +518,7 @@ impl ContextBuilder {
             .with_nanosecond(0)
             .unwrap();
         logger::detail(format!(
-            "Current time (UTC): {}",
+            "Current hour (UTC): {}",
             current_date.format("%Y-%m-%d %H:%M")
         ));
 
