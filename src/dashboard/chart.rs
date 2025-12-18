@@ -1,4 +1,6 @@
-use crate::{clock::Clock, constants::DEFAULT_AXIS_LABEL_FONT_SIZE, weather::icons::UVIndexIcon};
+use crate::{
+    clock::Clock, constants::DEFAULT_AXIS_LABEL_FONT_SIZE, logger, weather::icons::UVIndexIcon,
+};
 use anyhow::Error;
 use strum_macros::Display;
 
@@ -525,14 +527,14 @@ impl HourlyForecastGraph {
         //     "starting x: {}, ending x: {}",
         //     self.starting_x, self.ending_x
         // );
-        println!(
-            "24h forecast Global Min y: {}, Max y: {}",
+        logger::detail(format!(
+            "24h forecast range: Min {}°, Max {}°",
             self.min_y, self.max_y
-        );
+        ));
     }
 
     pub fn draw_uv_gradient_over_time(&self) -> String {
-        println!("UV data starting at current UTC date: {:?}", self.uv_data);
+        logger::detail(format!("UV indices for 24h: {:?}", self.uv_data));
         let mut gradient = String::new();
 
         for (i, &uv) in self.uv_data.iter().enumerate() {

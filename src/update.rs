@@ -1,3 +1,4 @@
+use crate::logger;
 use crate::CONFIG;
 use anyhow::{Context, Error, Result};
 use chrono::{DateTime, Duration, Utc};
@@ -44,7 +45,7 @@ struct GithubRelease {
 /// if the latest version cannot be parsed, or if the release cannot be downloaded and extracted.
 fn fetch_latest_release() -> Result<(), anyhow::Error> {
     let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
-    println!("Current version: {current_version}");
+    logger::debug(format!("Current version: {}", current_version));
 
     let client = reqwest::blocking::Client::new();
     let header_value = format!("{PACKAGE_NAME}/{current_version}");
@@ -52,16 +53,16 @@ fn fetch_latest_release() -> Result<(), anyhow::Error> {
     let latest_version = parse_latest_version(&release_info)?;
 
     if latest_version > current_version {
-        println!("Newer version available: {latest_version}");
+        logger::debug(format!("Newer version available: {}", latest_version));
 
         // return early if CONFIG.debugging.allow_pre_release_version is false and the latest version is a pre-release
         if !latest_version.pre.is_empty() && !CONFIG.debugging.allow_pre_release_version {
-            println!("Skipping pre-release version: {latest_version}");
+            logger::debug(format!("Skipping pre-release version: {}", latest_version));
             return Ok(());
         }
         download_and_extract_release(&client, &header_value, &latest_version)?;
     } else {
-        println!("You're already using the latest version.");
+        logger::debug("You're already using the latest version.");
     }
 
     Ok(())
@@ -258,7 +259,7 @@ fn download_and_extract_release(
     swap_in_new_files(temp_dir.path(), &base_dir)?;
     set_executable_permissions(&bin_path)?;
 
-    println!("Updated to version {latest_version}");
+    logger::success(format!("Updated to version {}", latest_version));
     Ok(())
 }
 
@@ -302,11 +303,11 @@ pub fn update_app() -> Result<(), anyhow::Error> {
         // Compare the difference
         let elapsed = now_utc.signed_duration_since(last_check_utc);
         if elapsed > Duration::days(CONFIG.release.update_interval_days.into_inner().into()) {
-            println!(
+            logger::info(format!(
                 "It's been more than {} days ({:.1} days elapsed), Checking for latest version...",
                 CONFIG.release.update_interval_days,
                 elapsed.num_days()
-            );
+            ));
             let result = fetch_latest_release();
 
             if result.is_ok() {
@@ -315,16 +316,19 @@ pub fn update_app() -> Result<(), anyhow::Error> {
 
             result
         } else {
-            println!(
+            logger::debug(format!(
                 "{:.1} days have passed since last check, skipping update.",
                 elapsed.num_days()
-            );
+            ));
             // We delete the backup link here because we couldn't delete it in the update function
             // This is a workaround for the fact that we can't delete the file while it's in use.
             let backup_link = base_dir.join(format!("{PACKAGE_NAME}.old"));
             if backup_link.exists() {
-                println!("Deleting old backup link: {}", backup_link.display());
-                fs::remove_file(&backup_link)?;
+                logger::debug(format!(
+                    "Deleting old backup link: {}",
+                    backup_link.display()
+                ));
+                fs::remove_file(&backup_link)?
             }
             Ok(())
         }
@@ -352,7 +356,7 @@ pub fn write_update_status(base_dir: &Path, result: &Result<(), Error>) {
     };
 
     if let Err(e) = fs::write(&status_path, status) {
-        eprintln!("Failed to write update status: {e}");
+        logger::error(format!("Failed to write update status: {}", e));
     }
 }
 

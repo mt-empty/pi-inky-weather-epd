@@ -1,6 +1,7 @@
 use crate::clock::{Clock, SystemClock};
 use crate::dashboard::context::{Context, ContextBuilder};
-use crate::errors::DashboardError;
+use crate::errors::{DashboardError, Description};
+use crate::logger;
 use crate::providers::factory::create_provider;
 use crate::update::read_last_update_status;
 use crate::{utils, CONFIG};
@@ -25,21 +26,31 @@ fn update_forecast_context(
         });
     }
 
-    println!("## Using provider: {}", provider.provider_name());
+    logger::subsection(format!("Using provider: {}", provider.provider_name()));
 
-    println!("## Fetching daily forecast...");
+    logger::subsection("Fetching daily forecast");
     let daily_result = provider.fetch_daily_forecast()?;
     if let Some(warning) = daily_result.warning {
-        println!("⚠️  Warning: Using stale daily forecast data");
+        logger::warning(format!(
+            "Using cached data due to: {}",
+            warning.long_description()
+        ));
         warnings.push(warning);
+    } else {
+        logger::success("Daily forecast retrieved");
     }
     context_builder.with_daily_forecast_data(daily_result.data, clock);
 
-    println!("## Fetching hourly forecast...");
+    logger::subsection("Fetching hourly forecast");
     let hourly_result = provider.fetch_hourly_forecast()?;
     if let Some(warning) = hourly_result.warning {
-        println!("⚠️  Warning: Using stale hourly forecast data");
+        logger::warning(format!(
+            "Using cached data due to: {}",
+            warning.long_description()
+        ));
         warnings.push(warning);
+    } else {
+        logger::success("Hourly forecast retrieved");
     }
     context_builder.with_hourly_forecast_data(hourly_result.data, clock);
 
@@ -60,7 +71,7 @@ fn render_dashboard_template(
     let tt_name = "dashboard";
 
     if let Err(e) = tt.add_template(tt_name, &dashboard_svg) {
-        println!("Failed to add template: {e}");
+        logger::error(format!("Failed to add template: {e}"));
         return Err(e.into());
     }
     tt.set_default_formatter(&format_unescaped);
@@ -72,7 +83,7 @@ fn render_dashboard_template(
             Ok(())
         }
         Err(e) => {
-            println!("Failed to render template: {e}");
+            logger::error(format!("Failed to render template: {e}"));
             Err(e.into())
         }
     }
@@ -118,29 +129,29 @@ pub fn generate_weather_dashboard_injection(
     let template_svg = match fs::read_to_string(input_template_name) {
         Ok(svg) => svg,
         Err(e) => {
-            println!("Current directory: {}", current_dir.display());
-            println!("Template path: {}", &input_template_name.display());
-            println!("Failed to read template file: {e}");
+            logger::error(format!("Failed to read template file: {e}"));
+            logger::detail(format!("Current directory: {}", current_dir.display()));
+            logger::detail(format!("Template path: {}", &input_template_name.display()));
             return Err(e.into());
         }
     };
 
     update_forecast_context(&mut context_builder, clock)?;
 
-    println!("## Rendering dashboard to SVG ...");
+    logger::subsection("Rendering dashboard to SVG");
     // Ensure the parent directory for the output SVG exists
     if let Some(parent) = output_svg_name.parent() {
         std::fs::create_dir_all(parent)?;
     }
 
     render_dashboard_template(&context_builder.context, template_svg, output_svg_name)?;
-    println!(
-        "SVG has been modified and saved successfully at {}",
+    logger::success(format!(
+        "SVG saved: {}",
         current_dir.join(output_svg_name).display()
-    );
+    ));
 
     if !CONFIG.debugging.disable_png_output {
-        println!("## Converting SVG to PNG ...");
+        logger::subsection("Converting SVG to PNG");
         // Ensure the parent directory for the generated PNG exists
         if let Some(png_parent) = CONFIG.misc.generated_png_name.parent() {
             std::fs::create_dir_all(png_parent)?;
@@ -152,10 +163,10 @@ pub fn generate_weather_dashboard_injection(
             2.0,
         )?;
 
-        println!(
-            "PNG has been generated successfully at {}",
+        logger::success(format!(
+            "PNG saved: {}",
             current_dir.join(&CONFIG.misc.generated_png_name).display()
-        );
+        ));
     }
     Ok(())
 }

@@ -3,7 +3,7 @@ use serde::Deserialize;
 use std::{fs, path::PathBuf};
 use url::Url;
 
-use crate::{errors::DashboardError, CONFIG};
+use crate::{errors::DashboardError, logger, CONFIG};
 
 /// Type alias for API-specific error checking function
 pub type ErrorChecker = fn(&str) -> Result<(), DashboardError>;
@@ -28,11 +28,12 @@ impl Fetcher {
 
     /// Load cached data from file
     fn load_cached<T: for<'de> Deserialize<'de>>(&self, file_path: &PathBuf) -> Result<T, Error> {
+        logger::detail("Attempting to use cached data");
         let cached = fs::read_to_string(file_path).map_err(|e| {
             anyhow::anyhow!(
-                "Weather data cache file not found at {:?}: {}. \
-                 If this is your first time running, set 'disable_weather_api_requests = false' \
-                 in the configuration so data can be cached.",
+                "No cached weather data available at {:?}. {}. \
+                 This happens on first run or when 'disable_weather_api_requests` is set to true. \
+                 The application needs at least one successful API call to create the cache.",
                 file_path,
                 e
             )
@@ -80,7 +81,7 @@ impl Fetcher {
             let response = match client.get(endpoint).send() {
                 Ok(res) => res,
                 Err(e) => {
-                    eprintln!("API request failed: {e}");
+                    logger::warning(format!("API request failed: {}", e));
                     return self.fallback(
                         &file_path,
                         DashboardError::NoInternet {
@@ -91,15 +92,19 @@ impl Fetcher {
             };
 
             let body = response.text().map_err(Error::msg)?;
+            logger::debug(format!("Received API response: {} bytes", body.len()));
 
             // Check for API-specific errors if checker provided
             if let Some(checker) = error_checker {
                 if let Err(dashboard_error) = checker(&body) {
+                    use crate::errors::Description;
+                    logger::warning(dashboard_error.long_description());
                     return self.fallback(&file_path, dashboard_error);
                 }
             }
 
             fs::write(&file_path, &body)?;
+            logger::debug(format!("Cached response to: {}", file_path.display()));
             let data = serde_json::from_str(&body).map_err(Error::msg)?;
             Ok(FetchOutcome::Fresh(data))
         } else {

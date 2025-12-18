@@ -16,20 +16,35 @@ use crate::{
 
 /// BOM-specific error checker
 fn check_bom_error(body: &str) -> Result<(), DashboardError> {
+    use crate::logger;
+    logger::debug("Checking for API errors");
     // Try to parse as error response; if it's not an error format, that's fine (return Ok)
     let api_error = match serde_json::from_str::<BomError>(body) {
         Ok(err) => err,
         Err(_) => return Ok(()), // Not an error response format, continue processing
     };
 
-    // If we have errors, report them and return the first one
-    if let Some(first_error) = api_error.errors.first() {
-        eprintln!("Warning: BOM API request failed, trying to load cached data");
-        for (i, error) in api_error.errors.iter().enumerate() {
-            eprintln!("BOM API Error {}: {}", i + 1, error.detail);
-        }
+    // If we have errors, format all of them into a single message
+    if !api_error.errors.is_empty() {
+        let error_details: Vec<String> = api_error
+            .errors
+            .iter()
+            .enumerate()
+            .map(|(i, err)| format!("  {}. {}", i + 1, err.detail))
+            .collect();
+
+        let combined_details = if api_error.errors.len() == 1 {
+            api_error.errors[0].detail.clone()
+        } else {
+            format!(
+                "BOM API returned {} errors:\n{}",
+                api_error.errors.len(),
+                error_details.join("\n")
+            )
+        };
+
         return Err(DashboardError::ApiError {
-            details: first_error.detail.clone(),
+            details: combined_details,
         });
     }
 
@@ -59,6 +74,10 @@ impl WeatherProvider for BomProvider {
                 // Convert BOM models to domain models
                 let domain_data: Vec<HourlyForecast> =
                     data.data.into_iter().map(|h| h.into()).collect();
+                crate::logger::debug(format!(
+                    "Converted {} BOM hourly entries to domain model",
+                    domain_data.len()
+                ));
                 Ok(FetchResult::fresh(domain_data))
             }
             FetchOutcome::Stale { data, error } => {
@@ -79,6 +98,10 @@ impl WeatherProvider for BomProvider {
                 // Convert BOM models to domain models
                 let domain_data: Vec<DailyForecast> =
                     data.data.into_iter().map(|d| d.into()).collect();
+                crate::logger::debug(format!(
+                    "Converted {} BOM daily entries to domain model",
+                    domain_data.len()
+                ));
                 Ok(FetchResult::fresh(domain_data))
             }
             FetchOutcome::Stale { data, error } => {
