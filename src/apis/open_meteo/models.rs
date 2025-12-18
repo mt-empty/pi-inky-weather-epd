@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use serde::{self, Deserialize, Deserializer};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -111,8 +111,7 @@ pub struct DailyUnits {
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Daily {
-    #[serde(deserialize_with = "deserialize_vec_daily_datetime")]
-    pub time: Vec<DateTime<Utc>>,
+    pub time: Vec<NaiveDate>,
     #[serde(deserialize_with = "deserialize_vec_iso8601_loose")]
     pub sunrise: Vec<DateTime<Utc>>,
     #[serde(deserialize_with = "deserialize_vec_iso8601_loose")]
