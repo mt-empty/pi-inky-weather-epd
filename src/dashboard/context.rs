@@ -255,42 +255,40 @@ impl ContextBuilder {
         daily_forecast_data: Vec<DailyForecast>,
         clock: &dyn Clock,
     ) -> &mut Self {
-        // Get today's local midnight for comparison with API dates (converted to UTC)
-        let local_midnight_time = clock
-            .now_local()
-            .with_hour(0)
-            .unwrap()
-            .with_minute(0)
-            .unwrap()
-            .with_second(0)
-            .unwrap()
-            .with_nanosecond(0)
-            .unwrap();
-        let utc_midnight_time = local_midnight_time.with_timezone(&Utc);
+        // Get today's local date for comparison
+        let today_local_date = clock.now_local().date_naive();
 
-        println!("local Midnight time: {local_midnight_time:?}");
-        println!("UTC Midnight time: {utc_midnight_time:?}");
+        println!("Today's local date: {today_local_date:?}");
 
         // Pre-populate day names from local calendar (tomorrow through +6 days)
-        self.initialize_day_names(local_midnight_time);
+        self.initialize_day_names(clock.now_local());
 
         // day_index tracks which forecast day we're filling (0-6 for 7 days)
         // day_index 0 = today (sunrise/sunset only), indices 1-6 = tomorrow through +5 days (day2-day7)
         let mut day_index: i32 = 0;
 
         for day in daily_forecast_data {
-            if let Some(forecast_date) = day.date {
+            if let Some(forecast_local_date) = day.date {
                 // Skip any dates before today (past dates)
-                if forecast_date < utc_midnight_time {
+                if forecast_local_date < today_local_date {
+                    println!("Skipping past date: {forecast_local_date}");
                     continue;
                 }
+
                 // Once we have 7 days, stop processing
-                if day_index > 7 {
+                if day_index >= 7 {
                     break;
                 }
-                if forecast_date >= utc_midnight_time + chrono::Days::new(7) {
-                    eprintln!("Warning: Reached day beyond 7-day forecast window: {forecast_date}. this should not happen.");
+
+                // Warn if date is beyond our 7-day window
+                if forecast_local_date >= today_local_date + chrono::Days::new(7) {
+                    eprintln!(
+                        "Warning: Reached day beyond 7-day forecast window: {forecast_local_date}"
+                    );
                 }
+            } else {
+                eprintln!("Warning: Daily forecast entry missing date, skipping.");
+                continue;
             }
 
             let min_temp_value = day
@@ -301,18 +299,20 @@ impl ContextBuilder {
                 .map_or("NA".to_string(), |temp| temp.to_string());
             let icon_value = day.get_icon_path();
 
+            let day_name = match day_index {
+                0 => "Today",
+                1 => &self.context.day2_name,
+                2 => &self.context.day3_name,
+                3 => &self.context.day4_name,
+                4 => &self.context.day5_name,
+                5 => &self.context.day6_name,
+                6 => &self.context.day7_name,
+                _ => "Unknown",
+            };
+
             println!(
-                "{} - Max {max_temp_value} Min {min_temp_value}",
-                match day_index {
-                    0 => "Today",
-                    1 => &self.context.day2_name,
-                    2 => &self.context.day3_name,
-                    3 => &self.context.day4_name,
-                    4 => &self.context.day5_name,
-                    5 => &self.context.day6_name,
-                    6 => &self.context.day7_name,
-                    _ => "Unknown",
-                }
+                "{day_name} ({}) - Max {max_temp_value}°, Min {min_temp_value}°",
+                day.date.unwrap()
             );
 
             match day_index {

@@ -8,10 +8,12 @@
 /// which is critical for weather forecast display accuracy.
 use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, TimeZone, Timelike, Utc};
 use pi_inky_weather_epd::utils::{convert_utc_to_local_date, convert_utc_to_local_datetime};
+use serial_test::serial;
 
 /// Test UTC to local conversion during standard time (AEST, UTC+10)
 /// Winter in Australia - no DST active
 #[test]
+#[serial]
 fn test_utc_to_local_during_standard_time() {
     // July 15, 2025 - middle of winter, standard time (AEST, UTC+10)
     let utc_time = "2025-07-15T14:00:00Z";
@@ -27,6 +29,7 @@ fn test_utc_to_local_during_standard_time() {
 /// Test UTC to local conversion during daylight saving time (AEDT, UTC+11)
 /// Summer in Australia - DST active
 #[test]
+#[serial]
 fn test_utc_to_local_during_daylight_saving() {
     // January 15, 2025 - middle of summer, DST active (AEDT, UTC+11)
     let utc_time = "2025-01-15T13:00:00Z";
@@ -344,4 +347,54 @@ fn test_daily_aggregation_on_23_hour_day() {
     // Count hours on October 5 - should be 4 in this sample
     let oct_5_hours = dates.iter().filter(|d| d.day() == 5).count();
     assert_eq!(oct_5_hours, 4);
+}
+
+/// Test New York timezone tests - these use serial_test to avoid TZ conflicts
+#[test]
+#[serial]
+fn test_new_york_timezones() {
+    // Save and restore TZ
+    let original_tz = std::env::var("TZ").ok();
+
+    // Test 1: EST (winter, UTC-5)
+    unsafe { std::env::set_var("TZ", "America/New_York") };
+    let utc_time = "2025-12-16T17:00:00Z";
+    let local_datetime = convert_utc_to_local_datetime(utc_time).unwrap();
+    assert_eq!(local_datetime.date().day(), 16);
+    assert_eq!(local_datetime.hour(), 12); // noon EST
+
+    // Test 2: EDT (summer, UTC-4)
+    let utc_time2 = "2025-07-15T16:00:00Z";
+    let local_datetime2 = convert_utc_to_local_datetime(utc_time2).unwrap();
+    assert_eq!(local_datetime2.date().day(), 15);
+    assert_eq!(local_datetime2.hour(), 12); // noon EDT
+
+    // Test 3: Daily forecast date mapping with noon UTC
+    let api_dates = &[
+        "2025-12-16T12:00:00Z", // Dec 16 EST (07:00)
+        "2025-12-17T12:00:00Z", // Dec 17 EST (07:00)
+        "2025-07-15T12:00:00Z", // July 15 EDT (08:00)
+    ];
+
+    for (idx, utc_str) in api_dates.iter().enumerate() {
+        let utc_dt = chrono::DateTime::parse_from_rfc3339(utc_str)
+            .unwrap()
+            .with_timezone(&Utc);
+        let local_date = utc_dt.with_timezone(&Local).date_naive();
+
+        match idx {
+            0 => assert_eq!(local_date, NaiveDate::from_ymd_opt(2025, 12, 16).unwrap()),
+            1 => assert_eq!(local_date, NaiveDate::from_ymd_opt(2025, 12, 17).unwrap()),
+            2 => assert_eq!(local_date, NaiveDate::from_ymd_opt(2025, 7, 15).unwrap()),
+            _ => {}
+        }
+    }
+
+    // Restore original TZ
+    unsafe {
+        match original_tz {
+            Some(tz) => std::env::set_var("TZ", tz),
+            None => std::env::remove_var("TZ"),
+        }
+    }
 }

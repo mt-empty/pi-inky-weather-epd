@@ -86,6 +86,23 @@
             {
                 "type": "lldb",
                 "request": "launch",
+                "name": "Debug executable with timezone",
+                "program": "${workspaceFolder}/target/debug/pi-inky-weather-epd",
+                "args": [
+                    "--nocapture"
+                ],
+                "env": {
+                    "TZ": "America/New_York"
+                },
+                "cwd": "${workspaceFolder}",
+                "preLaunchTask": "cargo-build",
+                "sourceLanguages": [
+                    "rust"
+                ]
+            },
+            {
+                "type": "lldb",
+                "request": "launch",
                 "name": "Run without debugging",
                 "program": "${workspaceFolder}/target/debug/pi-inky-weather-epd",
                 "args": [],
