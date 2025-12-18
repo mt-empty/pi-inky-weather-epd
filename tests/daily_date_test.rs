@@ -1,7 +1,7 @@
 /// Test to verify that daily forecast dates are correctly mapped to day names
 ///
 /// This test ensures that the date-to-day-name conversion works correctly for both providers
-use chrono::{Datelike, Utc, Weekday};
+use chrono::{Datelike, Weekday};
 use pi_inky_weather_epd::apis::open_meteo::models::OpenMeteoHourlyResponse;
 
 #[test]
@@ -37,35 +37,17 @@ fn test_open_meteo_daily_dates_deserialize_correctly() {
     assert_eq!(response.daily.time.len(), 7, "Should have 7 days of data");
 
     for (i, (expected_weekday, expected_date_str)) in expected_days.iter().enumerate() {
-        let datetime = response.daily.time[i];
+        let date = response.daily.time[i];
 
-        // The deserialized datetime should be in UTC
-        assert_eq!(datetime.timezone(), Utc);
-
-        // Check that the UTC date matches what we expect
-        let date_str = datetime.format("%Y-%m-%d").to_string();
+        // Check that the date matches what we expect
+        let date_str = date.format("%Y-%m-%d").to_string();
         assert_eq!(
             &date_str, expected_date_str,
             "Date string mismatch at index {i}"
         );
 
-        // Convert to local time (AEDT is UTC+11)
-        use chrono::Local;
-        let local_dt = datetime.with_timezone(&Local);
-
-        // The local date should still be the same day (not shifted)
-        let local_date_str = local_dt.format("%Y-%m-%d").to_string();
-        println!("UTC: {datetime} -> Local: {local_dt} ({local_date_str})");
-
-        // With the fix (00:00:00Z), this should not shift dates
-        // 2025-10-25T00:00:00Z in AEDT (UTC+11) = 2025-10-25T11:00:00+11:00 (still Oct 25)
-        assert_eq!(
-            &local_date_str, expected_date_str,
-            "Local date should match UTC date at index {i}"
-        );
-
-        // Check weekday
-        let weekday = local_dt.weekday();
+        // Check weekday (NaiveDate has weekday() method)
+        let weekday = date.weekday();
         assert_eq!(
             &weekday, expected_weekday,
             "Weekday mismatch at index {i}: expected {expected_weekday}, got {weekday}"
