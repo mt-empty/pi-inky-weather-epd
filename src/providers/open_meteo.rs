@@ -15,6 +15,8 @@ use crate::{
 
 /// Open-Meteo-specific error checker
 fn check_open_meteo_error(body: &str) -> Result<(), DashboardError> {
+    use crate::logger;
+    logger::debug("Checking for API errors");
     // Try to parse as error response; if it's not an error format, that's fine (return Ok)
     let api_error = match serde_json::from_str::<OpenMeteoError>(body) {
         Ok(err) => err,
@@ -23,8 +25,6 @@ fn check_open_meteo_error(body: &str) -> Result<(), DashboardError> {
 
     // OpenMeteoError.error field indicates if this is actually an error
     if api_error.error {
-        eprintln!("Warning: Open-Meteo API request failed, trying to load cached data");
-        eprintln!("Open-Meteo API Error: {}", api_error.reason);
         return Err(DashboardError::ApiError {
             details: api_error.reason,
         });

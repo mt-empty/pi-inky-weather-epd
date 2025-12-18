@@ -5,6 +5,7 @@ pub mod constants;
 pub mod dashboard;
 pub mod domain;
 pub mod errors;
+mod logger;
 mod providers;
 pub mod update;
 pub mod utils;
@@ -23,11 +24,11 @@ pub use crate::weather_dashboard::generate_weather_dashboard_injection;
 
 pub static CONFIG: Lazy<DashboardSettings> = Lazy::new(|| match DashboardSettings::new() {
     Ok(config) => {
-        println!("## Configuration: {config:#?}");
+        config.print_config();
         config
     }
     Err(e) => {
-        eprintln!("Failed to load config: {e}");
+        logger::error(format!("Failed to load config: {e}"));
         std::process::exit(1);
     }
 });
@@ -37,12 +38,16 @@ pub fn generate_weather_dashboard_wrapper() -> Result<(), Error> {
 }
 
 pub fn run_weather_dashboard() -> Result<(), anyhow::Error> {
-    println!("# Generating weather dashboard...");
+    logger::app_start("Pi Inky Weather Display", env!("CARGO_PKG_VERSION"));
+
+    logger::section("Generating weather dashboard");
     generate_weather_dashboard_wrapper()?;
 
     if CONFIG.release.update_interval_days.into_inner() > 0 {
-        println!("## Checking for updates...");
+        logger::section("Checking for updates");
         update_app()?;
     };
+
+    logger::app_end();
     Ok(())
 }

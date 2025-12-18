@@ -154,6 +154,7 @@ pub struct Debugging {
     pub disable_weather_api_requests: bool,
     pub disable_png_output: bool,
     pub allow_pre_release_version: bool,
+    pub enable_debug_logs: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -244,5 +245,84 @@ impl DashboardSettings {
         }
 
         final_settings
+    }
+
+    /// Print configuration settings in a structured, hierarchical format
+    pub fn print_config(&self) {
+        use crate::logger;
+
+        logger::section("Configuration loaded");
+
+        // API Settings
+        logger::config_group("API Settings");
+        logger::kvp("Provider", format!("{}", self.api.provider));
+        logger::kvp(
+            "Location",
+            format!(
+                "lat: {}, lon: {}",
+                self.api.latitude.into_inner(),
+                self.api.longitude.into_inner()
+            ),
+        );
+
+        // Render Options
+        logger::config_group("Render Options");
+        logger::kvp(
+            "Temperature Unit",
+            format!("{}", self.render_options.temp_unit),
+        );
+        logger::kvp(
+            "Wind Speed Unit",
+            format!("{}", self.render_options.wind_speed_unit),
+        );
+        logger::kvp("Date Format", &self.render_options.date_format);
+        logger::kvp(
+            "Use Moon Phase",
+            self.render_options.use_moon_phase_instead_of_clear_night,
+        );
+        logger::kvp(
+            "X-Axis Always at Min",
+            self.render_options.x_axis_always_at_min,
+        );
+        logger::kvp(
+            "Use Gust Instead of Wind",
+            self.render_options.use_gust_instead_of_wind,
+        );
+
+        // Colours
+        logger::config_group("Display Colours");
+        logger::kvp("Background", &self.colours.background_colour);
+        logger::kvp("Text", &self.colours.text_colour);
+        logger::kvp("X-Axis", &self.colours.x_axis_colour);
+        logger::kvp("Y-Left Axis (Temp)", &self.colours.y_left_axis_colour);
+        logger::kvp("Y-Right Axis (Rain)", &self.colours.y_right_axis_colour);
+        logger::kvp("Actual Temp", &self.colours.actual_temp_colour);
+        logger::kvp("Feels Like", &self.colours.feels_like_colour);
+        logger::kvp("Rain", &self.colours.rain_colour);
+
+        // File Paths
+        logger::config_group("File Paths");
+        logger::kvp("Cache Path", self.misc.weather_data_cache_path.display());
+        logger::kvp("Template", self.misc.template_path.display());
+        logger::kvp("Output SVG", self.misc.generated_svg_name.display());
+        logger::kvp("Output PNG", self.misc.generated_png_name.display());
+        logger::kvp("Icons Directory", self.misc.svg_icons_directory.display());
+
+        // Release/Update Settings
+        logger::config_group("Update Settings");
+        logger::kvp("Update Interval (days)", self.release.update_interval_days);
+        logger::kvp(
+            "Allow Pre-release",
+            self.debugging.allow_pre_release_version,
+        );
+
+        // Debugging Flags
+        logger::config_group("Debug Flags");
+        logger::kvp(
+            "Disable API Requests",
+            self.debugging.disable_weather_api_requests,
+        );
+        logger::kvp("Disable PNG Output", self.debugging.disable_png_output);
+        logger::kvp("Enable Debug Logs", self.debugging.enable_debug_logs);
     }
 }

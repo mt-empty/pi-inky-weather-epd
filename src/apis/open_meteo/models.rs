@@ -129,10 +129,14 @@ pub struct Daily {
 impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast> {
     fn from(response: OpenMeteoHourlyResponse) -> Self {
         use crate::domain::models::{Precipitation, Temperature as DomainTemp, Wind as DomainWind};
-        use crate::CONFIG;
+        use crate::{logger, CONFIG};
 
         let hourly_data = response.hourly;
         let num_entries = hourly_data.time.len();
+        logger::debug(format!(
+            "Converting {} Open-Meteo hourly entries to domain model",
+            num_entries
+        ));
         let unit = CONFIG.render_options.temp_unit;
 
         (0..num_entries)
@@ -189,9 +193,13 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast
 impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast> {
     fn from(response: OpenMeteoHourlyResponse) -> Self {
         use crate::domain::models::{Astronomical, Precipitation, Temperature as DomainTemp};
-        use crate::CONFIG;
+        use crate::{logger, CONFIG};
 
         let unit = CONFIG.render_options.temp_unit;
+        logger::debug(format!(
+            "Converting {} Open-Meteo daily entries to domain model",
+            response.daily.time.len()
+        ));
 
         response
             .daily
@@ -201,13 +209,6 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
             .map(|(i, date)| {
                 let raw_temp_max = response.daily.temperature_2m_max[i];
                 let raw_temp_min = response.daily.temperature_2m_min[i];
-
-                println!(
-                    "### API Raw Data: {} - Max {:.1}°C, Min {:.1}°C",
-                    date.format("%Y-%m-%d"),
-                    raw_temp_max,
-                    raw_temp_min
-                );
 
                 let temp_max = {
                     let val = raw_temp_max;

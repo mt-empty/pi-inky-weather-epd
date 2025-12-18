@@ -4,6 +4,7 @@ use crate::{
     dashboard::chart::{GraphDataPath, HourlyForecastGraph},
     domain::models::{DailyForecast, HourlyForecast},
     errors::{DashboardError, Description},
+    logger,
     utils::{find_max_item_between_dates, get_total_between_dates},
     weather::icons::{Icon, SunPositionIconName},
     CONFIG,
@@ -258,7 +259,9 @@ impl ContextBuilder {
         // Get today's local date for comparison
         let today_local_date = clock.now_local().date_naive();
 
-        println!("Today's local date: {today_local_date:?}");
+        logger::detail(format!(
+            "Processing daily forecast starting from: {today_local_date}"
+        ));
 
         // Pre-populate day names from local calendar (tomorrow through +6 days)
         self.initialize_day_names(clock.now_local());
@@ -271,7 +274,6 @@ impl ContextBuilder {
             if let Some(forecast_local_date) = day.date {
                 // Skip any dates before today (past dates)
                 if forecast_local_date < today_local_date {
-                    println!("Skipping past date: {forecast_local_date}");
                     continue;
                 }
 
@@ -282,12 +284,12 @@ impl ContextBuilder {
 
                 // Warn if date is beyond our 7-day window
                 if forecast_local_date >= today_local_date + chrono::Days::new(7) {
-                    eprintln!(
-                        "Warning: Reached day beyond 7-day forecast window: {forecast_local_date}"
-                    );
+                    logger::warning(format!(
+                        "Reached day beyond 7-day forecast window: {forecast_local_date}"
+                    ));
                 }
             } else {
-                eprintln!("Warning: Daily forecast entry missing date, skipping.");
+                logger::warning("Daily forecast entry missing date, skipping");
                 continue;
             }
 
@@ -310,10 +312,10 @@ impl ContextBuilder {
                 _ => "Unknown",
             };
 
-            println!(
+            logger::detail(format!(
                 "{day_name} ({}) - Max {max_temp_value}°, Min {min_temp_value}°",
                 day.date.unwrap()
-            );
+            ));
 
             match day_index {
                 0 => {
@@ -419,9 +421,11 @@ impl ContextBuilder {
             }
         };
 
-        println!(
-            "24h UTC forecast window: start = {utc_forecast_window_start:?}, end = {utc_forecast_window_end:?}"
-        );
+        logger::detail(format!(
+            "24h UTC forecast window: {} to {}",
+            utc_forecast_window_start.format("%Y-%m-%d %H:%M"),
+            utc_forecast_window_end.format("%Y-%m-%d %H:%M")
+        ));
 
         let local_forecast_window_start: DateTime<Local> =
             utc_forecast_window_start.with_timezone(&Local);
@@ -436,9 +440,11 @@ impl ContextBuilder {
             .unwrap()
             + chrono::Duration::days(1);
 
-        println!(
-            "Local forecast window: start = {local_forecast_window_start:?}, end = {local_forecast_window_end:?}"
-        );
+        logger::detail(format!(
+            "Local forecast window: {} to {}",
+            local_forecast_window_start.format("%Y-%m-%d %H:%M %Z"),
+            local_forecast_window_end.format("%Y-%m-%d %H:%M %Z")
+        ));
 
         // println!("Day end: {:?}", day_end);
 
@@ -511,7 +517,10 @@ impl ContextBuilder {
             .unwrap()
             .with_nanosecond(0)
             .unwrap();
-        println!("Current time (UTC, to the hour)     : {current_date:?}");
+        logger::detail(format!(
+            "Current time (UTC): {}",
+            current_date.format("%Y-%m-%d %H:%M")
+        ));
 
         let first_date = hourly_forecast_data.iter().find_map(|forecast| {
             if forecast.time >= current_date {
@@ -562,19 +571,24 @@ impl ContextBuilder {
                     self.with_current_hour_data(forecast, clock);
                     self.set_now_values_for_table(forecast)
                 } else if x >= 24 {
-                    eprintln!(
-                        "Warning: More than 24 hours of hourly forecast data, this should not happen"
+                    logger::warning(
+                        "More than 24 hours of hourly forecast data, this should not happen",
                     );
                     return;
                 }
-                    // we won't push the actual hour right now
-                    // we can calculate it later
-                    // we push this index to make scaling graph easier
+                // we won't push the actual hour right now
+                // we can calculate it later
+                // we push this index to make scaling graph easier
                 for curve_type in &mut graph.curves.iter_mut() {
                     match curve_type {
-                        CurveType::ActualTemp(curve) => curve.add_point(x as f32, *forecast.temperature),
-                        CurveType::TempFeelLike(curve) => curve.add_point(x as f32, *forecast.apparent_temperature),
-                        CurveType::RainChance(curve) => curve.add_point(x as f32, forecast.precipitation.chance.unwrap_or(0) as f32),
+                        CurveType::ActualTemp(curve) => {
+                            curve.add_point(x as f32, *forecast.temperature)
+                        }
+                        CurveType::TempFeelLike(curve) => {
+                            curve.add_point(x as f32, *forecast.apparent_temperature)
+                        }
+                        CurveType::RainChance(curve) => curve
+                            .add_point(x as f32, forecast.precipitation.chance.unwrap_or(0) as f32),
                     }
                 }
                 graph.uv_data[x] = forecast.uv_index;
@@ -625,20 +639,26 @@ impl ContextBuilder {
         day_end: chrono::DateTime<Local>,
         forecast_window_end: chrono::DateTime<Local>,
     ) {
-        println!("### Calculating table Max24h...");
+        logger::detail("Calculating Max24h values for table");
         let today_duration = day_end
             .signed_duration_since(forecast_window_start)
             .num_hours();
-        println!(
-            "Today's Forecast Window: start = {forecast_window_start:?}, end = {day_end:?}, duration = {today_duration} hours"
-        );
+        logger::detail(format!(
+            "Today's graph slice: {} to {} ({} hours)",
+            forecast_window_start.format("%H:%M"),
+            day_end.format("%H:%M"),
+            today_duration
+        ));
 
         let tomorrow_duration = forecast_window_end
             .signed_duration_since(day_end)
             .num_hours();
-        println!(
-            "Tomorrow's Forecast Window: start = {day_end:?}, end = {forecast_window_end:?}, duration = {tomorrow_duration} hours"
-        );
+        logger::detail(format!(
+            "Tomorrow's graph slice: {} to {} ({} hours)",
+            day_end.format("%H:%M"),
+            forecast_window_end.format("%H:%M"),
+            tomorrow_duration
+        ));
 
         macro_rules! max_in_today_and_tomorrow {
             ($get_value:expr) => {{
@@ -711,7 +731,7 @@ impl ContextBuilder {
     ///
     /// Use this for internal validation errors. For external API warnings, use `with_warning`.
     pub fn with_validation_error(&mut self, error: DashboardError) -> &mut Self {
-        eprintln!("Error: {}", error.long_description());
+        logger::error(error.long_description());
         self.diagnostics.push(error);
         self.update_warning_display();
         self

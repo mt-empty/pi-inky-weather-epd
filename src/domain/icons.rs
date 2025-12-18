@@ -1,4 +1,5 @@
 use super::models::{DailyForecast, HourlyForecast, Precipitation, Wind};
+use crate::logger;
 use crate::weather::icons::{
     DayNight, HumidityIconName, Icon, RainAmountIcon, RainAmountName, RainChanceName, UVIndexIcon,
     WindIconName,
@@ -112,7 +113,7 @@ impl Icon for HourlyForecast {
         if CONFIG.render_options.use_moon_phase_instead_of_clear_night
             && icon_name.ends_with(&format!("{}{}.svg", RainChanceName::Clear, DayNight::Night))
         {
-            println!("'use_moon_phase_instead_of_clear_night' is set to true, using moon phase icon instead of clear night");
+            logger::detail("Using moon phase icon instead of clear night");
             icon_name = get_moon_phase_icon_name().to_string();
         }
 

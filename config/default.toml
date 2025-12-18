@@ -62,3 +62,4 @@ svg_icons_directory = "static/fill-svg-static/"
 disable_weather_api_requests = false # Load cached data instead of making API requests (requires at least one successful run first)
 disable_png_output = false
 allow_pre_release_version = false
+enable_debug_logs = false

@@ -1,4 +1,5 @@
 use crate::errors::GeohashError;
+use crate::logger;
 use anyhow::Error;
 use anyhow::Result;
 use chrono::Local;
@@ -84,8 +85,8 @@ fn load_fonts(font_db: &mut fontdb::Database) {
 
     for file in &font_files {
         match font_db.load_font_file(current_path.join(file)) {
-            Ok(_) => println!("Loaded font file: {file}"),
-            Err(e) => eprintln!("Failed to load font file: {e}"),
+            Ok(_) => {}
+            Err(e) => logger::warning(format!("Failed to load font file: {e}")),
         }
     }
 }
