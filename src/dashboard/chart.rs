@@ -393,7 +393,9 @@ impl HourlyForecastGraph {
             let mut label_str = format!("{y_val:.1}°");
             let mut font_size = DEFAULT_AXIS_LABEL_FONT_SIZE;
             if j == 0 || j == self.y_left_ticks {
-                label_str = format!("{y_val:.0}°");
+                // Normalize negative zero when rounding to integer (e.g., -0.1 → 0, not -0)
+                let display_val = if y_val.abs() < 0.5 { 0.0 } else { y_val };
+                label_str = format!("{display_val:.0}°");
                 font_size = 35;
             }
             y_left_labels.push_str(&format!(
