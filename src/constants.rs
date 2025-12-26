@@ -35,7 +35,7 @@ pub static DAILY_FORECAST_ENDPOINT: Lazy<Url> = Lazy::new(|| build_forecast_url(
 pub static HOURLY_FORECAST_ENDPOINT: Lazy<Url> = Lazy::new(|| build_forecast_url("hourly"));
 pub static OPEN_METEO_ENDPOINT: Lazy<Url> = Lazy::new(|| {
     let url = format!(
-        "https://api.open-meteo.com/v1/forecast?latitude={}&longitude={}&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,uv_index,wind_speed_10m,wind_gusts_10m,relative_humidity_2m&current=is_day&forecast_days=14",
+        "https://api.open-meteo.com/v1/forecast?latitude={}&longitude={}&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,uv_index,wind_speed_10m,wind_gusts_10m,relative_humidity_2m&current=is_day&forecast_days=14&tiomezone=UTC",
         CONFIG.api.latitude,
         CONFIG.api.longitude
     );

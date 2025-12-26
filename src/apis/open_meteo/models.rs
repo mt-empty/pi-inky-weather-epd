@@ -43,7 +43,8 @@ pub struct CurrentUnits {
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Current {
-    // pub time: DateTime<Utc>,
+    #[serde(deserialize_with = "deserialize_short_datetime")]
+    pub time: DateTime<Utc>,
     // pub interval: i64,
     #[serde(rename = "is_day")]
     pub is_day: u16,
@@ -201,6 +202,9 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
             response.daily.time.len()
         ));
 
+        // Extract time component from current time in API response
+        let current_time = response.current.time.time();
+
         response
             .daily
             .time
@@ -253,8 +257,11 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
                     }
                 };
 
+                // Combine the date with current time component to create DateTime<Utc>
+                let date_with_time = date.and_time(current_time).and_utc();
+
                 crate::domain::models::DailyForecast {
-                    date: Some(*date),
+                    date: Some(date_with_time),
                     temp_max,
                     temp_min,
                     precipitation,
@@ -270,6 +277,17 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
 // ============================================================================
 // Note: Open-Meteo returns sunrise/sunset in UTC as "2025-10-24T19:21" format
 // This is the same format as hourly times, so we can reuse that deserializer
+
+pub fn deserialize_short_datetime<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M")
+        .map(|naive| DateTime::from_naive_utc_and_offset(naive, Utc))
+        .map_err(serde::de::Error::custom)
+}
+
 pub fn deserialize_vec_iso8601_loose<'de, D>(
     deserializer: D,
 ) -> Result<Vec<DateTime<Utc>>, D::Error>
