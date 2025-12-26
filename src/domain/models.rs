@@ -200,7 +200,7 @@ impl From<crate::apis::bom::models::HourlyForecast> for HourlyForecast {
                 bom.rain.amount.min,
                 bom.rain.amount.max,
             ),
-            uv_index: bom.uv.0,
+            uv_index: bom.uv.unwrap_or_default().0,
             relative_humidity: bom.relative_humidity.0,
             is_night: bom.is_night,
         }
