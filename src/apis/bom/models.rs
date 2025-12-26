@@ -180,7 +180,7 @@ pub struct HourlyForecast {
     // pub dew_point: i16,
     pub wind: Wind,
     pub relative_humidity: RelativeHumidity,
-    pub uv: HourlyUV,
+    pub uv: Option<HourlyUV>,
     // pub icon_descriptor: String,
     // pub next_three_hourly_forecast_period: DateTime<Utc>,
     pub time: DateTime<Utc>,

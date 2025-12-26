@@ -94,7 +94,10 @@ fn test_bom_hourly_fields() {
         if let Some(chance) = forecast.rain.chance {
             assert!(chance <= 100, "Rain chance should be <= 100%");
         }
-        assert!(forecast.uv.0 < 20, "UV index should be < 20");
+        assert!(
+            forecast.uv.unwrap_or_default().0 < 20,
+            "UV index should be < 20"
+        );
     }
 }
 
