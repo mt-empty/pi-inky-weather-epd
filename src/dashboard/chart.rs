@@ -562,9 +562,9 @@ impl HourlyForecastGraph {
                 CurveType::ActualTemp(_) | CurveType::TempFeelLike(_) => {
                     if self.max_y >= 0.0 && self.min_y < 0.0 {
                         self.height / (self.max_y + self.min_y.abs())
-                    } else if self.min_y < 0.0 {
-                        // it's possible for both to be negative
-                        self.height / (self.max_y.abs() - self.min_y.abs())
+                    } else if self.min_y < 0.0 && self.max_y < 0.0 {
+                        // both are negative - use the absolute difference
+                        self.height / (self.min_y.abs() - self.max_y.abs())
                     } else {
                         // when both are positive
                         self.height / (self.max_y - self.min_y)
