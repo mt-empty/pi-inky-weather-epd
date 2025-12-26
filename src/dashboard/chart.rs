@@ -372,9 +372,12 @@ impl HourlyForecastGraph {
         let mut y_left_labels = String::new();
         for j in 0..=self.y_left_ticks {
             let y_val = self.min_y + j as f32 * y_left_step;
-            if y_val > self.max_y {
-                break;
-            }
+            // Use small tolerance to handle floating point precision issues
+            // const EPSILON: f32 = 0.001;
+            // this is just defensive - should not happen due to loop condition
+            // if y_val > self.max_y + EPSILON {
+            //     break;
+            // }
             let ys = map_y_left(y_val);
             // Tick mark
             y_left_axis_path.push_str(&format!(
@@ -390,7 +393,9 @@ impl HourlyForecastGraph {
             let mut label_str = format!("{y_val:.1}°");
             let mut font_size = DEFAULT_AXIS_LABEL_FONT_SIZE;
             if j == 0 || j == self.y_left_ticks {
-                label_str = format!("{y_val:.0}°");
+                // Normalize negative zero when rounding to integer (e.g., -0.1 → 0, not -0)
+                let display_val = if y_val.abs() < 0.5 { 0.0 } else { y_val };
+                label_str = format!("{display_val:.0}°");
                 font_size = 35;
             }
             y_left_labels.push_str(&format!(
