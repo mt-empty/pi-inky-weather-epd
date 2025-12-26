@@ -271,7 +271,11 @@ impl ContextBuilder {
         let mut day_index: i32 = 0;
 
         for day in daily_forecast_data {
-            if let Some(forecast_local_date) = day.date {
+            if let Some(forecast_datetime) = day.date {
+                // Extract date for comparison
+                let forecast_local_date =
+                    forecast_datetime.with_timezone(&chrono::Local).date_naive();
+
                 // Skip any dates before today (past dates)
                 if forecast_local_date < today_local_date {
                     continue;

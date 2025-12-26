@@ -8,7 +8,6 @@
     // Mount host timezone so container uses Melbourne time (or whatever the host uses)
     "mounts": [
         "source=/etc/localtime,target=/etc/localtime,type=bind,consistency=cached",
-        "source=/etc/timezone,target=/etc/timezone,type=bind,consistency=cached",
         "source=${localEnv:HOME}/.zshrc,target=/home/vscode/.zshrc,type=bind,consistency=cached"
     ],
     "customizations": {

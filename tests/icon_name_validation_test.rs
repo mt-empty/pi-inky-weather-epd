@@ -71,7 +71,7 @@ fn test_clear_sky_never_has_precipitation_suffix_daily() {
     // Test case: Low chance for daily forecast with some amount
 
     let forecast = DailyForecast {
-        date: Some(Utc::now().date_naive()),
+        date: Some(Utc::now()),
         temp_max: Some(Temperature::celsius(25.0)),
         temp_min: Some(Temperature::celsius(15.0)),
         precipitation: Some(Precipitation::new(
@@ -168,7 +168,7 @@ fn test_zero_chance_zero_amount_produces_clear() {
     // Edge case: No precipitation at all
 
     let forecast = DailyForecast {
-        date: Some(Utc::now().date_naive()),
+        date: Some(Utc::now()),
         temp_max: Some(Temperature::celsius(28.0)),
         temp_min: Some(Temperature::celsius(18.0)),
         precipitation: Some(Precipitation::new(
