@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use serde::{self, Deserialize, Deserializer};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -257,17 +257,8 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
                     }
                 };
 
-                // Combine the date with current time component, interpret as local time, then convert to UTC
-                // This ensures the date aligns with the local timezone (when timezone=auto is used)
-                let date_with_time = {
-                    use chrono::Local;
-                    let naive_datetime = date.and_time(current_time);
-                    Local
-                        .from_local_datetime(&naive_datetime)
-                        .single()
-                        .expect("Failed to convert daily forecast date to local time")
-                        .to_utc()
-                };
+                // Combine the date with current time component and treat as UTC
+                let date_with_time = date.and_time(current_time).and_utc();
 
                 crate::domain::models::DailyForecast {
                     date: Some(date_with_time),
@@ -291,17 +282,10 @@ pub fn deserialize_short_datetime<'de, D>(deserializer: D) -> Result<DateTime<Ut
 where
     D: Deserializer<'de>,
 {
-    use chrono::Local;
     let s: String = Deserialize::deserialize(deserializer)?;
-    let naive =
-        NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M").map_err(serde::de::Error::custom)?;
-
-    // Interpret as local time, then convert to UTC
-    Local
-        .from_local_datetime(&naive)
-        .single()
-        .ok_or_else(|| serde::de::Error::custom("Ambiguous local time"))
-        .map(|local_dt| local_dt.to_utc())
+    NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M")
+        .map(|naive| DateTime::from_naive_utc_and_offset(naive, Utc))
+        .map_err(serde::de::Error::custom)
 }
 
 pub fn deserialize_vec_iso8601_loose<'de, D>(
@@ -319,20 +303,13 @@ pub fn deserialize_vec_short_datetime<'de, D>(
 where
     D: Deserializer<'de>,
 {
-    use chrono::Local;
     let raw_vec: Vec<String> = Deserialize::deserialize(deserializer)?;
     raw_vec
         .into_iter()
         .map(|s| {
-            let naive = NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M")
-                .map_err(serde::de::Error::custom)?;
-
-            // Interpret as local time, then convert to UTC
-            Local
-                .from_local_datetime(&naive)
-                .single()
-                .ok_or_else(|| serde::de::Error::custom("Ambiguous local time"))
-                .map(|local_dt| local_dt.to_utc())
+            NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M")
+                .map(|naive| DateTime::from_naive_utc_and_offset(naive, Utc))
+                .map_err(serde::de::Error::custom)
         })
         .collect()
 }

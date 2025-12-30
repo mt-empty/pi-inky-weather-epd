@@ -278,12 +278,27 @@ impl ContextBuilder {
 
                 // Skip any dates before today (past dates)
                 if forecast_local_date < today_local_date {
+                    logger::debug(format!(
+                        "Skipping past date in daily forecast: {forecast_local_date}"
+                    ));
                     continue;
                 }
 
                 // Once we have 7 days, stop processing
                 if day_index >= 7 {
+                    logger::debug("Reached 7 days of daily forecast, stopping further processing");
                     break;
+                }
+
+                // Validate that this forecast date matches expected day (today + day_index)
+                let expected_date = today_local_date + chrono::Days::new(day_index as u64);
+                if forecast_local_date != expected_date {
+                    logger::warning(format!(
+                        "Daily forecast date mismatch: got {} but expected {} (day_index: {})",
+                        forecast_local_date, expected_date, day_index
+                    ));
+                    // Skip this entry and continue looking for the correct date
+                    continue;
                 }
 
                 // Warn if date is beyond our 7-day window
@@ -521,9 +536,12 @@ impl ContextBuilder {
             .unwrap()
             .with_nanosecond(0)
             .unwrap();
+        let today_utc_date = current_date.date_naive();
+
         logger::detail(format!(
-            "Current hour (UTC): {}",
-            current_date.format("%Y-%m-%d %H:%M")
+            "Current hour (UTC): {} (date: {})",
+            current_date.format("%Y-%m-%d %H:%M"),
+            today_utc_date
         ));
 
         let first_date = hourly_forecast_data.iter().find_map(|forecast| {
@@ -535,6 +553,16 @@ impl ContextBuilder {
         });
 
         if let Some(forecast_window_start) = first_date {
+            // Validate that the first forecast is actually from today (not tomorrow)
+            let forecast_date = forecast_window_start.date_naive();
+            if forecast_date != today_utc_date {
+                logger::warning(format!(
+                    "First available forecast is from {} but expected {}",
+                    forecast_date, today_utc_date
+                ));
+                return None;
+            }
+
             let forecast_window_end = forecast_window_start + chrono::Duration::hours(24);
             Some((forecast_window_start, forecast_window_end))
         } else {

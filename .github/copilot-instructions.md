@@ -231,7 +231,7 @@ The project uses `insta` crate for SVG output verification. Workflow:
 2. **Run tests**: `RUN_MODE=test cargo test --test snapshot_provider_test`
 3. **Review changes**: `cargo insta review` (interactive UI)
    - Shows diff of old vs new SVG output
-   - Accept changes that are intentional improvements
+   - Accept changes that are intentional improvements with `cargo insta accept`
    - Reject changes that indicate bugs
 4. **Commit snapshots**: Snapshot files in `tests/snapshots/` must be committed
 

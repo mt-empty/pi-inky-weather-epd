@@ -34,10 +34,12 @@ fn build_forecast_url(frequency: &str) -> Url {
 pub static DAILY_FORECAST_ENDPOINT: Lazy<Url> = Lazy::new(|| build_forecast_url("daily"));
 pub static HOURLY_FORECAST_ENDPOINT: Lazy<Url> = Lazy::new(|| build_forecast_url("hourly"));
 pub static OPEN_METEO_ENDPOINT: Lazy<Url> = Lazy::new(|| {
-    // Using timezone=auto to ensure forecast days align with local timezone (not UTC-aligned).
-    // Times are returned in local time and converted to UTC internally.
+    // Using timezone=UTC with past_days=1 to ensure we always have enough forecast data
+    // even when crossing GMT boundary. Without past_days=1, users in western timezones lose
+    // access to "today's" forecast after UTC midnight (even though their local day hasn't ended).
+    // past_days=1 returns yesterday+today+next 14 days, ensuring current day data is always available.
     let url = format!(
-        "https://api.open-meteo.com/v1/forecast?latitude={}&longitude={}&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,uv_index,wind_speed_10m,wind_gusts_10m,relative_humidity_2m&current=is_day&forecast_days=14&timezone=auto",
+        "https://api.open-meteo.com/v1/forecast?latitude={}&longitude={}&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,uv_index,wind_speed_10m,wind_gusts_10m,relative_humidity_2m&current=is_day&forecast_days=14&past_days=1&timezone=UTC",
         CONFIG.api.latitude,
         CONFIG.api.longitude
     );
