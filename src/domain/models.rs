@@ -171,6 +171,7 @@ pub struct HourlyForecast {
     pub uv_index: u16,
     pub relative_humidity: u16,
     pub is_night: bool,
+    pub cloud_cover: Option<u16>,
 }
 
 /// Domain model for daily weather forecast
@@ -182,6 +183,7 @@ pub struct DailyForecast {
     pub temp_min: Option<Temperature>,
     pub precipitation: Option<Precipitation>,
     pub astronomical: Option<Astronomical>,
+    pub cloud_cover: Option<u16>,
 }
 
 // ============================================================================
@@ -203,6 +205,7 @@ impl From<crate::apis::bom::models::HourlyForecast> for HourlyForecast {
             uv_index: bom.uv.unwrap_or_default().0,
             relative_humidity: bom.relative_humidity.0,
             is_night: bom.is_night,
+            cloud_cover: None, // BOM API doesn't provide cloud cover data
         }
     }
 }
@@ -220,6 +223,7 @@ impl From<crate::apis::bom::models::DailyEntry> for DailyForecast {
                 sunrise_time: a.sunrise_time,
                 sunset_time: a.sunset_time,
             }),
+            cloud_cover: None, // BOM API doesn't provide cloud cover data
         }
     }
 }

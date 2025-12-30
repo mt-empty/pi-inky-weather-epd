@@ -15,7 +15,7 @@ DEFAULT_UTC_HOUR=$(date -u +"%H")
 OUTPUT_DIR="simulation_output"
 START_DATE="${1:-$DEFAULT_UTC_DATE}"  # Default to current UTC date, can be overridden
 START_HOUR="${2:-$DEFAULT_UTC_HOUR}"  # Default to current UTC hour (0-23)
-TIMEZONE="${3:-}"              # Optional timezone (e.g., "America/New_York", "Australia/Melbourne")
+TIMEZONE="${3:-$TZ}"              # Optional timezone (e.g., "America/New_York", "Australia/Melbourne")
 
 # Color codes for output
 RED='\033[0;31m'
@@ -100,6 +100,7 @@ for hour in $(seq "$START_HOUR" $((START_HOUR + 23))); do
         # Copy the generated dashboard.svg to the timestamped file
         if [ -f "dashboard.svg" ]; then
             cp "dashboard.svg" "$output_file"
+            # cp "dashboard.png" "${output_file%.svg}.png"
             # Fix icon paths for correct relative path from simulation_output/ directory
             sed -i 's|"static/|"../static/|g' "$output_file"
             sed -i "s|'static/|'../static/|g" "$output_file"
