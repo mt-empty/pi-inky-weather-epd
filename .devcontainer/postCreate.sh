@@ -10,6 +10,7 @@ sudo rm -rf /var/lib/apt/lists/*
 
 echo "[postCreate] Installing cargo-release (locked)..."
 cargo install cargo-release --locked
+cargo install cargo-insta --locked
 
 echo "[postCreate] Installing latest difftastic (Linux x86_64)..."
 latest_url="$(

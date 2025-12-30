@@ -39,7 +39,15 @@ pub static OPEN_METEO_ENDPOINT: Lazy<Url> = Lazy::new(|| {
     // access to "today's" forecast after UTC midnight (even though their local day hasn't ended).
     // past_days=1 returns yesterday+today+next 14 days, ensuring current day data is always available.
     let url = format!(
-        "https://api.open-meteo.com/v1/forecast?latitude={}&longitude={}&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,uv_index,wind_speed_10m,wind_gusts_10m,relative_humidity_2m&current=is_day&forecast_days=14&past_days=1&timezone=UTC",
+        "https://api.open-meteo.com/v1/forecast?\
+        latitude={}&\
+        longitude={}&\
+        daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,cloud_cover_mean&\
+        hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,uv_index,wind_speed_10m,wind_gusts_10m,relative_humidity_2m,cloud_cover&\
+        current=is_day&\
+        forecast_days=14&\
+        past_days=1&\
+        timezone=UTC",
         CONFIG.api.latitude,
         CONFIG.api.longitude
     );

@@ -4,7 +4,7 @@ use strum_macros::Display;
 
 use crate::CONFIG;
 
-#[derive(Debug, Display)]
+#[derive(Debug, Display, Copy, Clone)]
 pub enum RainChanceName {
     #[strum(to_string = "clear")]
     Clear,
@@ -16,7 +16,7 @@ pub enum RainChanceName {
     Extreme,
 }
 
-#[derive(Debug, Display)]
+#[derive(Debug, Display, Copy, Clone)]
 pub enum RainAmountName {
     #[strum(to_string = "")]
     None,
@@ -26,7 +26,7 @@ pub enum RainAmountName {
     Rain,
 }
 
-#[derive(Debug, Display)]
+#[derive(Debug, Display, Copy, Clone)]
 pub enum DayNight {
     #[strum(to_string = "-day")]
     Day,

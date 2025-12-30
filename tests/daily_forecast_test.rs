@@ -56,6 +56,7 @@ fn create_mock_daily_forecast(start_date: NaiveDate, num_days: usize) -> Vec<Dai
                     sunrise_time: Some(datetime),
                     sunset_time: Some(datetime),
                 }),
+                cloud_cover: None,
             }
         })
         .collect()

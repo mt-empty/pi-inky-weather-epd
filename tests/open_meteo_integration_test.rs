@@ -96,6 +96,7 @@ fn test_open_meteo_array_consistency() {
             "wind_speed_10m": [15.0, 18.0],
             "wind_gusts_10m": [25.0, 30.0],
             "relative_humidity_2m": [65, 70]
+            ,"cloud_cover": [30, 45]
         },
         "daily_units": {
             "time": "iso8601",
@@ -114,6 +115,7 @@ fn test_open_meteo_array_consistency() {
             "temperature_2m_min": [12.0],
             "precipitation_sum": [2.5],
             "precipitation_probability_max": [60]
+            ,"cloud_cover_mean": [55]
         }
     }"#;
 
@@ -165,6 +167,7 @@ fn test_open_meteo_extreme_values() {
             "wind_speed_10m": [120.0],
             "wind_gusts_10m": [180.0],
             "relative_humidity_2m": [99]
+            ,"cloud_cover": [95]
         },
         "daily_units": {
             "time": "iso8601",
@@ -183,6 +186,7 @@ fn test_open_meteo_extreme_values() {
             "temperature_2m_min": [-10.0],
             "precipitation_sum": [200.0],
             "precipitation_probability_max": [100]
+            ,"cloud_cover_mean": [98]
         }
     }"#;
 
@@ -253,6 +257,7 @@ fn test_open_meteo_zero_precipitation() {
             "wind_speed_10m": [10.0],
             "wind_gusts_10m": [15.0],
             "relative_humidity_2m": [50]
+            ,"cloud_cover": [10]
         },
         "daily_units": {
             "time": "iso8601",
@@ -271,6 +276,7 @@ fn test_open_meteo_zero_precipitation() {
             "temperature_2m_min": [15.0],
             "precipitation_sum": [0.0],
             "precipitation_probability_max": [0]
+            ,"cloud_cover_mean": [5]
         }
     }"#;
 

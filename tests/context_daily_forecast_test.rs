@@ -40,6 +40,7 @@ fn test_with_daily_forecast_data_new_york_est() {
                 sunrise_time: Some(Utc.with_ymd_and_hms(2025, 12, 17, 12, 19, 0).unwrap()),
                 sunset_time: Some(Utc.with_ymd_and_hms(2025, 12, 17, 21, 33, 0).unwrap()),
             }),
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 18, 12, 0, 0).unwrap()),
@@ -47,6 +48,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             temp_min: Some(temp_c(-1.2)),
             precipitation: Some(Precipitation::new(Some(30), None, Some(1))),
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 19, 12, 0, 0).unwrap()),
@@ -54,6 +56,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             temp_min: Some(temp_c(1.9)),
             precipitation: Some(Precipitation::new(Some(50), None, Some(2))),
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 20, 12, 0, 0).unwrap()),
@@ -61,6 +64,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             temp_min: Some(temp_c(-1.1)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 21, 12, 0, 0).unwrap()),
@@ -68,6 +72,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             temp_min: Some(temp_c(1.7)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 22, 12, 0, 0).unwrap()),
@@ -75,6 +80,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             temp_min: Some(temp_c(-1.5)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 23, 12, 0, 0).unwrap()),
@@ -82,6 +88,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             temp_min: Some(temp_c(-3.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
     ];
 
@@ -155,6 +162,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             temp_min: Some(temp_c(-3.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 18, 12, 0, 0).unwrap()),
@@ -162,6 +170,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             temp_min: Some(temp_c(-2.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 19, 12, 0, 0).unwrap()),
@@ -169,6 +178,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             temp_min: Some(temp_c(-1.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 20, 12, 0, 0).unwrap()),
@@ -176,6 +186,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             temp_min: Some(temp_c(0.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 21, 12, 0, 0).unwrap()),
@@ -183,6 +194,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             temp_min: Some(temp_c(1.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 22, 12, 0, 0).unwrap()),
@@ -190,6 +202,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             temp_min: Some(temp_c(2.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 23, 12, 0, 0).unwrap()),
@@ -197,6 +210,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             temp_min: Some(temp_c(3.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
     ];
 
@@ -241,6 +255,7 @@ fn test_skips_past_dates() {
             temp_min: Some(temp_c(-3.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 18, 12, 0, 0).unwrap()),
@@ -248,6 +263,7 @@ fn test_skips_past_dates() {
             temp_min: Some(temp_c(-2.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 19, 12, 0, 0).unwrap()),
@@ -255,6 +271,7 @@ fn test_skips_past_dates() {
             temp_min: Some(temp_c(-1.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 20, 12, 0, 0).unwrap()),
@@ -262,6 +279,7 @@ fn test_skips_past_dates() {
             temp_min: Some(temp_c(0.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 21, 12, 0, 0).unwrap()),
@@ -269,6 +287,7 @@ fn test_skips_past_dates() {
             temp_min: Some(temp_c(1.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 22, 12, 0, 0).unwrap()),
@@ -276,6 +295,7 @@ fn test_skips_past_dates() {
             temp_min: Some(temp_c(2.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 23, 12, 0, 0).unwrap()),
@@ -283,6 +303,7 @@ fn test_skips_past_dates() {
             temp_min: Some(temp_c(3.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 24, 12, 0, 0).unwrap()),
@@ -290,6 +311,7 @@ fn test_skips_past_dates() {
             temp_min: Some(temp_c(4.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
         DailyForecast {
             date: Some(Utc.with_ymd_and_hms(2025, 12, 25, 12, 0, 0).unwrap()),
@@ -297,6 +319,7 @@ fn test_skips_past_dates() {
             temp_min: Some(temp_c(5.0)),
             precipitation: None,
             astronomical: None,
+            cloud_cover: None,
         },
     ];
 

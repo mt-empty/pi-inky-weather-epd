@@ -136,7 +136,8 @@ fn test_open_meteo_forecast_time_conversion_during_dst() {
             "uv_index": [1, 2, 3, 4],
             "wind_speed_10m": [10, 15, 12, 10],
             "wind_gusts_10m": [18, 22, 18, 15],
-            "relative_humidity_2m": [80, 75, 78, 80]
+            "relative_humidity_2m": [80, 75, 78, 80],
+            "cloud_cover": [40, 35, 28, 25]
         },
         "daily_units": {
             "time": "iso8601",
@@ -154,7 +155,8 @@ fn test_open_meteo_forecast_time_conversion_during_dst() {
             "temperature_2m_max": [22.5],
             "temperature_2m_min": [15.2],
             "precipitation_sum": [0.0],
-            "precipitation_probability_max": [20]
+            "precipitation_probability_max": [20],
+            "cloud_cover_mean": [32]
         }
     }"#;
 
