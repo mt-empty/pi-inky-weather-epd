@@ -62,6 +62,58 @@ impl Precipitation {
     }
 }
 
+/// Converts cloud cover percentage to a corresponding `RainChanceName`.
+///
+/// # Arguments
+///
+/// * `cloud_cover` - Cloud cover percentage (0-100)
+///
+/// # Returns
+///
+/// * A `RainChanceName` variant representing the cloud cover level
+fn cloud_cover_to_name(cloud_cover: u16) -> RainChanceName {
+    match cloud_cover {
+        0..=25 => RainChanceName::Clear,
+        26..=50 => RainChanceName::PartlyCloudy,
+        51..=75 => RainChanceName::Overcast,
+        76.. => RainChanceName::Extreme,
+    }
+}
+
+/// Ensures precipitation amount requires minimum cloud coverage.
+/// Heavy precipitation cannot occur with completely clear skies.
+///
+/// # Arguments
+///
+/// * `cloud_name` - Cloud cover level from cloud data or precipitation chance
+/// * `amount_name` - Precipitation amount (None, Drizzle, or Rain)
+///
+/// # Returns
+///
+/// * Adjusted cloud level ensuring consistency with precipitation amount
+fn apply_precipitation_override(
+    cloud_name: RainChanceName,
+    amount_name: RainAmountName,
+) -> RainChanceName {
+    match amount_name {
+        RainAmountName::None => cloud_name,
+        RainAmountName::Drizzle => {
+            // Drizzle requires at least partly cloudy
+            match cloud_name {
+                RainChanceName::Clear => RainChanceName::PartlyCloudy,
+                _ => cloud_name,
+            }
+        }
+        RainAmountName::Rain => {
+            // Heavy rain requires at least overcast
+            match cloud_name {
+                RainChanceName::Clear | RainChanceName::PartlyCloudy => RainChanceName::Overcast,
+                _ => cloud_name,
+            }
+        }
+    }
+}
+
 impl Icon for Precipitation {
     fn get_icon_name(&self) -> String {
         RainAmountIcon::RainAmount.to_string()
@@ -71,18 +123,20 @@ impl Icon for Precipitation {
 impl Icon for DailyForecast {
     fn get_icon_name(&self) -> String {
         if let Some(ref precip) = self.precipitation {
-            let chance_name = precip.chance_to_name();
-            let amount_name = precip.amount_to_name(false);
-
-            // Clear skies should never have precipitation amounts
-            // (clear-day-drizzle.svg and clear-day-rain.svg don't exist)
-            let final_amount = if matches!(chance_name, RainChanceName::Clear) {
-                RainAmountName::None
+            // Determine cloud coverage from cloud_cover data if available, otherwise fall back to precipitation chance
+            let chance_name = if let Some(cloud_cover) = self.cloud_cover {
+                cloud_cover_to_name(cloud_cover)
             } else {
-                amount_name
+                precip.chance_to_name()
             };
 
-            format!("{chance_name}{}{final_amount}.svg", DayNight::Day)
+            let amount_name = precip.amount_to_name(false);
+
+            // Apply precipitation override: ensure heavy rain requires adequate cloud cover
+            // Note: After override, Clear can only occur with amount_name = None
+            let adjusted_chance_name = apply_precipitation_override(chance_name, amount_name);
+
+            format!("{adjusted_chance_name}{}{amount_name}.svg", DayNight::Day)
         } else {
             // Default to clear day if no precipitation data
             format!("{}{}.svg", RainChanceName::Clear, DayNight::Day)
@@ -92,7 +146,13 @@ impl Icon for DailyForecast {
 
 impl Icon for HourlyForecast {
     fn get_icon_name(&self) -> String {
-        let chance_name = self.precipitation.chance_to_name();
+        // Determine cloud coverage from cloud_cover data if available, otherwise fall back to precipitation chance
+        let chance_name = if let Some(cloud_cover) = self.cloud_cover {
+            cloud_cover_to_name(cloud_cover)
+        } else {
+            self.precipitation.chance_to_name()
+        };
+
         let amount_name = self.precipitation.amount_to_name(true);
         let day_night = if self.is_night {
             DayNight::Night
@@ -100,15 +160,11 @@ impl Icon for HourlyForecast {
             DayNight::Day
         };
 
-        // Clear skies should never have precipitation amounts
-        // (clear-day-drizzle.svg, clear-night-drizzle.svg, etc. don't exist)
-        let final_amount = if matches!(chance_name, RainChanceName::Clear) {
-            RainAmountName::None
-        } else {
-            amount_name
-        };
+        // Apply precipitation override: ensure heavy rain requires adequate cloud cover
+        // Note: After override, Clear can only occur with amount_name = None
+        let adjusted_chance_name = apply_precipitation_override(chance_name, amount_name);
 
-        let mut icon_name = format!("{chance_name}{day_night}{final_amount}.svg");
+        let mut icon_name = format!("{adjusted_chance_name}{day_night}{amount_name}.svg");
 
         if CONFIG.render_options.use_moon_phase_instead_of_clear_night
             && icon_name.ends_with(&format!("{}{}.svg", RainChanceName::Clear, DayNight::Night))

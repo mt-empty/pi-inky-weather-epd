@@ -91,6 +91,8 @@ pub struct Hourly {
     pub wind_gusts_10m: Vec<f32>,
     #[serde(rename = "relative_humidity_2m")]
     pub relative_humidity_2m: Vec<u16>,
+    #[serde(rename = "cloud_cover")]
+    pub cloud_cover: Vec<Option<u16>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
@@ -125,6 +127,8 @@ pub struct Daily {
     pub precipitation_sum: Vec<f32>,
     #[serde(rename = "precipitation_probability_max")]
     pub precipitation_probability_max: Vec<u16>,
+    #[serde(rename = "cloud_cover_mean")]
+    pub cloud_cover_mean: Vec<Option<u16>>,
 }
 
 impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast> {
@@ -175,6 +179,7 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast
                 let relative_humidity = hourly_data.relative_humidity_2m[i];
                 let time = hourly_data.time[i];
                 let is_night = response.current.is_day == 0;
+                let cloud_cover = hourly_data.cloud_cover[i];
 
                 crate::domain::models::HourlyForecast {
                     time,
@@ -185,6 +190,7 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast
                     uv_index,
                     relative_humidity,
                     is_night,
+                    cloud_cover,
                 }
             })
             .collect()
@@ -259,6 +265,7 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
 
                 // Combine the date with current time component to create DateTime<Utc>
                 let date_with_time = date.and_time(current_time).and_utc();
+                let cloud_cover = response.daily.cloud_cover_mean.get(i).and_then(|&c| c);
 
                 crate::domain::models::DailyForecast {
                     date: Some(date_with_time),
@@ -266,6 +273,7 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
                     temp_min,
                     precipitation,
                     astronomical,
+                    cloud_cover,
                 }
             })
             .collect()

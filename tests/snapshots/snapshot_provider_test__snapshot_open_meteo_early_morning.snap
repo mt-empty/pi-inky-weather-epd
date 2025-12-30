@@ -1,6 +1,5 @@
 ---
 source: tests/snapshot_provider_test.rs
-assertion_line: 282
 expression: svg_content
 ---
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
@@ -175,7 +174,7 @@ expression: svg_content
 
     <svg x="616" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Fri</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/partly-cloudy-day-drizzle.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">25°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
