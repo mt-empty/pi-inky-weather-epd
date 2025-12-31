@@ -263,7 +263,7 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
                     }
                 };
 
-                // Combine the date with current time component to create DateTime<Utc>
+                // Combine the date with current time component and treat as UTC
                 let date_with_time = date.and_time(current_time).and_utc();
                 let cloud_cover = response.daily.cloud_cover_mean.get(i).and_then(|&c| c);
 
@@ -283,8 +283,8 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
 // ============================================================================
 // Custom deserializers for OpenMeteo date/time formats
 // ============================================================================
-// Note: Open-Meteo returns sunrise/sunset in UTC as "2025-10-24T19:21" format
-// This is the same format as hourly times, so we can reuse that deserializer
+// Note: When using timezone=auto, Open-Meteo returns times in local timezone
+// These deserializers interpret the times as local and convert to UTC for internal storage
 
 pub fn deserialize_short_datetime<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
 where

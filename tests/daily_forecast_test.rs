@@ -12,7 +12,7 @@
 //!
 //! 1. Providers now convert API data to NaiveDate (local calendar day) before creating domain models
 //! 2. Context builder works directly with NaiveDate values (no timezone conversion)
-//! 3. Day names are pre-initialized from local calendar (tomorrow through +6 days)
+//! 3. Day names are pre-initialised from local calendar (tomorrow through +6 days)
 //! 4. Simple NaiveDate comparison ensures correct day matching
 //!
 //! ## How to Verify the Fix

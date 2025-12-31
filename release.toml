@@ -2,3 +2,5 @@ consolidate-commits = false
 allow-branch = ["master"]
 sign-commit = true
 sign-tag = true
+publish = false
+pre-release-commit-message = "chore: Release {{crate_name}} version {{version}}"
