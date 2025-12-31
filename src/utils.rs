@@ -3,7 +3,6 @@ use crate::logger;
 use anyhow::Error;
 use anyhow::Result;
 use chrono::Local;
-use chrono::NaiveDate;
 use chrono::TimeZone;
 use chrono::{DateTime, NaiveDateTime};
 use resvg::tiny_skia;
@@ -89,40 +88,6 @@ fn load_fonts(font_db: &mut fontdb::Database) {
             Err(e) => logger::warning(format!("Failed to load font file: {e}")),
         }
     }
-}
-
-/// Converts a UTC timestamp string to the local date.
-///
-/// # Arguments
-///
-/// * `utc_time` - A string slice representing the UTC time in ISO 8601 format (e.g., "2024-12-26T12:00:00Z").
-///
-/// # Returns
-///
-/// * `Ok(NaiveDate)` - The corresponding local date as `NaiveDate` if the conversion succeeds.
-/// * `Err(chrono::ParseError)` - If the input string cannot be parsed into a valid `NaiveDateTime`.
-pub fn convert_utc_to_local_date(utc_time: &str) -> Result<NaiveDate, chrono::ParseError> {
-    NaiveDateTime::parse_from_str(utc_time, "%Y-%m-%dT%H:%M:%SZ").map(|datetime| {
-        // Convert UTC NaiveDateTime to Local timezone DateTime
-        Local.from_utc_datetime(&datetime).date_naive()
-    })
-}
-
-/// Converts a UTC timestamp string to the local date and time.
-///
-/// # Arguments
-///
-/// * `utc_time` - A string slice representing the UTC time in ISO 8601 format (e.g., "2024-12-26T12:00:00Z").
-///
-/// # Returns
-///
-/// * `Ok(NaiveDateTime)` - The corresponding local date and time as `NaiveDateTime` if the conversion succeeds.
-/// * `Err(chrono::ParseError)` - If the input string cannot be parsed into a valid `NaiveDateTime`.
-pub fn convert_utc_to_local_datetime(utc_time: &str) -> Result<NaiveDateTime, chrono::ParseError> {
-    NaiveDateTime::parse_from_str(utc_time, "%Y-%m-%dT%H:%M:%SZ").map(|datetime| {
-        // Convert UTC NaiveDateTime to Local timezone DateTime
-        Local.from_utc_datetime(&datetime).naive_local()
-    })
 }
 
 /// Calculates the total value between two dates from a dataset.

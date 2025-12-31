@@ -35,7 +35,6 @@ use pi_inky_weather_epd::{
     clock::FixedClock,
     dashboard::context::ContextBuilder,
     domain::models::{Astronomical, DailyForecast, Temperature},
-    CONFIG,
 };
 
 /// Create mock daily forecast data with exactly 7 days starting from a given date
@@ -76,11 +75,6 @@ fn create_mock_daily_forecast(start_date: NaiveDate, num_days: usize) -> Vec<Dai
 /// - day_index 1-6 fill day2-day7 with temp/icon data from Oct 27-Nov 1
 #[test]
 fn test_timezone_bug_causes_missing_seventh_day() {
-    assert!(
-        CONFIG.debugging.disable_weather_api_requests,
-        "Test requires RUN_MODE=test environment variable"
-    );
-
     // Fixed time: Oct 26, 2025, 9:00 AM Melbourne (UTC+11)
     // This is Oct 25, 2025, 22:00 UTC
     let clock =
