@@ -265,7 +265,6 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
 
                 let now = Local::now();
                 let offset = now.offset().local_minus_utc(); // seconds east of UTC
-                println!("offset hours: {}", offset as f32 / 3600.0);
 
                 // for +GMT timezones, we add offset to current_time
                 // for -GMT timezones, we subtract offset from current_time
