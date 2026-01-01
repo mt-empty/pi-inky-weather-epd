@@ -7,14 +7,22 @@ latitude = -37.8136
 longitude = 144.9631
 
 [misc]
-weather_data_cache_path = "tests/fixtures/"
+weather_data_cache_path = "tests/output/cached_data/"  # Separate from fixtures to avoid overwriting test data
 
 [render_options]
 use_moon_phase_instead_of_clear_night = false
 
 [debugging]
-# CRITICAL: Disable API requests - use fixtures only
-disable_weather_api_requests = true
+# For Open-Meteo tests (wiremock):
+# - disable_weather_api_requests = false (allows HTTP calls that wiremock intercepts)
+# - Tests set OPEN_METEO_BASE_URL env var to point to mock server
+#
+# For BOM tests (fixture-based, not yet migrated):
+# - Would need disable_weather_api_requests = true to use cached fixtures
+# - For now, set to false globally since Open-Meteo tests are the default
+#
+# Note: To run BOM tests, override with: APP_DEBUGGING__DISABLE_WEATHER_API_REQUESTS=true APP_API__PROVIDER=bom
+disable_weather_api_requests = false
 disable_png_output = true
 allow_pre_release_version = false
 enable_debug_logs = true

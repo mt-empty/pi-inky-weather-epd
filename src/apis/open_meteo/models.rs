@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
+use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Utc};
 use serde::{self, Deserialize, Deserializer};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -263,8 +263,25 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
                     }
                 };
 
+                let now = Local::now();
+                let offset = now.offset().local_minus_utc(); // seconds east of UTC
+                println!("offset hours: {}", offset as f32 / 3600.0);
+
+                // for +GMT timezones, we add offset to current_time
+                // for -GMT timezones, we subtract offset from current_time
+
+                let date_with_time = if offset >= 0 {
+                    // Positive offset: add to current_time
+                    let adjusted_time = current_time + chrono::Duration::seconds(-offset as i64);
+                    date.and_time(adjusted_time).and_utc()
+                } else {
+                    // Negative offset: subtract from current_time
+                    let adjusted_time = current_time - chrono::Duration::seconds((offset) as i64);
+                    date.and_time(adjusted_time).and_utc()
+                };
+
                 // Combine the date with current time component and treat as UTC
-                let date_with_time = date.and_time(current_time).and_utc();
+                // let date_with_time = date.and_time(current_time).and_utc();
                 let cloud_cover = response.daily.cloud_cover_mean.get(i).and_then(|&c| c);
 
                 crate::domain::models::DailyForecast {

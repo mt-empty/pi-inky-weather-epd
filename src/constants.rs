@@ -10,11 +10,14 @@ pub const HOURLY_CACHE_SUFFIX: &str = "hourly_forecast.json";
 pub const DAILY_CACHE_SUFFIX: &str = "daily_forecast.json";
 pub const CACHE_SUFFIX: &str = "forecast.json";
 
-const BASE_WEATHER_URL: &str = "https://api.weather.bom.gov.au/v1/locations";
 const NOT_AVAILABLE_ICON_NAME: &str = "not-available.svg";
 
 fn build_forecast_url(frequency: &str) -> Url {
-    let mut u = Url::parse(BASE_WEATHER_URL).expect("Failed to construct forecast endpoint URL");
+    // Allow test override via environment variable (for wiremock/fixtures)
+    let base_url = std::env::var("BOM_BASE_URL")
+        .unwrap_or_else(|_| "https://api.weather.bom.gov.au/v1/locations".to_string());
+
+    let mut u = Url::parse(&base_url).expect("Failed to construct forecast endpoint URL");
 
     let geohash = encode(
         CONFIG.api.longitude.into_inner(),
@@ -38,8 +41,13 @@ pub static OPEN_METEO_ENDPOINT: Lazy<Url> = Lazy::new(|| {
     // even when crossing GMT boundary. Without past_days=1, users in western timezones lose
     // access to "today's" forecast after UTC midnight (even though their local day hasn't ended).
     // past_days=1 returns yesterday+today+next 14 days, ensuring current day data is always available.
+
+    // Allow test override via environment variable (for wiremock)
+    let base_url = std::env::var("OPEN_METEO_BASE_URL")
+        .unwrap_or_else(|_| "https://api.open-meteo.com".to_string());
+
     let url = format!(
-        "https://api.open-meteo.com/v1/forecast?\
+        "{}/v1/forecast?\
         latitude={}&\
         longitude={}&\
         daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,cloud_cover_mean&\
@@ -48,6 +56,7 @@ pub static OPEN_METEO_ENDPOINT: Lazy<Url> = Lazy::new(|| {
         forecast_days=14&\
         past_days=1&\
         timezone=UTC",
+        base_url,
         CONFIG.api.latitude,
         CONFIG.api.longitude
     );

@@ -25,7 +25,8 @@
         "uv_index": "",
         "wind_speed_10m": "km/h",
         "wind_gusts_10m": "km/h",
-        "relative_humidity_2m": "%"
+        "relative_humidity_2m": "%",
+        "cloud_cover": "%"
     },
     "hourly": {
         "time": [
