@@ -9,8 +9,9 @@ use crate::{
     weather::icons::{Icon, SunPositionIconName},
     CONFIG,
 };
-use chrono::{DateTime, Local, Timelike, Utc};
+use chrono::{DateTime, Local, NaiveDate, Timelike, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use super::chart::{CurveType, ElementVisibility, FontStyle};
 
@@ -251,6 +252,97 @@ impl ContextBuilder {
             .join("\n        ")
     }
 
+    /// Defines the 7-day forecast window starting from today.
+    /// Returns a vector of NaiveDate representing [today, today+1, ..., today+6]
+    fn define_daily_forecast_window(today: NaiveDate) -> Vec<NaiveDate> {
+        (0..7)
+            .map(|offset| today + chrono::Days::new(offset))
+            .collect()
+    }
+
+    /// Builds a HashMap mapping NaiveDate to DailyForecast references.
+    /// Skips forecasts with None dates.
+    fn build_date_to_forecast_map(
+        daily_forecast_data: &[DailyForecast],
+    ) -> HashMap<NaiveDate, &DailyForecast> {
+        daily_forecast_data
+            .iter()
+            .filter_map(|forecast| {
+                forecast
+                    .date
+                    .map(|dt| (dt.with_timezone(&Local).date_naive(), forecast))
+            })
+            .collect()
+    }
+
+    /// Assigns daily forecast data to the appropriate context fields.
+    /// Handles missing data by setting "NA" defaults.
+    fn assign_day_data(&mut self, day_index: i32, forecast: Option<&DailyForecast>) {
+        let min_temp_value = forecast
+            .and_then(|f| f.temp_min)
+            .map_or("NA".to_string(), |temp| temp.to_string());
+        let max_temp_value = forecast
+            .and_then(|f| f.temp_max)
+            .map_or("NA".to_string(), |temp| temp.to_string());
+        let icon_value = forecast.map_or_else(
+            || NOT_AVAILABLE_ICON_PATH.to_string_lossy().to_string(),
+            |f| f.get_icon_path(),
+        );
+
+        match day_index {
+            0 => {
+                // Day 0 (today) - show sunrise/sunset times
+                if let Some(forecast) = forecast {
+                    if let Some(ref astro) = forecast.astronomical {
+                        self.context.sunrise_time = astro
+                            .sunrise_time
+                            .unwrap_or_default()
+                            .with_timezone(&Local)
+                            .format("%H:%M")
+                            .to_string();
+                        self.context.sunset_time = astro
+                            .sunset_time
+                            .unwrap_or_default()
+                            .with_timezone(&Local)
+                            .format("%H:%M")
+                            .to_string();
+                    }
+                }
+            }
+            1 => {
+                self.context.day2_mintemp = min_temp_value;
+                self.context.day2_maxtemp = max_temp_value;
+                self.context.day2_icon = icon_value;
+            }
+            2 => {
+                self.context.day3_mintemp = min_temp_value;
+                self.context.day3_maxtemp = max_temp_value;
+                self.context.day3_icon = icon_value;
+            }
+            3 => {
+                self.context.day4_mintemp = min_temp_value;
+                self.context.day4_maxtemp = max_temp_value;
+                self.context.day4_icon = icon_value;
+            }
+            4 => {
+                self.context.day5_mintemp = min_temp_value;
+                self.context.day5_maxtemp = max_temp_value;
+                self.context.day5_icon = icon_value;
+            }
+            5 => {
+                self.context.day6_mintemp = min_temp_value;
+                self.context.day6_maxtemp = max_temp_value;
+                self.context.day6_icon = icon_value;
+            }
+            6 => {
+                self.context.day7_mintemp = min_temp_value;
+                self.context.day7_maxtemp = max_temp_value;
+                self.context.day7_icon = icon_value;
+            }
+            _ => {}
+        }
+    }
+
     pub fn with_daily_forecast_data(
         &mut self,
         daily_forecast_data: Vec<DailyForecast>,
@@ -266,59 +358,26 @@ impl ContextBuilder {
         // Pre-populate day names from local calendar (tomorrow through +6 days)
         self.initialize_day_names(clock.now_local());
 
-        // day_index tracks which forecast day we're filling (0-6 for 7 days)
-        // day_index 0 = today (sunrise/sunset only), indices 1-6 = tomorrow through +5 days (day2-day7)
-        let mut day_index: i32 = 0;
+        // Define the 7-day forecast window (today through +6 days)
+        let forecast_window = Self::define_daily_forecast_window(today_local_date);
 
-        for day in daily_forecast_data {
-            if let Some(forecast_datetime) = day.date {
-                // Extract date for comparison
-                let forecast_local_date =
-                    forecast_datetime.with_timezone(&chrono::Local).date_naive();
+        // Build date-to-forecast mapping for O(1) lookup
+        let forecast_map = Self::build_date_to_forecast_map(&daily_forecast_data);
 
-                // Skip any dates before today (past dates)
-                if forecast_local_date < today_local_date {
-                    logger::debug(format!(
-                        "Skipping past date in daily forecast: {forecast_local_date}"
-                    ));
-                    continue;
-                }
+        // Track how many days are missing
+        let mut missing_days_count = 0;
 
-                // Once we have 7 days, stop processing
-                if day_index >= 7 {
-                    logger::debug("Reached 7 days of daily forecast, stopping further processing");
-                    break;
-                }
+        // Iterate over expected window dates and map to forecasts
+        for (day_index, expected_date) in forecast_window.iter().enumerate() {
+            let forecast = forecast_map.get(expected_date);
 
-                // Validate that this forecast date matches expected day (today + day_index)
-                let expected_date = today_local_date + chrono::Days::new(day_index as u64);
-                if forecast_local_date != expected_date {
-                    logger::warning(format!(
-                        "Daily forecast date mismatch: got {} but expected {} (day_index: {})",
-                        forecast_local_date, expected_date, day_index
-                    ));
-                    // Skip this entry and continue looking for the correct date
-                    continue;
-                }
-
-                // Warn if date is beyond our 7-day window
-                if forecast_local_date >= today_local_date + chrono::Days::new(7) {
-                    logger::warning(format!(
-                        "Reached day beyond 7-day forecast window: {forecast_local_date}"
-                    ));
-                }
-            } else {
-                logger::warning("Daily forecast entry missing date, skipping");
-                continue;
+            if forecast.is_none() {
+                missing_days_count += 1;
+                logger::warning(format!(
+                    "Missing daily forecast for date: {} (day_index: {})",
+                    expected_date, day_index
+                ));
             }
-
-            let min_temp_value = day
-                .temp_min
-                .map_or("NA".to_string(), |temp| temp.to_string());
-            let max_temp_value = day
-                .temp_max
-                .map_or("NA".to_string(), |temp| temp.to_string());
-            let icon_value = day.get_icon_path();
 
             let day_name = match day_index {
                 0 => "Today",
@@ -331,69 +390,26 @@ impl ContextBuilder {
                 _ => "Unknown",
             };
 
-            logger::detail(format!(
-                "{day_name} ({}) - Max {max_temp_value}°, Min {min_temp_value}°",
-                day.date.unwrap()
-            ));
-
-            match day_index {
-                0 => {
-                    // Day 0 (today) - show sunrise/sunset times
-                    if let Some(ref astro) = day.astronomical {
-                        self.context.sunrise_time = astro
-                            .sunrise_time
-                            .unwrap_or_default()
-                            .with_timezone(&Local)
-                            .format("%H:%M")
-                            .to_string();
-                        self.context.sunset_time = astro
-                            .sunset_time
-                            .unwrap_or_default()
-                            .with_timezone(&Local)
-                            .format("%H:%M")
-                            .to_string();
-                    }
-                }
-                1 => {
-                    self.context.day2_mintemp = min_temp_value;
-                    self.context.day2_maxtemp = max_temp_value;
-                    self.context.day2_icon = icon_value;
-                }
-                2 => {
-                    self.context.day3_mintemp = min_temp_value;
-                    self.context.day3_maxtemp = max_temp_value;
-                    self.context.day3_icon = icon_value;
-                }
-                3 => {
-                    self.context.day4_mintemp = min_temp_value;
-                    self.context.day4_maxtemp = max_temp_value;
-                    self.context.day4_icon = icon_value;
-                }
-                4 => {
-                    self.context.day5_mintemp = min_temp_value;
-                    self.context.day5_maxtemp = max_temp_value;
-                    self.context.day5_icon = icon_value;
-                }
-                5 => {
-                    self.context.day6_mintemp = min_temp_value;
-                    self.context.day6_maxtemp = max_temp_value;
-                    self.context.day6_icon = icon_value;
-                }
-                6 => {
-                    self.context.day7_mintemp = min_temp_value;
-                    self.context.day7_maxtemp = max_temp_value;
-                    self.context.day7_icon = icon_value;
-                }
-                _ => {}
+            if let Some(day) = forecast {
+                let min_temp = day.temp_min.map_or("NA".to_string(), |t| t.to_string());
+                let max_temp = day.temp_max.map_or("NA".to_string(), |t| t.to_string());
+                logger::detail(format!(
+                    "{day_name} ({expected_date}) - Max {max_temp}°, Min {min_temp}°"
+                ));
+            } else {
+                logger::detail(format!("{day_name} ({expected_date}) - No data available"));
             }
 
-            day_index += 1;
+            // Assign data (handles missing data with "NA" defaults)
+            self.assign_day_data(day_index as i32, forecast.copied());
         }
 
-        // Verify we got all 7 days (indices 0-6 means day_index reaches 7)
-        if day_index < 7 {
-            let details = "Warning: Less than 7 days of daily forecast data, Using Incomplete data"
-                .to_string();
+        // Raise single IncompleteData error if any days are missing
+        if missing_days_count > 0 {
+            let details = format!(
+                "Missing {} day(s) of daily forecast data, using incomplete data",
+                missing_days_count
+            );
             self.with_validation_error(DashboardError::IncompleteData { details })
         } else {
             self

@@ -65,7 +65,7 @@ expression: svg
     <!-- Sunset/Sunrise Information -->
     <svg x="30" y="150">
         <image x="0" y="0" width="75" height="75" href="static/fill-svg-static/sunrise.svg" />
-        <text x="12" y="70" text-anchor="start" font-size="20" fill="black">07:20</text>
+        <text x="12" y="70" text-anchor="start" font-size="20" fill="black">07:21</text>
 
         <image x="70" y="0" width="75" height="75" href="static/fill-svg-static/sunset.svg" />
         <text x="83" y="70" text-anchor="start" font-size="20" fill="black">16:38</text>
@@ -136,17 +136,17 @@ expression: svg
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Mon</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day.svg" />
         <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">8°</tspan>
+            <tspan x="52" text-anchor="end">0°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">-1°</tspan>
+            <tspan x="52" text-anchor="start">-3°</tspan>
         </text>
     </svg>
 
     <svg x="373" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Tue</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day.svg" />
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">0°</tspan>
+            <tspan x="52" text-anchor="end">1°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
             <tspan x="52" text-anchor="start">-3°</tspan>
         </text>
@@ -158,7 +158,7 @@ expression: svg
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">1°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">-3°</tspan>
+            <tspan x="52" text-anchor="start">-5°</tspan>
         </text>
     </svg>
 
@@ -166,7 +166,7 @@ expression: svg
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Thu</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">1°</tspan>
+            <tspan x="52" text-anchor="end">-3°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
             <tspan x="52" text-anchor="start">-5°</tspan>
         </text>
@@ -174,21 +174,21 @@ expression: svg
 
     <svg x="616" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Fri</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
-        <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">-3°</tspan>
-            <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">-5°</tspan>
-        </text>
-    </svg>
-
-    <svg x="697" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Sat</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/partly-cloudy-day.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">-3°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
             <tspan x="52" text-anchor="start">-6°</tspan>
+        </text>
+    </svg>
+
+    <svg x="697" y="30">
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Sat</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
+        <text y="155" font-size="20" fill="black">
+            <tspan x="52" text-anchor="end">-3°</tspan>
+            <tspan x="52" text-anchor="middle">|</tspan>
+            <tspan x="52" text-anchor="start">-10°</tspan>
         </text>
     </svg>
 

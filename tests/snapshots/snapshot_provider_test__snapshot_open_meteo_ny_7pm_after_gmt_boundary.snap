@@ -1,6 +1,5 @@
 ---
 source: tests/snapshot_provider_test.rs
-assertion_line: 609
 expression: svg_content
 ---
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
@@ -54,22 +53,22 @@ expression: svg_content
     </text>
 
     <!-- Diagnostic Message -->
-    <svg x="580" y="0" width="200" height="100" text-anchor="middle" visibility="hidden">
+    <svg x="580" y="0" width="200" height="100" text-anchor="middle" visibility="visible">
         <!-- Cascading diagnostic icons (stacked by priority) -->
-        
+        <image x="63" y="-10" width="74" height="74" href="static/fill-svg-static/code-yellow.svg"/>
         <!-- Message for highest priority error only -->
         <text x="100" y="60" width="200" font-size="12">
-            NA
+            Incomplete Data
         </text>
     </svg>
 
     <!-- Sunset/Sunrise Information -->
     <svg x="30" y="150">
         <image x="0" y="0" width="75" height="75" href="static/fill-svg-static/sunrise.svg" />
-        <text x="12" y="70" text-anchor="start" font-size="20" fill="black">07:21</text>
+        <text x="12" y="70" text-anchor="start" font-size="20" fill="black">NA</text>
 
         <image x="70" y="0" width="75" height="75" href="static/fill-svg-static/sunset.svg" />
-        <text x="83" y="70" text-anchor="start" font-size="20" fill="black">16:38</text>
+        <text x="83" y="70" text-anchor="start" font-size="20" fill="black">NA</text>
     </svg>
 
     <g transform="translate(-15, 0)">
@@ -137,14 +136,24 @@ expression: svg_content
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Mon</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day.svg" />
         <text y="155" font-size="20" fill="black">
+            <tspan x="52" text-anchor="end">7°</tspan>
+            <tspan x="52" text-anchor="middle">|</tspan>
+            <tspan x="52" text-anchor="start">-1°</tspan>
+        </text>
+    </svg>
+
+    <svg x="373" y="30">
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Tue</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day.svg" />
+        <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">0°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
             <tspan x="52" text-anchor="start">-3°</tspan>
         </text>
     </svg>
 
-    <svg x="373" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Tue</text>
+    <svg x="454" y="30">
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Wed</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">1°</tspan>
@@ -153,21 +162,11 @@ expression: svg_content
         </text>
     </svg>
 
-    <svg x="454" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Wed</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
-        <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">1°</tspan>
-            <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">-5°</tspan>
-        </text>
-    </svg>
-
     <svg x="535" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Thu</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">-3°</tspan>
+            <tspan x="52" text-anchor="end">1°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
             <tspan x="52" text-anchor="start">-5°</tspan>
         </text>
@@ -177,19 +176,19 @@ expression: svg_content
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Fri</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">-1°</tspan>
+            <tspan x="52" text-anchor="end">-3°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">-6°</tspan>
+            <tspan x="52" text-anchor="start">-5°</tspan>
         </text>
     </svg>
 
     <svg x="697" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Sat</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/partly-cloudy-day.svg" />
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">-2°</tspan>
+            <tspan x="52" text-anchor="end">-1°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">-8°</tspan>
+            <tspan x="52" text-anchor="start">-6°</tspan>
         </text>
     </svg>
 
