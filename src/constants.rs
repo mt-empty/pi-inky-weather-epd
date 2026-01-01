@@ -10,11 +10,14 @@ pub const HOURLY_CACHE_SUFFIX: &str = "hourly_forecast.json";
 pub const DAILY_CACHE_SUFFIX: &str = "daily_forecast.json";
 pub const CACHE_SUFFIX: &str = "forecast.json";
 
-const BASE_WEATHER_URL: &str = "https://api.weather.bom.gov.au/v1/locations";
 const NOT_AVAILABLE_ICON_NAME: &str = "not-available.svg";
 
 fn build_forecast_url(frequency: &str) -> Url {
-    let mut u = Url::parse(BASE_WEATHER_URL).expect("Failed to construct forecast endpoint URL");
+    // Allow test override via environment variable (for wiremock/fixtures)
+    let base_url = std::env::var("BOM_BASE_URL")
+        .unwrap_or_else(|_| "https://api.weather.bom.gov.au/v1/locations".to_string());
+
+    let mut u = Url::parse(&base_url).expect("Failed to construct forecast endpoint URL");
 
     let geohash = encode(
         CONFIG.api.longitude.into_inner(),

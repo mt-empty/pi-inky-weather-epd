@@ -317,8 +317,9 @@ async fn snapshot_open_meteo_early_morning() {
 /// cargo insta review
 /// ```
 /// Note: Double underscore __ is used as separator for nested config keys (api.provider -> API__PROVIDER)
-#[test]
-fn snapshot_bom_dashboard() {
+#[tokio::test]
+#[serial_test::serial]
+async fn snapshot_bom_dashboard() {
     // Skip test if Open-Meteo provider is configured (test is provider-specific)
     if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
         eprintln!(
@@ -328,38 +329,53 @@ fn snapshot_bom_dashboard() {
         return;
     }
 
+    // Start wiremock server with BOM fixture data
+    let mock_server = wiremock_setup::setup_bom_mock(
+        "tests/fixtures/bom_daily_forecast.json",
+        "tests/fixtures/bom_hourly_forecast.json",
+    )
+    .await;
+
+    // Override BOM base URL to point to mock server
+    // Note: BOM URLs are constructed as {base_url}/{geohash}/forecasts/{frequency}
+    std::env::set_var(
+        "BOM_BASE_URL",
+        format!("{}/v1/locations", mock_server.uri()),
+    );
+
     // Fixed time: Oct 25, 2025, 10:00 AM UTC
     // In Melbourne AEDT (UTC+11): Oct 25, 2025, 9:00 PM
     // This is just before the first hourly forecast (11:00 UTC) in the fixture
     let clock =
         FixedClock::from_rfc3339("2025-10-25T10:00:00Z").expect("Failed to create fixed clock");
 
-    // Generate the dashboard with BOM provider
-    let input_template_name = &CONFIG.misc.template_path;
-    let output_svg_name = std::path::Path::new("tests/output/snapshot_bom_dashboard.svg");
-    let result = generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name);
-    assert!(
-        result.is_ok(),
-        "Failed to generate BOM dashboard: {:?}",
-        result.err()
-    );
+    let output_svg_name = Path::new("tests/output/snapshot_bom_dashboard.svg");
 
-    // Read the generated SVG
-    let svg_content =
-        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
+    // Run sync dashboard generation in blocking task
+    let svg_content = tokio::task::spawn_blocking(move || {
+        let result = generate_weather_dashboard_injection(
+            &clock,
+            &CONFIG.misc.template_path,
+            output_svg_name,
+        );
+        assert!(
+            result.is_ok(),
+            "Dashboard generation failed: {:?}",
+            result.err()
+        );
 
-    // Verify SVG is not empty
-    assert!(!svg_content.is_empty(), "Generated SVG should not be empty");
-    assert!(
-        svg_content.contains("<svg"),
-        "Generated file should be valid SVG"
-    );
+        let svg = fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
+        assert!(!svg.is_empty(), "Generated SVG should not be empty");
+        assert!(svg.contains("<svg"), "Generated file should be valid SVG");
+        svg
+    })
+    .await
+    .expect("Task panicked");
+
+    // Cleanup
+    std::env::remove_var("BOM_BASE_URL");
 
     // Snapshot the SVG structure
-    // This captures the complete dashboard including:
-    // - Weather data from BOM fixtures
-    // - Rendered at fixed time (9:00 AM Melbourne)
-    // - All graph paths, labels, icons
     insta::assert_snapshot!(svg_content);
 }
 
@@ -369,8 +385,9 @@ fn snapshot_bom_dashboard() {
 ///
 /// **Edge Case**: Midnight UTC boundary for BOM provider.
 /// Verifies BOM-specific parsing handles date transitions correctly.
-#[test]
-fn snapshot_bom_midnight_boundary() {
+#[tokio::test]
+#[serial_test::serial]
+async fn snapshot_bom_midnight_boundary() {
     if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
         eprintln!(
             "Skipping BOM midnight test - provider is set to '{}'",
@@ -379,23 +396,41 @@ fn snapshot_bom_midnight_boundary() {
         return;
     }
 
+    let mock_server = wiremock_setup::setup_bom_mock(
+        "tests/fixtures/bom_daily_forecast.json",
+        "tests/fixtures/bom_hourly_forecast.json",
+    )
+    .await;
+    std::env::set_var(
+        "BOM_BASE_URL",
+        format!("{}/v1/locations", mock_server.uri()),
+    );
+
     // Midnight UTC on Oct 26 = 11:00 AM Melbourne
     let clock =
         FixedClock::from_rfc3339("2025-10-26T00:00:00Z").expect("Failed to create fixed clock");
 
-    let input_template_name = &CONFIG.misc.template_path;
-    let output_svg_name = std::path::Path::new("tests/output/snapshot_bom_midnight_boundary.svg");
-    let result = generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name);
-    assert!(
-        result.is_ok(),
-        "Dashboard generation failed: {:?}",
-        result.err()
-    );
+    let output_svg_name = Path::new("tests/output/snapshot_bom_midnight_boundary.svg");
 
-    let svg_content =
-        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
+    let svg_content = tokio::task::spawn_blocking(move || {
+        let result = generate_weather_dashboard_injection(
+            &clock,
+            &CONFIG.misc.template_path,
+            output_svg_name,
+        );
+        assert!(
+            result.is_ok(),
+            "Dashboard generation failed: {:?}",
+            result.err()
+        );
+        let svg = fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
+        assert!(!svg.is_empty() && svg.contains("<svg"));
+        svg
+    })
+    .await
+    .expect("Task panicked");
 
-    assert!(!svg_content.is_empty() && svg_content.contains("<svg"));
+    std::env::remove_var("BOM_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }
 
@@ -405,8 +440,9 @@ fn snapshot_bom_midnight_boundary() {
 ///
 /// **Edge Case**: Tests BOM provider at local midnight.
 /// Verifies daily forecast alignment with Australian calendar days.
-#[test]
-fn snapshot_bom_local_midnight() {
+#[tokio::test]
+#[serial_test::serial]
+async fn snapshot_bom_local_midnight() {
     if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
         eprintln!(
             "Skipping BOM local midnight test - provider is set to '{}'",
@@ -415,23 +451,41 @@ fn snapshot_bom_local_midnight() {
         return;
     }
 
+    let mock_server = wiremock_setup::setup_bom_mock(
+        "tests/fixtures/bom_daily_forecast.json",
+        "tests/fixtures/bom_hourly_forecast.json",
+    )
+    .await;
+    std::env::set_var(
+        "BOM_BASE_URL",
+        format!("{}/v1/locations", mock_server.uri()),
+    );
+
     // 13:00 UTC = Midnight Melbourne (Oct 26)
     let clock =
         FixedClock::from_rfc3339("2025-10-25T13:00:00Z").expect("Failed to create fixed clock");
 
-    let input_template_name = &CONFIG.misc.template_path;
-    let output_svg_name = std::path::Path::new("tests/output/snapshot_bom_local_midnight.svg");
-    let result = generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name);
-    assert!(
-        result.is_ok(),
-        "Dashboard generation failed: {:?}",
-        result.err()
-    );
+    let output_svg_name = Path::new("tests/output/snapshot_bom_local_midnight.svg");
 
-    let svg_content =
-        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
+    let svg_content = tokio::task::spawn_blocking(move || {
+        let result = generate_weather_dashboard_injection(
+            &clock,
+            &CONFIG.misc.template_path,
+            output_svg_name,
+        );
+        assert!(
+            result.is_ok(),
+            "Dashboard generation failed: {:?}",
+            result.err()
+        );
+        let svg = fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
+        assert!(!svg.is_empty() && svg.contains("<svg"));
+        svg
+    })
+    .await
+    .expect("Task panicked");
 
-    assert!(!svg_content.is_empty() && svg_content.contains("<svg"));
+    std::env::remove_var("BOM_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }
 
@@ -444,8 +498,9 @@ fn snapshot_bom_local_midnight() {
 /// - Hourly graph includes sunrise hour
 /// - Wind speed conversion (knots to km/h) is accurate
 /// - Current conditions reflect early morning state
-#[test]
-fn snapshot_bom_early_morning() {
+#[tokio::test]
+#[serial_test::serial]
+async fn snapshot_bom_early_morning() {
     if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
         eprintln!(
             "Skipping BOM early morning test - provider is set to '{}'",
@@ -454,23 +509,41 @@ fn snapshot_bom_early_morning() {
         return;
     }
 
+    let mock_server = wiremock_setup::setup_bom_mock(
+        "tests/fixtures/bom_daily_forecast.json",
+        "tests/fixtures/bom_hourly_forecast.json",
+    )
+    .await;
+    std::env::set_var(
+        "BOM_BASE_URL",
+        format!("{}/v1/locations", mock_server.uri()),
+    );
+
     // 19:00 UTC = 6:00 AM Melbourne
     let clock =
         FixedClock::from_rfc3339("2025-10-25T19:00:00Z").expect("Failed to create fixed clock");
 
-    let input_template_name = &CONFIG.misc.template_path;
-    let output_svg_name = std::path::Path::new("tests/output/snapshot_bom_early_morning.svg");
-    let result = generate_weather_dashboard_injection(&clock, input_template_name, output_svg_name);
-    assert!(
-        result.is_ok(),
-        "Dashboard generation failed: {:?}",
-        result.err()
-    );
+    let output_svg_name = Path::new("tests/output/snapshot_bom_early_morning.svg");
 
-    let svg_content =
-        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
+    let svg_content = tokio::task::spawn_blocking(move || {
+        let result = generate_weather_dashboard_injection(
+            &clock,
+            &CONFIG.misc.template_path,
+            output_svg_name,
+        );
+        assert!(
+            result.is_ok(),
+            "Dashboard generation failed: {:?}",
+            result.err()
+        );
+        let svg = fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
+        assert!(!svg.is_empty() && svg.contains("<svg"));
+        svg
+    })
+    .await
+    .expect("Task panicked");
 
-    assert!(!svg_content.is_empty() && svg_content.contains("<svg"));
+    std::env::remove_var("BOM_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }
 
