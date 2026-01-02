@@ -80,7 +80,7 @@ fn test_open_meteo_array_consistency() {
             "temperature_2m": "°C",
             "apparent_temperature": "°C",
             "precipitation_probability": "%",
-            "precipitation": "mm",
+            "precipitation": "mm","snowfall":"cm",
             "uv_index": "",
             "wind_speed_10m": "km/h",
             "wind_gusts_10m": "km/h",
@@ -91,7 +91,7 @@ fn test_open_meteo_array_consistency() {
             "temperature_2m": [18.5, 19.2],
             "apparent_temperature": [15.1, 16.0],
             "precipitation_probability": [10, 20],
-            "precipitation": [0.0, 0.5],
+            "precipitation": [0.0, 0.5],"snowfall":[0.0,0.0],
             "uv_index": [0.0, 0.0],
             "wind_speed_10m": [15.0, 18.0],
             "wind_gusts_10m": [25.0, 30.0],
@@ -105,7 +105,7 @@ fn test_open_meteo_array_consistency() {
             "temperature_2m_max": "°C",
             "temperature_2m_min": "°C",
             "precipitation_sum": "mm",
-            "precipitation_probability_max": "%"
+            "precipitation_probability_max": "%","snowfall_sum":"cm"
         },
         "daily": {
             "time": ["2025-10-10"],
@@ -114,7 +114,7 @@ fn test_open_meteo_array_consistency() {
             "temperature_2m_max": [25.0],
             "temperature_2m_min": [12.0],
             "precipitation_sum": [2.5],
-            "precipitation_probability_max": [60]
+            "precipitation_probability_max": [60],"snowfall_sum":[0.0]
             ,"cloud_cover_mean": [55]
         }
     }"#;
@@ -151,7 +151,7 @@ fn test_open_meteo_extreme_values() {
             "temperature_2m": "°C",
             "apparent_temperature": "°C",
             "precipitation_probability": "%",
-            "precipitation": "mm",
+            "precipitation": "mm","snowfall":"cm",
             "uv_index": "",
             "wind_speed_10m": "km/h",
             "wind_gusts_10m": "km/h",
@@ -162,7 +162,7 @@ fn test_open_meteo_extreme_values() {
             "temperature_2m": [48.5],
             "apparent_temperature": [55.0],
             "precipitation_probability": [100],
-            "precipitation": [150.0],
+            "precipitation": [150.0],"snowfall":[0.0],
             "uv_index": [15],
             "wind_speed_10m": [120.0],
             "wind_gusts_10m": [180.0],
@@ -176,7 +176,7 @@ fn test_open_meteo_extreme_values() {
             "temperature_2m_max": "°C",
             "temperature_2m_min": "°C",
             "precipitation_sum": "mm",
-            "precipitation_probability_max": "%"
+            "precipitation_probability_max": "%","snowfall_sum":"cm"
         },
         "daily": {
             "time": ["2025-10-10"],
@@ -185,7 +185,7 @@ fn test_open_meteo_extreme_values() {
             "temperature_2m_max": [50.0],
             "temperature_2m_min": [-10.0],
             "precipitation_sum": [200.0],
-            "precipitation_probability_max": [100]
+            "precipitation_probability_max": [100],"snowfall_sum":[0.0]
             ,"cloud_cover_mean": [98]
         }
     }"#;
@@ -241,7 +241,7 @@ fn test_open_meteo_zero_precipitation() {
             "temperature_2m": "°C",
             "apparent_temperature": "°C",
             "precipitation_probability": "%",
-            "precipitation": "mm",
+            "precipitation": "mm","snowfall":"cm",
             "uv_index": "",
             "wind_speed_10m": "km/h",
             "wind_gusts_10m": "km/h",
@@ -252,7 +252,7 @@ fn test_open_meteo_zero_precipitation() {
             "temperature_2m": [20.0],
             "apparent_temperature": [18.0],
             "precipitation_probability": [0],
-            "precipitation": [0.0],
+            "precipitation": [0.0],"snowfall":[0.0],
             "uv_index": [5.0],
             "wind_speed_10m": [10.0],
             "wind_gusts_10m": [15.0],
@@ -266,7 +266,7 @@ fn test_open_meteo_zero_precipitation() {
             "temperature_2m_max": "°C",
             "temperature_2m_min": "°C",
             "precipitation_sum": "mm",
-            "precipitation_probability_max": "%"
+            "precipitation_probability_max": "%","snowfall_sum":"cm"
         },
         "daily": {
             "time": ["2025-10-10"],
@@ -275,7 +275,7 @@ fn test_open_meteo_zero_precipitation() {
             "temperature_2m_max": [25.0],
             "temperature_2m_min": [15.0],
             "precipitation_sum": [0.0],
-            "precipitation_probability_max": [0]
+            "precipitation_probability_max": [0],"snowfall_sum":[0.0]
             ,"cloud_cover_mean": [5]
         }
     }"#;
