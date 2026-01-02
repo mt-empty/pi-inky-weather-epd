@@ -77,7 +77,8 @@ pub static OPEN_METEO_DAILY_ENDPOINT: Lazy<Url> = Lazy::new(|| {
         "{}/v1/forecast?\
         latitude={}&\
         longitude={}&\
-        daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,cloud_cover_mean&\
+        daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,snowfall_sum,cloud_cover_mean&\
+        current=is_day&\
         forecast_days=14&\
         past_days=1&\
         timezone=auto",

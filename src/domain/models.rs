@@ -134,6 +134,7 @@ pub struct Precipitation {
     pub chance: Option<u16>,
     pub amount_min: Option<u16>,
     pub amount_max: Option<u16>,
+    pub snowfall_amount: Option<u16>,
 }
 
 impl Precipitation {
@@ -142,6 +143,21 @@ impl Precipitation {
             chance,
             amount_min,
             amount_max,
+            snowfall_amount: None,
+        }
+    }
+
+    pub fn new_with_snowfall(
+        chance: Option<u16>,
+        amount_min: Option<u16>,
+        amount_max: Option<u16>,
+        snowfall_amount: Option<u16>,
+    ) -> Self {
+        Self {
+            chance,
+            amount_min,
+            amount_max,
+            snowfall_amount,
         }
     }
 
