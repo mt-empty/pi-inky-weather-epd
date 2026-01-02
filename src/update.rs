@@ -316,9 +316,17 @@ pub fn update_app() -> Result<(), anyhow::Error> {
 
             result
         } else {
+            logger::info(format!(
+                "Update check skipped: {:.1} days since last check (threshold: {} days)",
+                elapsed.num_days(),
+                CONFIG.release.update_interval_days
+            ));
             logger::debug(format!(
-                "{:.1} days have passed since last check, skipping update.",
-                elapsed.num_days()
+                "Last checked: {}, Next check after: {}",
+                last_check_utc.format("%Y-%m-%d %H:%M UTC"),
+                (last_check_utc
+                    + Duration::days(CONFIG.release.update_interval_days.into_inner().into()))
+                .format("%Y-%m-%d %H:%M UTC")
             ));
             // We delete the backup link here because we couldn't delete it in the update function
             // This is a workaround for the fact that we can't delete the file while it's in use.
