@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use std::{
     fmt::{self, Display},
     ops::Deref,
@@ -153,10 +153,12 @@ impl Precipitation {
 }
 
 /// Domain model for astronomical data
+/// Sunrise/sunset times are stored as NaiveDateTime (timezone-agnostic wall-clock times)
+/// since they represent the actual clock time at the location, not a UTC timestamp
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Astronomical {
-    pub sunrise_time: Option<DateTime<Utc>>,
-    pub sunset_time: Option<DateTime<Utc>>,
+    pub sunrise_time: Option<NaiveDateTime>,
+    pub sunset_time: Option<NaiveDateTime>,
 }
 
 /// Domain model for hourly weather forecast
@@ -224,8 +226,13 @@ impl From<crate::apis::bom::models::DailyEntry> for DailyForecast {
                 .rain
                 .map(|r| Precipitation::new(r.chance, r.amount.min, r.amount.max)),
             astronomical: bom.astronomical.map(|a| Astronomical {
-                sunrise_time: a.sunrise_time,
-                sunset_time: a.sunset_time,
+                // BOM returns UTC times, convert to local NaiveDateTime for display
+                sunrise_time: a
+                    .sunrise_time
+                    .map(|dt| dt.with_timezone(&chrono::Local).naive_local()),
+                sunset_time: a
+                    .sunset_time
+                    .map(|dt| dt.with_timezone(&chrono::Local).naive_local()),
             }),
             cloud_cover: None, // BOM API doesn't provide cloud cover data
         }

@@ -30,6 +30,7 @@ impl<T> FetchResult<T> {
     }
 
     /// Transform the data inside FetchResult while preserving the warning state
+    #[allow(dead_code)] // Utility method - not currently used but useful for future transformations
     pub fn map<U, F>(self, f: F) -> FetchResult<U>
     where
         F: FnOnce(T) -> U,
