@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use serde::{self, Deserialize, Deserializer};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -208,9 +208,6 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
             response.daily.time.len()
         ));
 
-        // Extract time component from current time in API response
-        let current_time = response.current.time.time();
-
         response
             .daily
             .time
@@ -263,28 +260,12 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
                     }
                 };
 
-                let now = Local::now();
-                let offset = now.offset().local_minus_utc(); // seconds east of UTC
-
-                // for +GMT timezones, we add offset to current_time
-                // for -GMT timezones, we subtract offset from current_time
-
-                let date_with_time = if offset >= 0 {
-                    // Positive offset: add to current_time
-                    let adjusted_time = current_time + chrono::Duration::seconds(-offset as i64);
-                    date.and_time(adjusted_time).and_utc()
-                } else {
-                    // Negative offset: subtract from current_time
-                    let adjusted_time = current_time - chrono::Duration::seconds((offset) as i64);
-                    date.and_time(adjusted_time).and_utc()
-                };
-
-                // Combine the date with current time component and treat as UTC
-                // let date_with_time = date.and_time(current_time).and_utc();
                 let cloud_cover = response.daily.cloud_cover_mean.get(i).and_then(|&c| c);
 
                 crate::domain::models::DailyForecast {
-                    date: Some(date_with_time),
+                    // Use NaiveDate directly - represents calendar date regardless of timezone
+                    // API's "2025-12-28" = weather for Dec 28, matches user's local Dec 28
+                    date: Some(*date),
                     temp_max,
                     temp_min,
                     precipitation,
@@ -336,31 +317,4 @@ where
                 .map_err(serde::de::Error::custom)
         })
         .collect()
-}
-
-pub fn deserialize_vec_daily_datetime<'de, D>(
-    deserializer: D,
-) -> Result<Vec<DateTime<Utc>>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    // Deserialize the input as a vector of strings
-    let date_strings: Vec<String> = Deserialize::deserialize(deserializer)?;
-
-    // Map the date strings to DateTime<Utc> with noon UTC
-    // Using 12:00:00Z (noon) ensures the date represents the correct calendar day
-    // regardless of local timezone offset (+/- 12 hours max)
-    let datetime_vec: Result<Vec<DateTime<Utc>>, D::Error> = date_strings
-        .into_iter()
-        .map(|date_str| {
-            // Combine the date string with noon UTC
-            let datetime_str = format!("{date_str}T12:00:00Z");
-            // Parse the datetime string
-            NaiveDateTime::parse_from_str(&datetime_str, "%Y-%m-%dT%H:%M:%SZ")
-                .map(|naive| DateTime::from_naive_utc_and_offset(naive, Utc))
-                .map_err(serde::de::Error::custom) // Convert parsing error to serde error
-        })
-        .collect(); // Collect the results into a single Result
-
-    datetime_vec
 }

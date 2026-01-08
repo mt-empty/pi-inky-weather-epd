@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use std::{
     fmt::{self, Display},
     ops::Deref,
@@ -178,7 +178,8 @@ pub struct HourlyForecast {
 /// This is what the application works with, independent of any API
 #[derive(Debug, Clone)]
 pub struct DailyForecast {
-    pub date: Option<DateTime<Utc>>,
+    /// Calendar date (timezone-agnostic) representing the forecast day
+    pub date: Option<NaiveDate>,
     pub temp_max: Option<Temperature>,
     pub temp_min: Option<Temperature>,
     pub precipitation: Option<Precipitation>,
@@ -213,7 +214,10 @@ impl From<crate::apis::bom::models::HourlyForecast> for HourlyForecast {
 impl From<crate::apis::bom::models::DailyEntry> for DailyForecast {
     fn from(bom: crate::apis::bom::models::DailyEntry) -> Self {
         DailyForecast {
-            date: bom.date,
+            // BOM returns UTC timestamps - convert to local timezone to extract calendar date
+            date: bom
+                .date
+                .map(|dt| dt.with_timezone(&chrono::Local).date_naive()),
             temp_max: bom.temp_max.map(|t| t.into()),
             temp_min: bom.temp_min.map(|t| t.into()),
             precipitation: bom

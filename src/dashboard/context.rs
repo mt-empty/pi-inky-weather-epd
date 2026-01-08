@@ -268,9 +268,8 @@ impl ContextBuilder {
         daily_forecast_data
             .iter()
             .filter_map(|forecast| {
-                forecast
-                    .date
-                    .map(|dt| (dt.with_timezone(&Local).date_naive(), forecast))
+                // Date is already NaiveDate - no conversion needed
+                forecast.date.map(|date| (date, forecast))
             })
             .collect()
     }
@@ -361,7 +360,6 @@ impl ContextBuilder {
         // Define the 7-day forecast window (today through +6 days)
         let forecast_window = Self::define_daily_forecast_window(today_local_date);
 
-        // Build date-to-forecast mapping for O(1) lookup
         let forecast_map = Self::build_date_to_forecast_map(&daily_forecast_data);
 
         // Track how many days are missing

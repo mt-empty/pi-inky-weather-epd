@@ -2,7 +2,7 @@
 ///
 /// Verifies that daily forecast data with noon UTC timestamps correctly maps
 /// to local dates without shifting to the previous day in EST (UTC-5)
-use chrono::{TimeZone, Utc};
+use chrono::{NaiveDate, TimeZone, Utc};
 use pi_inky_weather_epd::{
     clock::FixedClock,
     configs::settings::TemperatureUnit,
@@ -32,7 +32,7 @@ fn test_with_daily_forecast_data_new_york_est() {
     // Dec 17-23, 2025: Wed, Thu, Fri, Sat, Sun, Mon, Tue
     let daily_forecasts = vec![
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 17, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 17).unwrap()),
             temp_max: Some(temp_c(9.9)),
             temp_min: Some(temp_c(-2.8)),
             precipitation: Some(Precipitation::new(Some(10), None, Some(0))),
@@ -43,7 +43,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 18, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 18).unwrap()),
             temp_max: Some(temp_c(10.3)),
             temp_min: Some(temp_c(-1.2)),
             precipitation: Some(Precipitation::new(Some(30), None, Some(1))),
@@ -51,7 +51,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 19, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 19).unwrap()),
             temp_max: Some(temp_c(11.5)),
             temp_min: Some(temp_c(1.9)),
             precipitation: Some(Precipitation::new(Some(50), None, Some(2))),
@@ -59,7 +59,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 20, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 20).unwrap()),
             temp_max: Some(temp_c(2.2)),
             temp_min: Some(temp_c(-1.1)),
             precipitation: None,
@@ -67,7 +67,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 21, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 21).unwrap()),
             temp_max: Some(temp_c(7.2)),
             temp_min: Some(temp_c(1.7)),
             precipitation: None,
@@ -75,7 +75,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 22, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 22).unwrap()),
             temp_max: Some(temp_c(5.0)),
             temp_min: Some(temp_c(-1.5)),
             precipitation: None,
@@ -83,7 +83,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 23, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 23).unwrap()),
             temp_max: Some(temp_c(1.3)),
             temp_min: Some(temp_c(-3.0)),
             precipitation: None,
@@ -157,7 +157,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
     // 2025-12-17T12:00:00Z → 2025-12-17T07:00:00-05:00 (same day!)
     let daily_forecasts = vec![
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 17, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 17).unwrap()),
             temp_max: Some(temp_c(10.0)),
             temp_min: Some(temp_c(-3.0)),
             precipitation: None,
@@ -165,7 +165,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 18, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 18).unwrap()),
             temp_max: Some(temp_c(11.0)),
             temp_min: Some(temp_c(-2.0)),
             precipitation: None,
@@ -173,7 +173,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 19, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 19).unwrap()),
             temp_max: Some(temp_c(12.0)),
             temp_min: Some(temp_c(-1.0)),
             precipitation: None,
@@ -181,7 +181,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 20, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 20).unwrap()),
             temp_max: Some(temp_c(13.0)),
             temp_min: Some(temp_c(0.0)),
             precipitation: None,
@@ -189,7 +189,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 21, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 21).unwrap()),
             temp_max: Some(temp_c(14.0)),
             temp_min: Some(temp_c(1.0)),
             precipitation: None,
@@ -197,7 +197,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 22, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 22).unwrap()),
             temp_max: Some(temp_c(15.0)),
             temp_min: Some(temp_c(2.0)),
             precipitation: None,
@@ -205,7 +205,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 23, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 23).unwrap()),
             temp_max: Some(temp_c(16.0)),
             temp_min: Some(temp_c(3.0)),
             precipitation: None,
@@ -250,7 +250,7 @@ fn test_skips_past_dates() {
     // Include past dates (Dec 17, 18) which should be skipped
     let daily_forecasts = vec![
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 17, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 17).unwrap()),
             temp_max: Some(temp_c(10.0)),
             temp_min: Some(temp_c(-3.0)),
             precipitation: None,
@@ -258,7 +258,7 @@ fn test_skips_past_dates() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 18, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 18).unwrap()),
             temp_max: Some(temp_c(11.0)),
             temp_min: Some(temp_c(-2.0)),
             precipitation: None,
@@ -266,7 +266,7 @@ fn test_skips_past_dates() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 19, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 19).unwrap()),
             temp_max: Some(temp_c(12.0)),
             temp_min: Some(temp_c(-1.0)),
             precipitation: None,
@@ -274,7 +274,7 @@ fn test_skips_past_dates() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 20, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 20).unwrap()),
             temp_max: Some(temp_c(13.0)),
             temp_min: Some(temp_c(0.0)),
             precipitation: None,
@@ -282,7 +282,7 @@ fn test_skips_past_dates() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 21, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 21).unwrap()),
             temp_max: Some(temp_c(14.0)),
             temp_min: Some(temp_c(1.0)),
             precipitation: None,
@@ -290,7 +290,7 @@ fn test_skips_past_dates() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 22, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 22).unwrap()),
             temp_max: Some(temp_c(15.0)),
             temp_min: Some(temp_c(2.0)),
             precipitation: None,
@@ -298,7 +298,7 @@ fn test_skips_past_dates() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 23, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 23).unwrap()),
             temp_max: Some(temp_c(16.0)),
             temp_min: Some(temp_c(3.0)),
             precipitation: None,
@@ -306,7 +306,7 @@ fn test_skips_past_dates() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 24, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 24).unwrap()),
             temp_max: Some(temp_c(17.0)),
             temp_min: Some(temp_c(4.0)),
             precipitation: None,
@@ -314,7 +314,7 @@ fn test_skips_past_dates() {
             cloud_cover: None,
         },
         DailyForecast {
-            date: Some(Utc.with_ymd_and_hms(2025, 12, 25, 12, 0, 0).unwrap()),
+            date: Some(NaiveDate::from_ymd_opt(2025, 12, 25).unwrap()),
             temp_max: Some(temp_c(18.0)),
             temp_min: Some(temp_c(5.0)),
             precipitation: None,
