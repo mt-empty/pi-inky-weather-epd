@@ -207,7 +207,7 @@ fn test_fallback_with_precipitation_override() {
     // Test fallback behaviour: low precipitation chance + drizzle amount
     // Median of 0-5mm = 2.5mm which is in None range (0-2.0), so no override needed
     let forecast = DailyForecast {
-        date: Some(Utc::now()),
+        date: Some(chrono::Local::now().date_naive()),
         temp_max: Some(Temperature::celsius(25.0)),
         temp_min: Some(Temperature::celsius(15.0)),
         precipitation: Some(Precipitation::new(
@@ -309,7 +309,7 @@ fn test_zero_chance_zero_amount_produces_clear() {
     // Edge case: No precipitation at all
 
     let forecast = DailyForecast {
-        date: Some(Utc::now()),
+        date: Some(chrono::Local::now().date_naive()),
         temp_max: Some(Temperature::celsius(28.0)),
         temp_min: Some(Temperature::celsius(18.0)),
         precipitation: Some(Precipitation::new(

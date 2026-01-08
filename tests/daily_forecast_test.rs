@@ -47,7 +47,7 @@ fn create_mock_daily_forecast(start_date: NaiveDate, num_days: usize) -> Vec<Dai
             let datetime = date.and_hms_opt(6, 30, 0).unwrap().and_utc();
 
             DailyForecast {
-                date: Some(datetime),
+                date: Some(date),
                 temp_max: Some(Temperature::celsius(20.0 + i as f32)),
                 temp_min: Some(Temperature::celsius(10.0 + i as f32)),
                 precipitation: None,
