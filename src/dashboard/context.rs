@@ -293,18 +293,16 @@ impl ContextBuilder {
                 // Day 0 (today) - show sunrise/sunset times
                 if let Some(forecast) = forecast {
                     if let Some(ref astro) = forecast.astronomical {
+                        // Sunrise/sunset are NaiveDateTime (already in local time)
+                        // Format directly without timezone conversion
                         self.context.sunrise_time = astro
                             .sunrise_time
-                            .unwrap_or_default()
-                            .with_timezone(&Local)
-                            .format("%H:%M")
-                            .to_string();
+                            .map(|dt| dt.format("%H:%M").to_string())
+                            .unwrap_or_else(|| "NA".to_string());
                         self.context.sunset_time = astro
                             .sunset_time
-                            .unwrap_or_default()
-                            .with_timezone(&Local)
-                            .format("%H:%M")
-                            .to_string();
+                            .map(|dt| dt.format("%H:%M").to_string())
+                            .unwrap_or_else(|| "NA".to_string());
                     }
                 }
             }

@@ -43,8 +43,8 @@ fn create_mock_daily_forecast(start_date: NaiveDate, num_days: usize) -> Vec<Dai
     (0..num_days)
         .map(|i| {
             let date = start_date + chrono::Days::new(i as u64);
-            // Create DateTime for astronomical data (sunrise/sunset times)
-            let datetime = date.and_hms_opt(6, 30, 0).unwrap().and_utc();
+            // Create NaiveDateTime for astronomical data (sunrise/sunset times)
+            let naive_datetime = date.and_hms_opt(6, 30, 0).unwrap();
 
             DailyForecast {
                 date: Some(date),
@@ -52,8 +52,8 @@ fn create_mock_daily_forecast(start_date: NaiveDate, num_days: usize) -> Vec<Dai
                 temp_min: Some(Temperature::celsius(10.0 + i as f32)),
                 precipitation: None,
                 astronomical: Some(Astronomical {
-                    sunrise_time: Some(datetime),
-                    sunset_time: Some(datetime),
+                    sunrise_time: Some(naive_datetime),
+                    sunset_time: Some(naive_datetime),
                 }),
                 cloud_cover: None,
             }

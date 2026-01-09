@@ -12,10 +12,6 @@ pub struct OpenMeteoError {
 pub struct OpenMeteoHourlyResponse {
     pub latitude: f32,
     pub longitude: f32,
-    // #[serde(rename = "generationtime_ms")]
-    // pub generationtime_ms: f32,
-    // #[serde(rename = "utc_offset_seconds")]
-    // pub utc_offset_seconds: i64,
     pub timezone: String,
     // #[serde(rename = "timezone_abbreviation")]
     // pub timezone_abbreviation: String,
@@ -26,6 +22,19 @@ pub struct OpenMeteoHourlyResponse {
     #[serde(rename = "hourly_units")]
     pub hourly_units: HourlyUnits,
     pub hourly: Hourly,
+}
+
+/// Response from Open-Meteo API for daily forecast data
+///
+/// This is requested separately from hourly data with timezone-specific parameters
+/// to ensure daily aggregations (max/min temp, precipitation totals) represent
+/// the user's local 24-hour window, not UTC's 24-hour window.
+#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenMeteoDailyResponse {
+    pub latitude: f32,
+    pub longitude: f32,
+    pub timezone: String,
     #[serde(rename = "daily_units")]
     pub daily_units: DailyUnits,
     pub daily: Daily,
@@ -115,10 +124,14 @@ pub struct DailyUnits {
 #[serde(rename_all = "camelCase")]
 pub struct Daily {
     pub time: Vec<NaiveDate>,
-    #[serde(deserialize_with = "deserialize_vec_iso8601_loose")]
-    pub sunrise: Vec<DateTime<Utc>>,
-    #[serde(deserialize_with = "deserialize_vec_iso8601_loose")]
-    pub sunset: Vec<DateTime<Utc>>,
+    /// Sunrise times as NaiveDateTime (timezone-agnostic)
+    /// When timezone=auto is used, these represent local time and must be converted using response.timezone
+    #[serde(deserialize_with = "deserialize_vec_naive_datetime")]
+    pub sunrise: Vec<NaiveDateTime>,
+    /// Sunset times as NaiveDateTime (timezone-agnostic)
+    /// When timezone=auto is used, these represent local time and must be converted using response.timezone
+    #[serde(deserialize_with = "deserialize_vec_naive_datetime")]
+    pub sunset: Vec<NaiveDateTime>,
     #[serde(rename = "temperature_2m_max")]
     pub temperature_2m_max: Vec<f32>,
     #[serde(rename = "temperature_2m_min")]
@@ -197,8 +210,8 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast
     }
 }
 
-impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast> {
-    fn from(response: OpenMeteoHourlyResponse) -> Self {
+impl From<OpenMeteoDailyResponse> for Vec<crate::domain::models::DailyForecast> {
+    fn from(response: OpenMeteoDailyResponse) -> Self {
         use crate::domain::models::{Astronomical, Precipitation, Temperature as DomainTemp};
         use crate::{logger, CONFIG};
 
@@ -247,6 +260,8 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
                 };
 
                 let astronomical = {
+                    // With timezone=auto, sunrise/sunset are already in local time (NaiveDateTime)
+                    // Store them directly without timezone conversion
                     let sunrise = response.daily.sunrise.get(i).copied();
                     let sunset = response.daily.sunset.get(i).copied();
 
@@ -263,8 +278,9 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
                 let cloud_cover = response.daily.cloud_cover_mean.get(i).and_then(|&c| c);
 
                 crate::domain::models::DailyForecast {
-                    // Use NaiveDate directly - represents calendar date regardless of timezone
-                    // API's "2025-12-28" = weather for Dec 28, matches user's local Dec 28
+                    // Use NaiveDate directly - API returns dates in user's local timezone
+                    // When timezone=America/New_York, "2025-12-28" = Dec 28 in NY time
+                    // Daily aggregations (max/min) are computed over NY's 24-hour window
                     date: Some(*date),
                     temp_max,
                     temp_min,
@@ -280,9 +296,25 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::DailyForecast>
 // ============================================================================
 // Custom deserializers for OpenMeteo date/time formats
 // ============================================================================
-// Note: When using timezone=auto, Open-Meteo returns times in local timezone
-// These deserializers interpret the times as local and convert to UTC for internal storage
 
+/// Deserializes a vector of datetime strings to NaiveDateTime (no timezone)
+/// Used for sunrise/sunset times when timezone=auto, which returns local times
+pub fn deserialize_vec_naive_datetime<'de, D>(
+    deserializer: D,
+) -> Result<Vec<NaiveDateTime>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw_vec: Vec<String> = Deserialize::deserialize(deserializer)?;
+    raw_vec
+        .into_iter()
+        .map(|s| {
+            NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M").map_err(serde::de::Error::custom)
+        })
+        .collect()
+}
+
+/// Deserializes datetime string for hourly data (always UTC)
 pub fn deserialize_short_datetime<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
 where
     D: Deserializer<'de>,

@@ -7,19 +7,21 @@
 //! Test fixtures are stored in tests/fixtures/ directory to avoid
 //! dependency on runtime cache files from executing the binary.
 
-use pi_inky_weather_epd::apis::open_meteo::models::OpenMeteoHourlyResponse;
+use pi_inky_weather_epd::apis::open_meteo::models::{
+    OpenMeteoDailyResponse, OpenMeteoHourlyResponse,
+};
 use std::fs;
 
-/// Test that Open-Meteo forecast fixture deserializes
+/// Test that Open-Meteo hourly forecast fixture deserializes
 #[test]
-fn test_load_open_meteo_fixture() {
-    let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
-        .expect("Failed to read Open-Meteo forecast fixture file");
+fn test_load_open_meteo_hourly_fixture() {
+    let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+        .expect("Failed to read Open-Meteo hourly forecast fixture file");
 
     let result: Result<OpenMeteoHourlyResponse, _> = serde_json::from_str(&json);
     assert!(
         result.is_ok(),
-        "Failed to deserialize Open-Meteo forecast: {:?}",
+        "Failed to deserialize Open-Meteo hourly forecast: {:?}",
         result.err()
     );
 
@@ -35,6 +37,22 @@ fn test_load_open_meteo_fixture() {
         response.hourly.temperature_2m.len(),
         "All hourly arrays should have same length"
     );
+}
+
+/// Test that Open-Meteo daily forecast fixture deserializes
+#[test]
+fn test_load_open_meteo_daily_fixture() {
+    let json = fs::read_to_string("tests/fixtures/open_meteo_daily_forecast.json")
+        .expect("Failed to read Open-Meteo daily forecast fixture file");
+
+    let result: Result<OpenMeteoDailyResponse, _> = serde_json::from_str(&json);
+    assert!(
+        result.is_ok(),
+        "Failed to deserialize Open-Meteo daily forecast: {:?}",
+        result.err()
+    );
+
+    let response = result.unwrap();
 
     // Validate daily data
     assert!(
@@ -51,8 +69,8 @@ fn test_load_open_meteo_fixture() {
 /// Test Open-Meteo hourly forecast has expected fields and ranges
 #[test]
 fn test_open_meteo_hourly_fields() {
-    let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
-        .expect("Failed to read Open-Meteo forecast fixture file");
+    let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+        .expect("Failed to read Open-Meteo hourly forecast fixture file");
 
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
     let hourly = &response.hourly;
@@ -105,10 +123,10 @@ fn test_open_meteo_hourly_fields() {
 /// Test Open-Meteo daily forecast has expected fields and ranges
 #[test]
 fn test_open_meteo_daily_fields() {
-    let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
-        .expect("Failed to read Open-Meteo forecast fixture file");
+    let json = fs::read_to_string("tests/fixtures/open_meteo_daily_forecast.json")
+        .expect("Failed to read Open-Meteo daily forecast fixture file");
 
-    let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
+    let response: OpenMeteoDailyResponse = serde_json::from_str(&json).unwrap();
     let daily = &response.daily;
 
     for i in 0..daily.time.len() {
@@ -149,8 +167,8 @@ fn test_open_meteo_daily_fields() {
 /// Test Open-Meteo hourly forecasts are time-ordered
 #[test]
 fn test_open_meteo_hourly_time_ordering() {
-    let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
-        .expect("Failed to read Open-Meteo forecast fixture file");
+    let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+        .expect("Failed to read Open-Meteo hourly forecast fixture file");
 
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
     let hourly = &response.hourly;
@@ -169,10 +187,10 @@ fn test_open_meteo_hourly_time_ordering() {
 /// Test Open-Meteo daily forecasts are time-ordered
 #[test]
 fn test_open_meteo_daily_time_ordering() {
-    let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
-        .expect("Failed to read Open-Meteo forecast fixture file");
+    let json = fs::read_to_string("tests/fixtures/open_meteo_daily_forecast.json")
+        .expect("Failed to read Open-Meteo daily forecast fixture file");
 
-    let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
+    let response: OpenMeteoDailyResponse = serde_json::from_str(&json).unwrap();
     let daily = &response.daily;
 
     assert!(daily.time.len() > 1, "Should have multiple forecast days");
@@ -189,8 +207,8 @@ fn test_open_meteo_daily_time_ordering() {
 /// Test Open-Meteo coordinates are present
 #[test]
 fn test_open_meteo_coordinates() {
-    let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
-        .expect("Failed to read Open-Meteo forecast fixture file");
+    let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+        .expect("Failed to read Open-Meteo hourly forecast fixture file");
 
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
 
