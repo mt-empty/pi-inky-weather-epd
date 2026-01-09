@@ -2,7 +2,7 @@
 ///
 /// Verifies that daily forecast data with noon UTC timestamps correctly maps
 /// to local dates without shifting to the previous day in EST (UTC-5)
-use chrono::{NaiveDate, TimeZone, Utc};
+use chrono::{NaiveDate, NaiveDateTime, TimeZone, Utc};
 use pi_inky_weather_epd::{
     clock::FixedClock,
     configs::settings::TemperatureUnit,
@@ -37,8 +37,16 @@ fn test_with_daily_forecast_data_new_york_est() {
             temp_min: Some(temp_c(-2.8)),
             precipitation: Some(Precipitation::new(Some(10), None, Some(0))),
             astronomical: Some(Astronomical {
-                sunrise_time: Some(Utc.with_ymd_and_hms(2025, 12, 17, 12, 19, 0).unwrap()),
-                sunset_time: Some(Utc.with_ymd_and_hms(2025, 12, 17, 21, 33, 0).unwrap()),
+                // Sunrise/sunset as NaiveDateTime (local wall-clock time)
+                // 12:19 UTC = 7:19 AM EST, 21:33 UTC = 4:33 PM EST
+                sunrise_time: Some(
+                    NaiveDateTime::parse_from_str("2025-12-17 07:19:00", "%Y-%m-%d %H:%M:%S")
+                        .unwrap(),
+                ),
+                sunset_time: Some(
+                    NaiveDateTime::parse_from_str("2025-12-17 16:33:00", "%Y-%m-%d %H:%M:%S")
+                        .unwrap(),
+                ),
             }),
             cloud_cover: None,
         },

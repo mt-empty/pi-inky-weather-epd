@@ -6,15 +6,17 @@
 //! 3. Hourly and daily data extraction from combined response
 //! 4. Edge cases and data consistency
 
-use pi_inky_weather_epd::apis::open_meteo::models::OpenMeteoHourlyResponse;
+use pi_inky_weather_epd::apis::open_meteo::models::{
+    OpenMeteoDailyResponse, OpenMeteoHourlyResponse,
+};
 use pi_inky_weather_epd::domain::models::{DailyForecast, HourlyForecast};
 use std::fs;
 
 /// Test conversion from Open-Meteo response to hourly domain models
 #[test]
 fn test_open_meteo_hourly_conversion() {
-    let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
-        .expect("Failed to read Open-Meteo forecast fixture");
+    let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+        .expect("Failed to read Open-Meteo hourly forecast fixture");
 
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
     let expected_count = response.hourly.time.len();
@@ -39,10 +41,10 @@ fn test_open_meteo_hourly_conversion() {
 /// Test conversion from Open-Meteo response to daily domain models
 #[test]
 fn test_open_meteo_daily_conversion() {
-    let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
-        .expect("Failed to read Open-Meteo forecast fixture");
+    let json = fs::read_to_string("tests/fixtures/open_meteo_daily_forecast.json")
+        .expect("Failed to read Open-Meteo daily forecast fixture");
 
-    let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
+    let response: OpenMeteoDailyResponse = serde_json::from_str(&json).unwrap();
     let expected_count = response.daily.time.len();
 
     // Convert to domain models
@@ -207,10 +209,10 @@ fn test_open_meteo_extreme_values() {
 /// Test Open-Meteo daily conversion preserves min/max relationship
 #[test]
 fn test_open_meteo_daily_temp_relationship() {
-    let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
-        .expect("Failed to read Open-Meteo forecast fixture");
+    let json = fs::read_to_string("tests/fixtures/open_meteo_daily_forecast.json")
+        .expect("Failed to read Open-Meteo daily forecast fixture");
 
-    let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
+    let response: OpenMeteoDailyResponse = serde_json::from_str(&json).unwrap();
     let domain_forecasts: Vec<DailyForecast> = response.into();
 
     // Verify every daily forecast has max >= min
@@ -293,8 +295,8 @@ fn test_open_meteo_zero_precipitation() {
 /// Test Open-Meteo conversion preserves chronological order
 #[test]
 fn test_open_meteo_conversion_preserves_order() {
-    let json = fs::read_to_string("tests/fixtures/open_meteo_forecast.json")
-        .expect("Failed to read Open-Meteo forecast fixture");
+    let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+        .expect("Failed to read Open-Meteo hourly forecast fixture");
 
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
     let domain_forecasts: Vec<HourlyForecast> = response.into();

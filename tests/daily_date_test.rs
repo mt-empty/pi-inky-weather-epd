@@ -2,7 +2,7 @@
 ///
 /// This test ensures that the date-to-day-name conversion works correctly for both providers
 use chrono::{Datelike, Weekday};
-use pi_inky_weather_epd::apis::open_meteo::models::OpenMeteoHourlyResponse;
+use pi_inky_weather_epd::apis::open_meteo::models::OpenMeteoDailyResponse;
 
 #[test]
 fn test_open_meteo_daily_dates_deserialize_correctly() {
@@ -20,7 +20,7 @@ fn test_open_meteo_daily_dates_deserialize_correctly() {
         "daily":{"time":["2025-10-25","2025-10-26","2025-10-27","2025-10-28","2025-10-29","2025-10-30","2025-10-31"],"sunrise":["2025-10-25T19:00","2025-10-26T19:00","2025-10-27T19:00","2025-10-28T19:00","2025-10-29T19:00","2025-10-30T19:00","2025-10-31T19:00"],"sunset":["2025-10-25T09:00","2025-10-26T09:00","2025-10-27T09:00","2025-10-28T09:00","2025-10-29T09:00","2025-10-30T09:00","2025-10-31T09:00"],"temperature_2m_max":[22.0,23.0,24.0,25.0,26.0,27.0,28.0],"temperature_2m_min":[12.0,13.0,14.0,15.0,16.0,17.0,18.0],"precipitation_sum":[0.0,1.0,2.0,0.0,0.0,0.0,0.0],"precipitation_probability_max":[10,30,50,20,10,5,0],"cloud_cover_mean":[20,45,65,25,10,8,5]}
     }"#;
 
-    let response: OpenMeteoHourlyResponse = serde_json::from_str(json).unwrap();
+    let response: OpenMeteoDailyResponse = serde_json::from_str(json).unwrap();
 
     // October 25, 2025 is a Saturday
     // The dates should be: Sat(25), Sun(26), Mon(27), Tue(28), Wed(29), Thu(30), Fri(31)

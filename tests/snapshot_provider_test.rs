@@ -97,8 +97,11 @@ async fn snapshot_open_meteo_dashboard() {
     }
 
     // Start wiremock server with fixture data
-    let mock_server =
-        wiremock_setup::setup_open_meteo_mock("tests/fixtures/open_meteo_forecast.json").await;
+    let mock_server = wiremock_setup::setup_open_meteo_mock(
+        "tests/fixtures/open_meteo_hourly_forecast.json",
+        "tests/fixtures/open_meteo_daily_forecast.json",
+    )
+    .await;
 
     // Override Open-Meteo base URL to point to mock server
     std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
@@ -159,8 +162,11 @@ async fn snapshot_open_meteo_midnight_boundary() {
         return;
     }
 
-    let mock_server =
-        wiremock_setup::setup_open_meteo_mock("tests/fixtures/open_meteo_forecast.json").await;
+    let mock_server = wiremock_setup::setup_open_meteo_mock(
+        "tests/fixtures/open_meteo_hourly_forecast.json",
+        "tests/fixtures/open_meteo_daily_forecast.json",
+    )
+    .await;
     std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
 
     let clock =
@@ -209,8 +215,11 @@ async fn snapshot_open_meteo_end_of_day() {
         return;
     }
 
-    let mock_server =
-        wiremock_setup::setup_open_meteo_mock("tests/fixtures/open_meteo_forecast.json").await;
+    let mock_server = wiremock_setup::setup_open_meteo_mock(
+        "tests/fixtures/open_meteo_hourly_forecast.json",
+        "tests/fixtures/open_meteo_daily_forecast.json",
+    )
+    .await;
     std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
 
     let clock =
@@ -259,8 +268,11 @@ async fn snapshot_open_meteo_early_morning() {
         return;
     }
 
-    let mock_server =
-        wiremock_setup::setup_open_meteo_mock("tests/fixtures/open_meteo_forecast.json").await;
+    let mock_server = wiremock_setup::setup_open_meteo_mock(
+        "tests/fixtures/open_meteo_hourly_forecast.json",
+        "tests/fixtures/open_meteo_daily_forecast.json",
+    )
+    .await;
     std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
 
     let clock =
@@ -568,7 +580,8 @@ async fn snapshot_open_meteo_ny_6pm_before_gmt_boundary() {
     }
 
     let mock_server = wiremock_setup::setup_open_meteo_mock(
-        "tests/fixtures/ny_6pm_before_gmt/open_meteo_forecast.json",
+        "tests/fixtures/ny_6pm_before_gmt/open_meteo_hourly_forecast.json",
+        "tests/fixtures/ny_6pm_before_gmt/open_meteo_daily_forecast.json",
     )
     .await;
     std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
@@ -645,7 +658,8 @@ async fn snapshot_open_meteo_ny_7pm_after_gmt_boundary() {
     }
 
     let mock_server = wiremock_setup::setup_open_meteo_mock(
-        "tests/fixtures/ny_7pm_after_gmt/open_meteo_forecast.json",
+        "tests/fixtures/ny_7pm_after_gmt/open_meteo_hourly_forecast.json",
+        "tests/fixtures/ny_7pm_after_gmt/open_meteo_daily_forecast.json",
     )
     .await;
     std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
