@@ -1,0 +1,93 @@
+{
+    "latitude": -37.75,
+    "longitude": 144.875,
+    "generationtime_ms": 0.19919872283935547,
+    "utc_offset_seconds": 39600,
+    "timezone": "Australia/Melbourne",
+    "timezone_abbreviation": "GMT+11",
+    "elevation": 19,
+    "daily_units": {
+        "time": "iso8601",
+        "sunrise": "iso8601",
+        "sunset": "iso8601",
+        "temperature_2m_max": "°C",
+        "temperature_2m_min": "°C",
+        "precipitation_sum": "mm",
+        "precipitation_probability_max": "%",
+        "cloud_cover_mean": "%"
+    },
+    "daily": {
+        "time": [
+            "2025-10-25",
+            "2025-10-26",
+            "2025-10-27",
+            "2025-10-28",
+            "2025-10-29",
+            "2025-10-30",
+            "2025-10-31"
+        ],
+        "sunrise": [
+            "2025-10-25T06:21",
+            "2025-10-26T06:20",
+            "2025-10-27T06:19",
+            "2025-10-28T06:18",
+            "2025-10-29T06:16",
+            "2025-10-30T06:15",
+            "2025-10-31T06:14"
+        ],
+        "sunset": [
+            "2025-10-25T19:47",
+            "2025-10-26T19:48",
+            "2025-10-27T19:49",
+            "2025-10-28T19:50",
+            "2025-10-29T19:51",
+            "2025-10-30T19:52",
+            "2025-10-31T19:53"
+        ],
+        "temperature_2m_max": [
+            18.5,
+            22.8,
+            13.4,
+            16.8,
+            17.9,
+            18.8,
+            25
+        ],
+        "temperature_2m_min": [
+            13.1,
+            10.1,
+            5.6,
+            7.5,
+            9.7,
+            7.6,
+            13.4
+        ],
+        "precipitation_sum": [
+            6.6,
+            13,
+            0,
+            0,
+            0,
+            0,
+            7.8
+        ],
+        "precipitation_probability_max": [
+            93,
+            93,
+            5,
+            9,
+            8,
+            3,
+            8
+        ],
+        "cloud_cover_mean": [
+            88,
+            88,
+            null,
+            10,
+            9,
+            3,
+            38
+        ]
+    }
+}
