@@ -41,7 +41,7 @@ clap = { version = "4.5", features = ["derive"], optional = true }
 # dev dependencies
 [dev-dependencies]
 insta = "1.45.1"
-usvg = "0.45"
+usvg = "0.46"
 cross = "0.2"                                                            # needed for ci/cd to compile and test for different architectures
 serial_test = "3.2"
 wiremock = "0.6.5"
