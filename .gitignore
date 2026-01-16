@@ -31,3 +31,4 @@ notes.md
 dashboard*.svg
 dashboard*.png
 tests/output/*
+comparison_output
