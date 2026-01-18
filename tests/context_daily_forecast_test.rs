@@ -49,6 +49,7 @@ fn test_with_daily_forecast_data_new_york_est() {
                 ),
             }),
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 18).unwrap()),
@@ -57,6 +58,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             precipitation: Some(Precipitation::new(Some(30), None, Some(1))),
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 19).unwrap()),
@@ -65,6 +67,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             precipitation: Some(Precipitation::new(Some(50), None, Some(2))),
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 20).unwrap()),
@@ -73,6 +76,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 21).unwrap()),
@@ -81,6 +85,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 22).unwrap()),
@@ -89,6 +94,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 23).unwrap()),
@@ -97,6 +103,7 @@ fn test_with_daily_forecast_data_new_york_est() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
     ];
 
@@ -171,6 +178,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 18).unwrap()),
@@ -179,6 +187,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 19).unwrap()),
@@ -187,6 +196,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 20).unwrap()),
@@ -195,6 +205,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 21).unwrap()),
@@ -203,6 +214,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 22).unwrap()),
@@ -211,6 +223,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 23).unwrap()),
@@ -219,6 +232,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
     ];
 
@@ -264,6 +278,7 @@ fn test_skips_past_dates() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 18).unwrap()),
@@ -272,6 +287,7 @@ fn test_skips_past_dates() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 19).unwrap()),
@@ -280,6 +296,7 @@ fn test_skips_past_dates() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 20).unwrap()),
@@ -288,6 +305,7 @@ fn test_skips_past_dates() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 21).unwrap()),
@@ -296,6 +314,7 @@ fn test_skips_past_dates() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 22).unwrap()),
@@ -304,6 +323,7 @@ fn test_skips_past_dates() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 23).unwrap()),
@@ -312,6 +332,7 @@ fn test_skips_past_dates() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 24).unwrap()),
@@ -320,6 +341,7 @@ fn test_skips_past_dates() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
         DailyForecast {
             date: Some(NaiveDate::from_ymd_opt(2025, 12, 25).unwrap()),
@@ -328,6 +350,7 @@ fn test_skips_past_dates() {
             precipitation: None,
             astronomical: None,
             cloud_cover: None,
+            weather_code: None,
         },
     ];
 
