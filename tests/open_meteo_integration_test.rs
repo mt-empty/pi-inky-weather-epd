@@ -309,3 +309,104 @@ fn test_open_meteo_conversion_preserves_order() {
         );
     }
 }
+
+/// Test hourly forecast conversion preserves snowfall data
+#[test]
+fn test_hourly_forecast_conversion_preserves_snowfall() {
+    // Test that snowfall data flows from API response -> domain model
+    let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+        .expect("Failed to read Open-Meteo hourly forecast fixture");
+
+    let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
+    let hourly_forecasts: Vec<HourlyForecast> = response.into();
+
+    // Find an entry with snowfall
+    let with_snow = hourly_forecasts.iter().find(|f| f.precipitation.has_snow());
+
+    assert!(
+        with_snow.is_some(),
+        "Expected at least one forecast with snowfall in test fixture"
+    );
+
+    // Verify the snowfall data is properly converted
+    if let Some(forecast) = with_snow {
+        let snowfall = forecast.precipitation.snowfall_amount.unwrap();
+        assert!(
+            snowfall > 0,
+            "Snowfall amount should be greater than 0 for entries with snow"
+        );
+    }
+}
+
+/// Test daily forecast conversion preserves snowfall sum
+#[test]
+fn test_daily_forecast_conversion_preserves_snowfall() {
+    // Test that snowfall_sum data flows from API response -> domain model
+    let json = fs::read_to_string("tests/fixtures/open_meteo_daily_forecast.json")
+        .expect("Failed to read Open-Meteo daily forecast fixture");
+
+    let response: OpenMeteoDailyResponse = serde_json::from_str(&json).unwrap();
+    let daily_forecasts: Vec<DailyForecast> = response.into();
+
+    // Find an entry with snowfall
+    let with_snow = daily_forecasts.iter().find(|f| {
+        f.precipitation
+            .as_ref()
+            .map(|p| p.has_snow())
+            .unwrap_or(false)
+    });
+
+    assert!(
+        with_snow.is_some(),
+        "Expected at least one daily forecast with snowfall in test fixture"
+    );
+}
+
+/// Test snowfall data with zero values is handled correctly
+#[test]
+fn test_zero_snowfall_handled_correctly() {
+    let json = r#"{
+        "latitude": 45.38,
+        "longitude": -81.109,
+        "timezone": "America/Toronto",
+        "timezone_abbreviation": "EST",
+        "current_units": {"time": "iso8601", "interval": "seconds", "is_day": ""},
+        "current": {"time": "2026-01-18T12:00", "interval": 900, "is_day": 1},
+        "hourly_units": {
+            "time": "iso8601",
+            "temperature_2m": "°C",
+            "apparent_temperature": "°C",
+            "precipitation_probability": "%",
+            "precipitation": "mm",
+            "snowfall": "cm",
+            "wind_speed_10m": "km/h",
+            "wind_gusts_10m": "km/h",
+            "uv_index": "",
+            "relative_humidity_2m": "%",
+            "cloud_cover": "%",
+            "is_day": ""
+        },
+        "hourly": {
+            "time": ["2026-01-18T12:00"],
+            "temperature_2m": [5.0],
+            "apparent_temperature": [3.0],
+            "precipitation_probability": [20],
+            "precipitation": [1.0],
+            "snowfall": [0.0],
+            "wind_speed_10m": [10],
+            "wind_gusts_10m": [15],
+            "uv_index": [2],
+            "relative_humidity_2m": [70],
+            "cloud_cover": [40],
+            "is_day": [1]
+        }
+    }"#;
+
+    let response: OpenMeteoHourlyResponse = serde_json::from_str(json).unwrap();
+    let domain: Vec<HourlyForecast> = response.into();
+
+    assert_eq!(domain.len(), 1);
+    assert_eq!(domain[0].precipitation.snowfall_amount, Some(0));
+    assert!(!domain[0].precipitation.has_snow());
+    assert!(!domain[0].precipitation.is_primarily_snow());
+}
