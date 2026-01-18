@@ -128,6 +128,26 @@ fn apply_precipitation_override(
                 _ => cloud_name,
             }
         }
+        RainAmountName::Sleet => {
+            // Sleet (freezing rain/drizzle) requires at least partly cloudy
+            match cloud_name {
+                PrecipitationChanceName::Clear => PrecipitationChanceName::PartlyCloudy,
+                _ => cloud_name,
+            }
+        }
+        RainAmountName::Hail => {
+            // Hail requires at least overcast (severe weather)
+            match cloud_name {
+                PrecipitationChanceName::Clear | PrecipitationChanceName::PartlyCloudy => {
+                    PrecipitationChanceName::Overcast
+                }
+                _ => cloud_name,
+            }
+        }
+        RainAmountName::Fog => {
+            // Fog can occur with any cloud cover, no override needed
+            cloud_name
+        }
     }
 }
 
@@ -139,6 +159,19 @@ impl Icon for Precipitation {
 
 impl Icon for DailyForecast {
     fn get_icon_name(&self) -> String {
+        // Priority 1: Use WMO weather code if available (most accurate)
+        if CONFIG.debugging.use_weather_codes {
+            if let Some(code) = self.weather_code {
+                logger::debug("DailyForecast: Using WMO weather code for icon selection");
+                let wmo_code = crate::domain::weather_code::WmoWeatherCode::from(code);
+                // Daily forecasts always use day icons
+                return wmo_code.to_icon_name(false);
+            }
+        }
+
+        logger::debug("DailyForecast: Falling back to precipitation-based icon logic");
+
+        // Priority 2: Fall back to precipitation-based logic (BOM provider, missing codes)
         if let Some(ref precip) = self.precipitation {
             // Determine cloud coverage from cloud_cover data if available, otherwise fall back to precipitation chance
             let chance_name = if let Some(cloud_cover) = self.cloud_cover {
@@ -163,6 +196,32 @@ impl Icon for DailyForecast {
 
 impl Icon for HourlyForecast {
     fn get_icon_name(&self) -> String {
+        // Priority 1: Use WMO weather code if available (most accurate)
+        if CONFIG.debugging.use_weather_codes {
+            if let Some(code) = self.weather_code {
+                logger::debug("HourlyForecast: Using WMO weather code for icon selection");
+                let wmo_code = crate::domain::weather_code::WmoWeatherCode::from(code);
+                let mut icon_name = wmo_code.to_icon_name(self.is_night);
+
+                // Special case: moon phase override for clear night
+                if CONFIG.render_options.use_moon_phase_instead_of_clear_night
+                    && icon_name.ends_with(&format!(
+                        "{}{}.svg",
+                        PrecipitationChanceName::Clear,
+                        DayNight::Night
+                    ))
+                {
+                    logger::detail("Using moon phase icon instead of clear night (from weather code)");
+                    icon_name = get_moon_phase_icon_name().to_string();
+                }
+
+                return icon_name;
+            }
+        }
+
+        logger::debug("HourlyForecast: Falling back to precipitation-based icon logic");
+
+        // Priority 2: Fall back to cloud_cover + precipitation logic (BOM provider, missing codes)
         // Determine cloud coverage from cloud_cover data if available, otherwise fall back to precipitation chance
         let chance_name = if let Some(cloud_cover) = self.cloud_cover {
             cloud_cover_to_name(cloud_cover)

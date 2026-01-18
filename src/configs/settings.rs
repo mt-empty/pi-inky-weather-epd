@@ -155,6 +155,7 @@ pub struct Debugging {
     pub disable_png_output: bool,
     pub allow_pre_release_version: bool,
     pub enable_debug_logs: bool,
+    pub use_weather_codes: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -324,5 +325,6 @@ impl DashboardSettings {
         );
         logger::kvp("Disable PNG Output", self.debugging.disable_png_output);
         logger::kvp("Enable Debug Logs", self.debugging.enable_debug_logs);
+        logger::kvp("Use Weather Codes", self.debugging.use_weather_codes);
     }
 }
