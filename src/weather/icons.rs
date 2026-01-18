@@ -26,6 +26,12 @@ pub enum RainAmountName {
     Rain,
     #[strum(to_string = "-snow")]
     Snow,
+    #[strum(to_string = "-sleet")]
+    Sleet,
+    #[strum(to_string = "-hail")]
+    Hail,
+    #[strum(to_string = "-fog")]
+    Fog,
 }
 
 #[derive(Debug, Display, Copy, Clone)]

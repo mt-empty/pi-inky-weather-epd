@@ -217,6 +217,9 @@ pub struct HourlyForecast {
     pub relative_humidity: u16,
     pub is_night: bool,
     pub cloud_cover: Option<u16>,
+    /// WMO Weather Interpretation Code (0-99)
+    /// Provides more precise weather classification than derived conditions
+    pub weather_code: Option<u8>,
 }
 
 /// Domain model for daily weather forecast
@@ -230,6 +233,9 @@ pub struct DailyForecast {
     pub precipitation: Option<Precipitation>,
     pub astronomical: Option<Astronomical>,
     pub cloud_cover: Option<u16>,
+    /// WMO Weather Interpretation Code (0-99) for the day
+    /// Represents the dominant weather condition for the entire day
+    pub weather_code: Option<u8>,
 }
 
 // ============================================================================
@@ -251,7 +257,8 @@ impl From<crate::apis::bom::models::HourlyForecast> for HourlyForecast {
             uv_index: bom.uv.unwrap_or_default().0,
             relative_humidity: bom.relative_humidity.0,
             is_night: bom.is_night,
-            cloud_cover: None, // BOM API doesn't provide cloud cover data
+            cloud_cover: None,  // BOM API doesn't provide cloud cover data
+            weather_code: None, // BOM API doesn't provide WMO weather codes
         }
     }
 }
@@ -277,7 +284,8 @@ impl From<crate::apis::bom::models::DailyEntry> for DailyForecast {
                     .sunset_time
                     .map(|dt| dt.with_timezone(&chrono::Local).naive_local()),
             }),
-            cloud_cover: None, // BOM API doesn't provide cloud cover data
+            cloud_cover: None,  // BOM API doesn't provide cloud cover data
+            weather_code: None, // BOM API doesn't provide WMO weather codes
         }
     }
 }
