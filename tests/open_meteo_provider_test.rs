@@ -66,6 +66,52 @@ fn test_load_open_meteo_daily_fixture() {
     );
 }
 
+/// Test snowfall data is captured in hourly fixtures
+#[test]
+fn test_open_meteo_hourly_includes_snowfall() {
+    let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+        .expect("Failed to read Open-Meteo hourly forecast fixture file");
+
+    let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
+
+    // Verify snowfall array exists and has correct length
+    assert_eq!(
+        response.hourly.snowfall.len(),
+        response.hourly.time.len(),
+        "Snowfall array should match time array length"
+    );
+
+    // Verify snowfall data contains expected values (some zeros, some non-zero)
+    let has_snowfall = response.hourly.snowfall.iter().any(|&s| s > 0.0);
+    assert!(
+        has_snowfall,
+        "Test fixture should contain at least some snowfall data"
+    );
+}
+
+/// Test snowfall data is captured in daily fixtures
+#[test]
+fn test_open_meteo_daily_includes_snowfall_sum() {
+    let json = fs::read_to_string("tests/fixtures/open_meteo_daily_forecast.json")
+        .expect("Failed to read Open-Meteo daily forecast fixture file");
+
+    let response: OpenMeteoDailyResponse = serde_json::from_str(&json).unwrap();
+
+    // Verify snowfall_sum array exists and has correct length
+    assert_eq!(
+        response.daily.snowfall_sum.len(),
+        response.daily.time.len(),
+        "Snowfall sum array should match time array length"
+    );
+
+    // Verify daily snowfall contains expected values
+    let has_snowfall = response.daily.snowfall_sum.iter().any(|&s| s > 0.0);
+    assert!(
+        has_snowfall,
+        "Test fixture should contain at least some daily snowfall data"
+    );
+}
+
 /// Test Open-Meteo hourly forecast has expected fields and ranges
 #[test]
 fn test_open_meteo_hourly_fields() {

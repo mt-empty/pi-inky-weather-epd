@@ -134,6 +134,7 @@ pub struct Precipitation {
     pub chance: Option<u16>,
     pub amount_min: Option<u16>,
     pub amount_max: Option<u16>,
+    pub snowfall_amount: Option<u16>,
 }
 
 impl Precipitation {
@@ -142,6 +143,21 @@ impl Precipitation {
             chance,
             amount_min,
             amount_max,
+            snowfall_amount: None,
+        }
+    }
+
+    pub fn new_with_snowfall(
+        chance: Option<u16>,
+        amount_min: Option<u16>,
+        amount_max: Option<u16>,
+        snowfall_amount: Option<u16>,
+    ) -> Self {
+        Self {
+            chance,
+            amount_min,
+            amount_max,
+            snowfall_amount,
         }
     }
 
@@ -149,6 +165,33 @@ impl Precipitation {
         let min = self.amount_min.unwrap_or(0);
         let max = self.amount_max.unwrap_or(min);
         (min + max) as f32 / 2.0
+    }
+
+    /// Check if this precipitation includes snowfall
+    pub fn has_snow(&self) -> bool {
+        self.snowfall_amount.unwrap_or(0) > 0
+    }
+
+    /// Determine if precipitation is primarily snow based on water equivalent ratio
+    /// Using Open-Meteo's ratio: 7 cm snow ≈ 10 mm water (0.7 density)
+    pub fn is_primarily_snow(&self) -> bool {
+        let snow_cm = self.snowfall_amount.unwrap_or(0) as f32;
+        let precip_mm = self.calculate_median();
+
+        if snow_cm == 0.0 {
+            return false;
+        }
+
+        // Convert snow to water equivalent (7cm snow = 10mm water, so multiply by ~1.43), from open meteo docs
+        let snow_water_equivalent = snow_cm * 1.43;
+
+        // If snow water equivalent is more than 60% of total precipitation, it's primarily snow
+        snow_water_equivalent > (precip_mm * 0.6)
+    }
+
+    /// Get snowfall amount in cm
+    pub fn get_snowfall_cm(&self) -> f32 {
+        self.snowfall_amount.unwrap_or(0) as f32
     }
 }
 

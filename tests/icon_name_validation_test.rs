@@ -377,3 +377,254 @@ fn test_boundary_case_26_percent_allows_precipitation_suffix() {
     // 26% is PartlyCloudy, so drizzle suffix should appear
     assert_eq!(icon_name, "partly-cloudy-day-drizzle.svg");
 }
+
+// ============================================================================
+// Snow Icon Selection Tests
+// ============================================================================
+
+#[test]
+fn test_snow_icon_selected_with_high_snowfall() {
+    // Heavy snow: 14.3cm snow = ~10mm water, total ~10mm = 100% snow
+    let forecast = HourlyForecast {
+        time: Utc::now(),
+        temperature: Temperature::celsius(-2.0),
+        apparent_temperature: Temperature::celsius(-5.0),
+        wind: Wind::new(10, 15),
+        precipitation: Precipitation::new_with_snowfall(
+            Some(80), // Extreme range
+            Some(8),
+            Some(12),
+            Some(143), // 14.3cm snow = ~10mm water
+        ),
+        uv_index: 1,
+        relative_humidity: 85,
+        is_night: false,
+        cloud_cover: Some(80),
+    };
+
+    assert_eq!(
+        forecast.get_icon_name(),
+        "extreme-day-snow.svg",
+        "Heavy snowfall should produce snow icon"
+    );
+}
+
+#[test]
+fn test_snow_icon_at_60_percent_threshold() {
+    // Boundary: exactly 60% snow (8.6cm = ~6mm water, total 10mm)
+    let forecast = HourlyForecast {
+        time: Utc::now(),
+        temperature: Temperature::celsius(0.0),
+        apparent_temperature: Temperature::celsius(-2.0),
+        wind: Wind::new(8, 12),
+        precipitation: Precipitation::new_with_snowfall(
+            Some(65),
+            Some(9),
+            Some(11),
+            Some(86), // 8.6cm = ~6mm water, total 10mm = 60% snow
+        ),
+        uv_index: 2,
+        relative_humidity: 80,
+        is_night: true,
+        cloud_cover: Some(70),
+    };
+
+    assert_eq!(
+        forecast.get_icon_name(),
+        "overcast-night-snow.svg",
+        "Exactly 60% snow threshold should produce snow icon"
+    );
+}
+
+#[test]
+fn test_rain_icon_below_snow_threshold() {
+    // ~43% snow -> should show rain (3cm = ~4.3mm water, total 10mm)
+    let forecast = HourlyForecast {
+        time: Utc::now(),
+        temperature: Temperature::celsius(2.0),
+        apparent_temperature: Temperature::celsius(0.0),
+        wind: Wind::new(12, 18),
+        precipitation: Precipitation::new_with_snowfall(
+            Some(70),
+            Some(9),
+            Some(11),
+            Some(3), // 3cm × 1.43 = 4.29mm water, total 10mm = 42.9% snow (below 60%)
+        ),
+        uv_index: 1,
+        relative_humidity: 85,
+        is_night: false,
+        cloud_cover: Some(75),
+    };
+
+    // Below 60% threshold, should be rain not snow
+    assert_eq!(
+        forecast.get_icon_name(),
+        "overcast-day-rain.svg",
+        "Below 60% snow threshold should produce rain icon"
+    );
+}
+
+#[test]
+fn test_snow_override_requires_partly_cloudy() {
+    // Snow with clear skies should bump to partly-cloudy
+    let forecast = HourlyForecast {
+        time: Utc::now(),
+        temperature: Temperature::celsius(-3.0),
+        apparent_temperature: Temperature::celsius(-6.0),
+        wind: Wind::new(5, 8),
+        precipitation: Precipitation::new_with_snowfall(
+            Some(30),
+            Some(0),
+            Some(2),
+            Some(15), // 1.5cm = ~1.05mm water, total ~1mm = 100% snow
+        ),
+        uv_index: 2,
+        relative_humidity: 70,
+        is_night: false,
+        cloud_cover: Some(20), // Clear range
+    };
+
+    // Should be bumped to partly-cloudy due to snow
+    assert_eq!(
+        forecast.get_icon_name(),
+        "partly-cloudy-day-snow.svg",
+        "Snow with clear skies should be upgraded to partly-cloudy"
+    );
+}
+
+#[test]
+fn test_low_snowfall_shows_clear_not_snow() {
+    // Very light snowfall below 1.4mm threshold (0.2cm = ~0.14mm water)
+    let forecast = HourlyForecast {
+        time: Utc::now(),
+        temperature: Temperature::celsius(-1.0),
+        apparent_temperature: Temperature::celsius(-3.0),
+        wind: Wind::new(3, 5),
+        precipitation: Precipitation::new_with_snowfall(
+            Some(15),
+            Some(0),
+            Some(0),
+            Some(2), // 0.2cm = ~0.14mm water (very light)
+        ),
+        uv_index: 3,
+        relative_humidity: 60,
+        is_night: false,
+        cloud_cover: Some(10),
+    };
+
+    // Below 1.4mm threshold for snow, should show clear
+    assert_eq!(
+        forecast.get_icon_name(),
+        "clear-day.svg",
+        "Very light snow below threshold should show clear icon"
+    );
+}
+
+#[test]
+fn test_mixed_precipitation_favors_rain() {
+    // Mixed: ~29% snow, 71% rain (2cm = ~2.9mm water, total ~10mm)
+    let forecast = HourlyForecast {
+        time: Utc::now(),
+        temperature: Temperature::celsius(3.0),
+        apparent_temperature: Temperature::celsius(1.0),
+        wind: Wind::new(10, 15),
+        precipitation: Precipitation::new_with_snowfall(
+            Some(60),
+            Some(8),
+            Some(12),
+            Some(2), // 2cm × 1.43 = 2.86mm water, total 10mm = 28.6% snow (below 60%)
+        ),
+        uv_index: 1,
+        relative_humidity: 90,
+        is_night: true,
+        cloud_cover: Some(65),
+    };
+
+    // Below 60% snow threshold -> rain
+    assert_eq!(
+        forecast.get_icon_name(),
+        "overcast-night-rain.svg",
+        "Mixed precipitation below 60% snow should show rain icon"
+    );
+}
+
+#[test]
+fn test_partly_cloudy_snow_at_night() {
+    // Light snow at night (10cm = ~7mm water, total ~8mm = 87.5% snow)
+    let forecast = HourlyForecast {
+        time: Utc::now(),
+        temperature: Temperature::celsius(-5.0),
+        apparent_temperature: Temperature::celsius(-8.0),
+        wind: Wind::new(6, 10),
+        precipitation: Precipitation::new_with_snowfall(
+            Some(45), // PartlyCloudy range
+            Some(7),
+            Some(9),
+            Some(100), // 10cm snow
+        ),
+        uv_index: 0,
+        relative_humidity: 80,
+        is_night: true,
+        cloud_cover: Some(40),
+    };
+
+    assert_eq!(
+        forecast.get_icon_name(),
+        "partly-cloudy-night-snow.svg",
+        "Partly cloudy with snow at night should produce night snow icon"
+    );
+}
+
+#[test]
+fn test_overcast_day_snow() {
+    // Overcast day with snow (11.5cm = ~8mm water, total ~9mm = 89% snow)
+    let forecast = HourlyForecast {
+        time: Utc::now(),
+        temperature: Temperature::celsius(-4.0),
+        apparent_temperature: Temperature::celsius(-7.0),
+        wind: Wind::new(12, 18),
+        precipitation: Precipitation::new_with_snowfall(
+            Some(60), // Overcast range
+            Some(8),
+            Some(10),
+            Some(115), // 11.5cm snow
+        ),
+        uv_index: 1,
+        relative_humidity: 85,
+        is_night: false,
+        cloud_cover: Some(60),
+    };
+
+    assert_eq!(
+        forecast.get_icon_name(),
+        "overcast-day-snow.svg",
+        "Overcast day with snow should produce overcast-day-snow icon"
+    );
+}
+
+#[test]
+fn test_extreme_night_snow() {
+    // Extreme conditions with snow (20cm = ~14mm water, total ~15mm = 93% snow)
+    let forecast = HourlyForecast {
+        time: Utc::now(),
+        temperature: Temperature::celsius(-10.0),
+        apparent_temperature: Temperature::celsius(-15.0),
+        wind: Wind::new(20, 35),
+        precipitation: Precipitation::new_with_snowfall(
+            Some(90), // Extreme range
+            Some(14),
+            Some(16),
+            Some(200), // 20cm snow
+        ),
+        uv_index: 0,
+        relative_humidity: 90,
+        is_night: true,
+        cloud_cover: Some(85),
+    };
+
+    assert_eq!(
+        forecast.get_icon_name(),
+        "extreme-night-snow.svg",
+        "Extreme night conditions with heavy snow should produce extreme-night-snow icon"
+    );
+}

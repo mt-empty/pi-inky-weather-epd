@@ -70,6 +70,7 @@ pub struct HourlyUnits {
     #[serde(rename = "precipitation_probability")]
     pub precipitation_probability: String,
     pub precipitation: String,
+    pub snowfall: String,
     #[serde(rename = "uv_index")]
     pub uv_index: String,
     #[serde(rename = "wind_speed_10m")]
@@ -92,6 +93,7 @@ pub struct Hourly {
     #[serde(rename = "precipitation_probability")]
     pub precipitation_probability: Vec<u16>,
     pub precipitation: Vec<f32>,
+    pub snowfall: Vec<f32>,
     #[serde(rename = "uv_index")]
     pub uv_index: Vec<f32>,
     #[serde(rename = "wind_speed_10m")]
@@ -118,6 +120,8 @@ pub struct DailyUnits {
     pub precipitation_sum: String,
     #[serde(rename = "precipitation_probability_max")]
     pub precipitation_probability_max: String,
+    #[serde(rename = "snowfall_sum")]
+    pub snowfall_sum: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
@@ -140,6 +144,8 @@ pub struct Daily {
     pub precipitation_sum: Vec<f32>,
     #[serde(rename = "precipitation_probability_max")]
     pub precipitation_probability_max: Vec<u16>,
+    #[serde(rename = "snowfall_sum")]
+    pub snowfall_sum: Vec<f32>,
     #[serde(rename = "cloud_cover_mean")]
     pub cloud_cover_mean: Vec<Option<u16>>,
 }
@@ -182,10 +188,11 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast
                     hourly_data.wind_gusts_10m[i].round() as u16,
                 );
 
-                let precipitation = Precipitation::new(
+                let precipitation = Precipitation::new_with_snowfall(
                     Some(hourly_data.precipitation_probability[i]),
                     None,
                     Some(hourly_data.precipitation[i].round() as u16),
+                    Some(hourly_data.snowfall[i].round() as u16),
                 );
 
                 let uv_index = hourly_data.uv_index[i].round() as u16;
@@ -251,9 +258,15 @@ impl From<OpenMeteoDailyResponse> for Vec<crate::domain::models::DailyForecast> 
                 let precipitation = {
                     let amount_max = response.daily.precipitation_sum[i].round() as u16;
                     let chance = response.daily.precipitation_probability_max[i];
+                    let snowfall_amount = response.daily.snowfall_sum[i].round() as u16;
 
-                    if amount_max > 0 || chance > 0 {
-                        Some(Precipitation::new(Some(chance), None, Some(amount_max)))
+                    if amount_max > 0 || chance > 0 || snowfall_amount > 0 {
+                        Some(Precipitation::new_with_snowfall(
+                            Some(chance),
+                            None,
+                            Some(amount_max),
+                            Some(snowfall_amount),
+                        ))
                     } else {
                         None
                     }

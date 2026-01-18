@@ -14,7 +14,8 @@
         "temperature_2m_min": "°C",
         "precipitation_sum": "mm",
         "precipitation_probability_max": "%",
-        "cloud_cover_mean": "%"
+        "cloud_cover_mean": "%",
+        "snowfall_sum": "cm"
     },
     "daily": {
         "time": [
@@ -88,6 +89,15 @@
             9,
             3,
             38
+        ],
+        "snowfall_sum": [
+            0.0,
+            0.0,
+            8.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
         ]
     }
 }
