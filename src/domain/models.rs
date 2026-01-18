@@ -257,7 +257,7 @@ impl From<crate::apis::bom::models::HourlyForecast> for HourlyForecast {
             uv_index: bom.uv.unwrap_or_default().0,
             relative_humidity: bom.relative_humidity.0,
             is_night: bom.is_night,
-            cloud_cover: None, // BOM API doesn't provide cloud cover data
+            cloud_cover: None,  // BOM API doesn't provide cloud cover data
             weather_code: None, // BOM API doesn't provide WMO weather codes
         }
     }
@@ -284,7 +284,7 @@ impl From<crate::apis::bom::models::DailyEntry> for DailyForecast {
                     .sunset_time
                     .map(|dt| dt.with_timezone(&chrono::Local).naive_local()),
             }),
-            cloud_cover: None, // BOM API doesn't provide cloud cover data
+            cloud_cover: None,  // BOM API doesn't provide cloud cover data
             weather_code: None, // BOM API doesn't provide WMO weather codes
         }
     }
