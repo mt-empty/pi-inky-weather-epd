@@ -5,7 +5,7 @@ use strum_macros::Display;
 use crate::CONFIG;
 
 #[derive(Debug, Display, Copy, Clone)]
-pub enum RainChanceName {
+pub enum PrecipitationChanceName {
     #[strum(to_string = "clear")]
     Clear,
     #[strum(to_string = "partly-cloudy")]
@@ -16,7 +16,7 @@ pub enum RainChanceName {
     Extreme,
 }
 
-#[derive(Debug, Display, Copy, Clone)]
+#[derive(Debug, Display, Copy, Clone, PartialEq)]
 pub enum RainAmountName {
     #[strum(to_string = "")]
     None,
@@ -24,6 +24,8 @@ pub enum RainAmountName {
     Drizzle,
     #[strum(to_string = "-rain")]
     Rain,
+    #[strum(to_string = "-snow")]
+    Snow,
 }
 
 #[derive(Debug, Display, Copy, Clone)]
