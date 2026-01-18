@@ -211,7 +211,9 @@ impl Icon for HourlyForecast {
                         DayNight::Night
                     ))
                 {
-                    logger::detail("Using moon phase icon instead of clear night (from weather code)");
+                    logger::detail(
+                        "Using moon phase icon instead of clear night (from weather code)",
+                    );
                     icon_name = get_moon_phase_icon_name().to_string();
                 }
 
