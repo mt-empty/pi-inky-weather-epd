@@ -1,18 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient
-      id="a"
-      x1="163.5"
-      x2="296.6"
-      y1="185.7"
-      y2="416.3"
-      gradientUnits="userSpaceOnUse"
-    >
-      <stop stop-color="orange" />
-    </linearGradient>
-  </defs>
+  <rect x="230" y="200" width="60" height="150" fill="black" />
   <path
-    fill="url(#a)"
+    fill="orange"
     stroke="orange"
     stroke-miterlimit="10"
     stroke-width="4"
