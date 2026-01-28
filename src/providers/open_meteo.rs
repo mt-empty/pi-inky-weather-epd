@@ -15,14 +15,13 @@ use crate::{
     },
 };
 
-/// Open-Meteo-specific error checker
 fn check_open_meteo_error(body: &str) -> Result<(), DashboardError> {
     use crate::logger;
     logger::debug("Checking for API errors");
     // Try to parse as error response; if it's not an error format, that's fine (return Ok)
     let api_error = match serde_json::from_str::<OpenMeteoError>(body) {
         Ok(err) => err,
-        Err(_) => return Ok(()), // Not an error response format, continue processing
+        Err(_) => return Ok(()),
     };
 
     // OpenMeteoError.error field indicates if this is actually an error

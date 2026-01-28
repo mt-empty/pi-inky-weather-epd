@@ -11,7 +11,7 @@
 
 A Rust application that generates weather dashboards for Raspberry Pi with 7.3" e-paper displays. Supports multiple weather APIs (BOM, Open-Meteo) through a provider pattern, renders SVG templates with TinyTemplate, and converts to PNG using resvg for display on Inky Impression 7.3" hardware.
 
-**Current Version**: v0.8.1-alpha.3
+**Current Version**: v0.8.1
 
 **Core Flow**: Provider Factory → Fetch API data → Convert to domain models → Build context → Render SVG template → Convert to PNG → Display via Python script
 
@@ -36,11 +36,11 @@ Provider Factory → WeatherProvider Trait → Domain Models → Template Contex
 - **API Layer** (`src/apis/`): Provider-specific response models with `From` traits for domain conversion
 
 ### Module Structure
-- **`src/weather_dashboard.rs`**: Main orchestrator (25 lines) - uses provider factory, builds context, renders
+- **`src/weather_dashboard.rs`**: Main orchestrator - uses provider factory, builds context, renders
 - **`src/providers/`**: Provider pattern implementation
-  - `mod.rs` - `WeatherProvider` trait definition
+  - `mod.rs` - `WeatherProvider` trait definition + `FetchResult<T>` struct (data + optional warning)
   - `factory.rs` - `create_provider()` based on config
-  - `fetcher.rs` - Shared `Fetcher` with `FetchOutcome<T>` enum
+  - `fetcher.rs` - Shared `Fetcher` with HTTP client, returns `FetchOutcome<T>` enum (Fresh/Stale)
   - `bom.rs` - BOM provider (Australia only, geohash-based)
   - `open_meteo.rs` - Open-Meteo provider (worldwide, lat/lon)
 - **`src/domain/`**: Domain models and icon logic
@@ -65,20 +65,23 @@ WeatherProvider::fetch_hourly_forecast() / fetch_daily_forecast()
     ↓
 Fetcher::fetch_data() → HTTP GET → API
     ↓ (success)
-FetchResult { data, warning: None }
+FetchOutcome::Fresh(data) → FetchResult { data, warning: None }
     ↓ (failure, cached exists)
-FetchResult { data, warning: Some(error) }
+FetchOutcome::Stale { data, error } → FetchResult { data, warning: Some(error) }
     ↓
 From trait → Domain Models (HourlyForecastAbs, DailyForecastAbs)
     ↓
-ContextBuilder → Template Context
+ContextBuilder → Template Context (accumulates diagnostics)
     ↓
-TinyTemplate → SVG
+TinyTemplate → SVG (with diagnostic icons if warnings present)
     ↓
 resvg → PNG
 ```
 
-**Stale Data Handling**: `FetchResult<T>` struct distinguishes fresh vs cached data. Falls back to cached JSON on network failure with warning context in the `warning` field.
+**Stale Data Handling**:
+- `FetchOutcome<T>` enum (in `fetcher.rs`): `Fresh(T)` for successful API calls, `Stale { data, error }` for fallback to cache
+- `FetchResult<T>` struct (in `mod.rs`): Wraps data + optional `DashboardError` warning for provider interface
+- Falls back to cached JSON on network failure with diagnostic displayed on dashboard
 
 ### Configuration System
 Hierarchical merge via `config` crate:
@@ -199,6 +202,32 @@ cargo run
 - `disable_weather_api_requests = true`: Use cached JSON (requires one successful fetch first)
 - `disable_png_output = true`: Skip PNG generation for faster iteration
 
+### CLI Simulation Mode (Optional Feature)
+**Production builds** do NOT include CLI - it's a dev-only feature for testing time-dependent rendering.
+
+**Build with CLI**: `cargo build --features cli`
+
+**Simulate specific time**:
+```bash
+# Run as if it's a specific time (RFC3339 format)
+cargo run --features cli -- --simulate-time "2025-12-26T09:00:00Z"
+```
+
+**24-hour dashboard generation** (`scripts/simulate-24h.sh`):
+```bash
+# Generates 24 hourly dashboards using cached data
+./scripts/simulate-24h.sh [date] [start_hour] [timezone]
+
+# Examples:
+./scripts/simulate-24h.sh                                    # Today, midnight UTC
+./scripts/simulate-24h.sh 2025-12-26 6                       # Specific date/hour
+./scripts/simulate-24h.sh 2025-12-26 0 "Australia/Melbourne" # With timezone
+```
+- Fetches fresh API data first (using current config)
+- Generates 24 sequential hourly dashboards with consistent cached data
+- Output: `simulation_output/dashboard_YYYYMMDD_HH00.png`
+- Useful for testing DST transitions, icon changes, chart behavior over time
+
 ### Testing
 
 **Test Philosophy**: All tests use fixtures (pre-captured API responses) or mocked time via `Clock` abstraction. No live API calls to ensure deterministic, reproducible results.
@@ -316,11 +345,12 @@ impl WeatherProvider for YourProvider {
 ### Fetcher Usage Pattern
 
 The shared `Fetcher` handles:
-- HTTP requests with `reqwest::blocking::Client`
+- HTTP requests with `reqwest::blocking::Client` (15s timeout, 10s connect timeout)
 - Automatic cache directory creation
 - Respects `disable_weather_api_requests` debug flag
-- Falls back to cached JSON on network errors
+- Falls back to cached JSON on network errors (returns `FetchOutcome::Stale`)
 - Optional API-specific error checking via callback
+- Connection pooling for request reuse (2 max idle per host)
 
 **BOM-specific error checking**:
 ```rust
@@ -373,10 +403,15 @@ generate_weather_dashboard_injection(&clock)
 - Descriptive errors via `anyhow::Error` with context
 - **Priority-based display**: Errors have priority levels (High/Medium/Low) - highest priority error message is shown
 - **Cascading icons**: Multiple diagnostics are displayed as stacked SVG icons (highest priority at front, lowest at back)
+- **Diagnostic Types**:
+  - `ApiError` (High priority, red icon) - API returned error response
+  - `NetworkError` (Medium priority, orange icon) - Connection failed, no internet
+  - `DataIncomplete` (Low priority, yellow icon) - Partial data retrieved
+  - `UpdateFailed` (Low priority, green icon) - Self-update failed
 - **ContextBuilder patterns**:
   - `with_validation_error()` - Internal validation errors (logs to stderr + adds to diagnostics)
   - `with_warning()` - External warnings (e.g., stale data from API failure, caller already logged)
-- Display error indicators in dashboard corner with icon + message
+- **Degraded Operation**: Dashboard continues working with cached data when API unavailable, shows diagnostic indicator
 
 ### Icon System
 - All icons are enums implementing `Display` trait (e.g., `UVIndexIcon`, `WindIconName`)
@@ -425,8 +460,9 @@ When `update_interval_days > 0`:
 
 ### Core Workflow Understanding
 - **Entry point**: `src/main.rs` → `run_weather_dashboard()` → `generate_weather_dashboard()` in `src/weather_dashboard.rs`
+- **CLI feature** (optional): When built with `--features cli`, enables `--simulate-time` argument for testing
 - **Provider instantiation**: `create_provider()` in `src/providers/factory.rs` returns `Box<dyn WeatherProvider>` based on `CONFIG.api.provider`
-- **Data flow**: Provider → Domain models → ContextBuilder → Template vars → TinyTemplate → SVG string → resvg → PNG
+- **Data flow**: Provider → Domain models → ContextBuilder (accumulates diagnostics) → Template vars → TinyTemplate → SVG string → resvg → PNG
 
 ### Critical Patterns to Follow
 - **Temperature handling**: Always check `CONFIG.render_options.temp_unit` - conversion happens at deserialization
@@ -434,10 +470,13 @@ When `update_interval_days > 0`:
 - **Clock injection**: For any time-dependent code, accept `&dyn Clock` parameter and use `clock.now_local()/now_utc()` instead of `chrono::Local::now()`
 - **Config changes**: Modify TOML files, not hardcoded values - system merges configs hierarchically
 - **Error handling**: Return `Result<T, Error>` for internal functions; use `DashboardError` enum for user-facing errors with icon support
+- **Fetcher pattern**: Use `Fetcher::fetch_data()` which returns `FetchOutcome<T>`, then convert to `FetchResult<T>` at provider level
 
 ### Development Tips
 - **SVG debugging**: Set `disable_png_output = true` in config and inspect `dashboard.svg` directly
 - **Skip API calls**: Set `disable_weather_api_requests = true` to use cached JSON (requires one successful fetch first)
+- **Simulate time**: Build with `--features cli` and use `--simulate-time "2025-12-26T09:00:00Z"` for time-dependent testing
+- **24-hour simulation**: Run `./scripts/simulate-24h.sh` to generate hourly dashboards for visual regression testing
 - **Adding weather icons**:
   1. Create SVG in `static/fill-svg-static/`
   2. Add enum variant in `src/weather/icons.rs`
@@ -461,8 +500,10 @@ Before committing:
 ### Common Pitfalls
 - **Config environment vars**: Use double underscores for nested keys (`APP_API__PROVIDER`, not `APP_API_PROVIDER`)
 - **Provider enum**: Must be exact match - use `"open_meteo"` not `"OpenMeteo"` in config
-- **Fetcher pattern**: Always check `result.warning` field after calling `Fetcher::fetch_data()` to handle stale data scenarios
+- **Fetcher return types**: `Fetcher::fetch_data()` returns `FetchOutcome<T>` enum; providers convert to `FetchResult<T>` struct
+- **FetchResult handling**: Always check `result.warning` field after provider calls to detect stale data scenarios
 - **resvg text positioning**: Avoid `tspan` with `dx`/`dy` attributes - resvg doesn't handle properly (see SVG comments)
+- **CLI feature**: Not included in release builds by default - must explicitly build with `--features cli`
 
 ## Project Status
 

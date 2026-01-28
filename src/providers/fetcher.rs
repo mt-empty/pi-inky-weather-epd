@@ -1,3 +1,4 @@
+// TODO: this files violates the single responsibility principle and should be refactored
 use anyhow::Error;
 use serde::Deserialize;
 use std::{fs, path::PathBuf, time::Duration};
@@ -25,9 +26,6 @@ pub struct Fetcher {
 impl Fetcher {
     pub fn new(cache_path: PathBuf) -> Self {
         let client = reqwest::blocking::Client::builder()
-            .timeout(Duration::from_secs(15))
-            .connect_timeout(Duration::from_secs(10))
-            .pool_max_idle_per_host(2) // Connection pooling for reuse
             .user_agent(format!(
                 "{}/{} ({})",
                 env!("CARGO_PKG_NAME"),
@@ -40,33 +38,43 @@ impl Fetcher {
         Self { cache_path, client }
     }
 
-    /// Classify the error to provide better diagnostics
-    fn classify_error(error: &reqwest::Error) -> String {
-        if error.is_timeout() {
-            "Request timeout - server took too long to respond".to_string()
-        } else if error.is_connect() {
-            "Connection failed - unable to reach server (check network/firewall)".to_string()
-        } else if error.is_request() {
-            format!("Request error - {}", error)
-        } else if let Some(status) = error.status() {
-            format!(
-                "HTTP {} - {}",
+    /// Classify reqwest error to appropriate DashboardError using idiomatic error inspection
+    fn classify_error(error: &reqwest::Error) -> DashboardError {
+        logger::detail(format!("Raw error details: {:?}", error));
+
+        // Check for HTTP status codes first (4xx/5xx)
+        if let Some(status) = error.status() {
+            let details = format!(
+                "HTTP {} {}",
                 status.as_u16(),
                 status.canonical_reason().unwrap_or("Unknown")
-            )
-        } else {
-            // Could be DNS resolution failure, TLS error, etc.
-            let err_str = error.to_string();
-            if err_str.contains("dns") || err_str.contains("resolve") {
-                "DNS resolution failed - cannot find server address".to_string()
-            } else if err_str.contains("certificate")
-                || err_str.contains("tls")
-                || err_str.contains("ssl")
-            {
-                "TLS/SSL error - certificate validation failed".to_string()
-            } else {
-                format!("Network error - {}", error)
-            }
+            );
+
+            // 4xx and 5xx are API errors (server returned error response)
+            return DashboardError::ApiError { details };
+        }
+
+        if error.is_timeout() {
+            return DashboardError::NetworkError {
+                details: "Request timeout - server took too long to respond".to_string(),
+            };
+        }
+
+        if error.is_connect() {
+            return DashboardError::NetworkError {
+                details: error.to_string(),
+            };
+        }
+
+        if error.is_request() {
+            return DashboardError::ApiError {
+                details: format!("Request error: {}", error),
+            };
+        }
+
+        // Catch-all for other errors
+        DashboardError::NetworkError {
+            details: format!("Network error: {}", error),
         }
     }
 
@@ -99,11 +107,45 @@ impl Fetcher {
         })
     }
 
-    /// Check if an error is retryable (transient network issues)
+    /// Check if an error is retryable (transient network issues, rate limits, server errors)
     fn is_error_retryable(error: &reqwest::Error) -> bool {
-        error.is_timeout()
-            || error.is_connect()
-            || error.status().is_some_and(|s| s.is_server_error())
+        // Network connectivity issues are retryable
+        if error.is_timeout() || error.is_connect() {
+            return true;
+        }
+
+        // Check HTTP status codes
+        if let Some(status) = error.status() {
+            // 429 Too Many Requests - always retryable with backoff
+            if status.as_u16() == 429 {
+                return true;
+            }
+            // 5xx server errors are retryable
+            if status.is_server_error() {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Parse Retry-After header value (seconds as integer or HTTP-date)
+    fn parse_retry_after(value: &str) -> Option<u64> {
+        // Try parsing as integer seconds first
+        if let Ok(seconds) = value.trim().parse::<u64>() {
+            return Some(seconds);
+        }
+
+        // Try parsing as HTTP-date (RFC 7231)
+        if let Ok(date) = chrono::DateTime::parse_from_rfc2822(value) {
+            let now = chrono::Utc::now();
+            let duration = date.signed_duration_since(now);
+            if duration.num_seconds() > 0 {
+                return Some(duration.num_seconds() as u64);
+            }
+        }
+
+        None
     }
 
     /// Process a successful API response
@@ -130,36 +172,40 @@ impl Fetcher {
         Ok(FetchOutcome::Fresh(data))
     }
 
-    /// Handle fetch errors with logging
+    /// Handle fetch errors with logging (classify_error logs raw details internally)
     fn handle_fetch_error(&self, error: &reqwest::Error, attempt: u32, max_retries: u32) {
-        let error_classification = Self::classify_error(error);
+        let dashboard_error = Self::classify_error(error);
+        use crate::errors::Description;
 
         if attempt == 0 {
-            logger::warning(format!("API request failed: {}", error_classification));
+            logger::warning(format!(
+                "API request failed: {}",
+                dashboard_error.short_description()
+            ));
         } else {
             logger::warning(format!(
                 "Retry {}/{} failed: {}",
                 attempt + 1,
                 max_retries,
-                error_classification
+                dashboard_error.short_description()
             ));
         }
     }
 
-    /// Try to fetch data with retry logic
+    /// Try to fetch data with retry logic and rate limit handling
     fn try_fetch_with_retry<T: for<'de> Deserialize<'de>>(
         &self,
         endpoint: &Url,
         file_path: &PathBuf,
         error_checker: Option<ErrorChecker>,
     ) -> Result<FetchOutcome<T>, Error> {
-        const MAX_RETRIES: u32 = 3;
-        let retry_delays = [1, 2, 4]; // Exponential backoff in seconds
+        const MAX_RETRIES: u32 = 5;
+        const MAX_RETRY_AFTER_SECS: u64 = 60; // Cap Retry-After at 60 seconds
+        let retry_delays = [1, 2, 4, 16, 32]; // Exponential backoff in seconds
 
-        let mut last_error = None;
+        let mut last_error: Option<Box<dyn std::error::Error + Send + Sync>> = None;
 
         for attempt in 0..MAX_RETRIES {
-            // Wait before retry (skip first attempt)
             if attempt > 0 {
                 let delay_secs = retry_delays[(attempt - 1) as usize];
                 logger::detail(format!(
@@ -174,6 +220,45 @@ impl Fetcher {
 
             match self.client.get(endpoint.clone()).send() {
                 Ok(response) => {
+                    // Check for 429 Too Many Requests with Retry-After header
+                    if response.status().as_u16() == 429 {
+                        let retry_after = response
+                            .headers()
+                            .get("retry-after")
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(Self::parse_retry_after)
+                            .unwrap_or(retry_delays.get((attempt) as usize).copied().unwrap_or(32));
+
+                        // Cap retry delay at maximum
+                        if retry_after > MAX_RETRY_AFTER_SECS {
+                            // return error immediately if Retry-After is unreasonably high
+                            last_error = Some(Box::new(std::io::Error::other(
+                                format!(
+                                    "Rate limited with Retry-After of {} seconds exceeding max of {} seconds",
+                                    retry_after, MAX_RETRY_AFTER_SECS
+                                ),
+                            )));
+                            break;
+                        }
+
+                        logger::warning(format!(
+                            "Rate limited (HTTP 429). Retrying after {} seconds",
+                            retry_after
+                        ));
+
+                        // Don't count as last attempt yet - respect rate limit
+                        if attempt < MAX_RETRIES - 1 {
+                            std::thread::sleep(Duration::from_secs(retry_after));
+                            continue;
+                        } else {
+                            // Final attempt - fall back to cache
+                            last_error = Some(Box::new(std::io::Error::other(
+                                "Rate limited after max retries",
+                            )));
+                            break;
+                        }
+                    }
+
                     if attempt > 0 {
                         logger::success(format!(
                             "Request succeeded on attempt {}/{}",
@@ -193,28 +278,34 @@ impl Fetcher {
 
                     if !is_retryable || attempt == MAX_RETRIES - 1 {
                         // Non-retryable error or final attempt - fall back to cache
-                        last_error = Some(e);
+                        last_error = Some(Box::new(e));
                         break;
                     }
 
-                    last_error = Some(e);
+                    last_error = Some(Box::new(e));
                 }
             }
         }
 
         // All retries exhausted, use cached data
-        if let Some(e) = last_error {
+        let dashboard_error = if let Some(e) = last_error {
             logger::warning("All retry attempts exhausted. Attempting to use cached data");
-            return self.fallback(
-                file_path,
-                DashboardError::NoInternet {
-                    details: Self::classify_error(&e),
-                },
-            );
-        }
 
-        // Shouldn't reach here, but just in case
-        unreachable!("Retry loop should either succeed or have last_error set");
+            // Try to downcast to reqwest::Error for proper classification
+            if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
+                Self::classify_error(reqwest_err)
+            } else {
+                DashboardError::NetworkError {
+                    details: e.to_string(),
+                }
+            }
+        } else {
+            return Err(anyhow::anyhow!(
+                "Failed to fetch data and no error information available"
+            ));
+        };
+
+        self.fallback(file_path, dashboard_error)
     }
 
     /// Fetch data from API with caching fallback and retry logic
@@ -225,7 +316,10 @@ impl Fetcher {
     /// * `error_checker` - Optional function to check response for API-specific errors
     ///
     /// # Retry Strategy
-    /// Attempts up to 3 retries with exponential backoff (1s, 2s, 4s) on transient errors
+    /// - Attempts up to 5 retries with exponential backoff (1s, 2s, 4s, 16s, 32s)
+    /// - Respects HTTP 429 rate limit responses with Retry-After header
+    /// - Retries on: timeouts, connection failures, 5xx errors, 429 rate limits
+    /// - Falls back to cached data if all retries fail
     pub fn fetch_data<T>(
         &self,
         endpoint: Url,
@@ -241,10 +335,12 @@ impl Fetcher {
             fs::create_dir_all(file_path.parent().unwrap())?;
         }
 
-        if !CONFIG.debugging.disable_weather_api_requests {
-            self.try_fetch_with_retry(&endpoint, &file_path, error_checker)
-        } else {
-            Ok(FetchOutcome::Fresh(self.load_cached(&file_path)?))
+        match CONFIG.debugging.disable_weather_api_requests {
+            true => {
+                let cached = self.load_cached(&file_path)?;
+                Ok(FetchOutcome::Fresh(cached))
+            }
+            false => self.try_fetch_with_retry(&endpoint, &file_path, error_checker),
         }
     }
 }

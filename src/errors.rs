@@ -15,7 +15,7 @@ pub enum DiagnosticPriority {
 #[derive(Error, Debug, Clone)]
 pub enum DashboardError {
     #[error("No internet connection")]
-    NoInternet { details: String },
+    NetworkError { details: String },
     #[error("API error")]
     ApiError { details: String },
     #[error("Incomplete data")]
@@ -44,7 +44,7 @@ pub trait Description {
 impl Icon for DashboardError {
     fn get_icon_name(&self) -> String {
         match self {
-            DashboardError::NoInternet { .. } => DashboardErrorIconName::NoInternet,
+            DashboardError::NetworkError { .. } => DashboardErrorIconName::NoInternet,
             DashboardError::ApiError { .. } => DashboardErrorIconName::ApiError,
             DashboardError::IncompleteData { .. } => DashboardErrorIconName::IncompleteData,
             DashboardError::UpdateFailed { .. } => DashboardErrorIconName::UpdateFailed,
@@ -59,7 +59,7 @@ impl DashboardError {
     pub fn priority(&self) -> DiagnosticPriority {
         match self {
             DashboardError::ApiError { .. } => DiagnosticPriority::High,
-            DashboardError::NoInternet { .. } => DiagnosticPriority::Medium,
+            DashboardError::NetworkError { .. } => DiagnosticPriority::Medium,
             DashboardError::IncompleteData { .. } => DiagnosticPriority::Low,
             DashboardError::UpdateFailed { .. } => DiagnosticPriority::Low,
         }
@@ -69,7 +69,7 @@ impl DashboardError {
 impl Description for DashboardError {
     fn short_description(&self) -> &'static str {
         match self {
-            DashboardError::NoInternet { .. } => "API unreachable -> Stale Data",
+            DashboardError::NetworkError { .. } => "API unreachable -> Stale Data",
             DashboardError::ApiError { .. } => "API error -> Stale Data",
             DashboardError::IncompleteData { .. } => "Incomplete Data",
             DashboardError::UpdateFailed { .. } => "Update Failed",
@@ -78,7 +78,7 @@ impl Description for DashboardError {
 
     fn long_description(&self) -> String {
         match self {
-            DashboardError::NoInternet { details } => {
+            DashboardError::NetworkError { details } => {
                 format!("The application is unable to reach the API server. Details: {details}")
             }
             DashboardError::ApiError { details } => {

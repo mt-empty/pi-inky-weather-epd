@@ -32,7 +32,7 @@ fn test_single_api_warning_displays() {
     let mut builder = ContextBuilder::new();
 
     // Add API warning
-    builder.with_warning(DashboardError::NoInternet {
+    builder.with_warning(DashboardError::NetworkError {
         details: "Using cached data".to_string(),
     });
 
@@ -83,7 +83,7 @@ fn test_medium_priority_overrides_low_priority() {
     });
 
     // Add medium priority error
-    builder.with_warning(DashboardError::NoInternet {
+    builder.with_warning(DashboardError::NetworkError {
         details: "Using cached data".to_string(),
     });
 
@@ -163,7 +163,7 @@ fn test_realistic_scenario_api_stale_and_incomplete_data() {
     let mut builder = ContextBuilder::new();
 
     // Simulate API warning (from provider)
-    builder.with_warning(DashboardError::NoInternet {
+    builder.with_warning(DashboardError::NetworkError {
         details: "Could not reach API server".to_string(),
     });
 
@@ -197,7 +197,7 @@ fn test_cascading_icons_svg_generated_for_multiple_errors() {
     let mut builder = ContextBuilder::new();
 
     // Add multiple errors of different priorities
-    builder.with_warning(DashboardError::NoInternet {
+    builder.with_warning(DashboardError::NetworkError {
         details: "Network issue".to_string(),
     });
     builder.with_validation_error(DashboardError::IncompleteData {
@@ -239,7 +239,7 @@ fn test_cascading_icons_are_sorted_by_priority() {
     builder.with_validation_error(DashboardError::IncompleteData {
         details: "Issue 1".to_string(),
     });
-    builder.with_warning(DashboardError::NoInternet {
+    builder.with_warning(DashboardError::NetworkError {
         details: "Issue 2".to_string(),
     });
     builder.with_warning(DashboardError::ApiError {
