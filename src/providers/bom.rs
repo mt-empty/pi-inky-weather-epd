@@ -14,7 +14,6 @@ use crate::{
     },
 };
 
-/// BOM-specific error checker
 fn check_bom_error(body: &str) -> Result<(), DashboardError> {
     use crate::logger;
     logger::debug("Checking for API errors");
