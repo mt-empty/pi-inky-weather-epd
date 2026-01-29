@@ -1,4 +1,3 @@
-// TODO: this files violates the single responsibility principle and should be refactored
 use anyhow::Error;
 use serde::Deserialize;
 use std::{fs, path::PathBuf, time::Duration};
@@ -8,6 +7,34 @@ use crate::{errors::DashboardError, logger, CONFIG};
 
 /// Type alias for API-specific error checking function
 pub type ErrorChecker = fn(&str) -> Result<(), DashboardError>;
+
+/// Configuration for retry behavior
+///
+/// **Internal API** - Not intended for external use, may change without notice.
+/// Used for testing retry logic with custom configurations.
+pub struct RetryConfig<'a> {
+    pub max_retries: usize,
+    pub retry_delays: &'a [Duration],
+    pub max_retry_after_secs: Duration,
+}
+
+impl<'a> RetryConfig<'a> {
+    pub fn new(
+        max_retries: usize,
+        retry_delays: &'static [Duration],
+        max_retry_after_secs: Duration,
+    ) -> Self {
+        assert!(
+            max_retries <= retry_delays.len(),
+            "max_retries cannot exceed the length of retry_delays array"
+        );
+        Self {
+            max_retries,
+            retry_delays,
+            max_retry_after_secs,
+        }
+    }
+}
 
 /// Represents the outcome of a fetch operation
 pub enum FetchOutcome<T> {
@@ -39,7 +66,7 @@ impl Fetcher {
     }
 
     /// Classify reqwest error to appropriate DashboardError using idiomatic error inspection
-    fn classify_error(error: &reqwest::Error) -> DashboardError {
+    pub fn classify_error(error: &reqwest::Error) -> DashboardError {
         logger::detail(format!("Raw error details: {:?}", error));
 
         // Check for HTTP status codes first (4xx/5xx)
@@ -108,7 +135,7 @@ impl Fetcher {
     }
 
     /// Check if an error is retryable (transient network issues, rate limits, server errors)
-    fn is_error_retryable(error: &reqwest::Error) -> bool {
+    pub fn is_error_retryable(error: &reqwest::Error) -> bool {
         // Network connectivity issues are retryable
         if error.is_timeout() || error.is_connect() {
             return true;
@@ -130,10 +157,10 @@ impl Fetcher {
     }
 
     /// Parse Retry-After header value (seconds as integer or HTTP-date)
-    fn parse_retry_after(value: &str) -> Option<u64> {
+    pub fn parse_retry_after(value: &str) -> Option<Duration> {
         // Try parsing as integer seconds first
         if let Ok(seconds) = value.trim().parse::<u64>() {
-            return Some(seconds);
+            return Some(Duration::from_secs(seconds));
         }
 
         // Try parsing as HTTP-date (RFC 7231)
@@ -141,7 +168,7 @@ impl Fetcher {
             let now = chrono::Utc::now();
             let duration = date.signed_duration_since(now);
             if duration.num_seconds() > 0 {
-                return Some(duration.num_seconds() as u64);
+                return Some(Duration::from_secs(duration.num_seconds() as u64));
             }
         }
 
@@ -173,7 +200,7 @@ impl Fetcher {
     }
 
     /// Handle fetch errors with logging (classify_error logs raw details internally)
-    fn handle_fetch_error(&self, error: &reqwest::Error, attempt: u32, max_retries: u32) {
+    fn handle_fetch_error(&self, error: &reqwest::Error, attempt: usize, max_retries: usize) {
         let dashboard_error = Self::classify_error(error);
         use crate::errors::Description;
 
@@ -192,120 +219,171 @@ impl Fetcher {
         }
     }
 
-    /// Try to fetch data with retry logic and rate limit handling
-    fn try_fetch_with_retry<T: for<'de> Deserialize<'de>>(
+    /// Handle HTTP 429 rate limiting with Retry-After header
+    ///
+    /// Returns Ok(retry_delay) if should retry, Err if should abort
+    fn handle_rate_limit_response(
+        response: &reqwest::blocking::Response,
+        attempt: usize,
+        config: &RetryConfig,
+    ) -> Result<Duration, Box<dyn std::error::Error + Send + Sync>> {
+        let retry_after = response
+            .headers()
+            .get("retry-after")
+            .and_then(|v| v.to_str().ok())
+            .and_then(Self::parse_retry_after)
+            .unwrap_or(
+                config
+                    .retry_delays
+                    .get(attempt)
+                    .copied()
+                    .unwrap_or(Duration::from_secs(32)),
+            );
+
+        // Cap retry delay at maximum
+        if retry_after > config.max_retry_after_secs {
+            return Err(Box::new(std::io::Error::other(format!(
+                "Rate limited with Retry-After of {} seconds exceeding max of {} seconds",
+                retry_after.as_secs(),
+                config.max_retry_after_secs.as_secs()
+            ))));
+        }
+
+        logger::warning(format!(
+            "Rate limited (HTTP 429). Retrying after {} seconds",
+            retry_after.as_secs()
+        ));
+
+        // Check if we have more retries available
+        if attempt >= config.max_retries - 1 {
+            return Err(Box::new(std::io::Error::other(
+                "Rate limited after max retries",
+            )));
+        }
+
+        Ok(retry_after)
+    }
+
+    /// Execute a single fetch attempt and process the response
+    fn execute_fetch_attempt<T: for<'de> Deserialize<'de>>(
         &self,
         endpoint: &Url,
         file_path: &PathBuf,
         error_checker: Option<ErrorChecker>,
-    ) -> Result<FetchOutcome<T>, Error> {
-        const MAX_RETRIES: u32 = 5;
-        const MAX_RETRY_AFTER_SECS: u64 = 60; // Cap Retry-After at 60 seconds
-        let retry_delays = [1, 2, 4, 16, 32]; // Exponential backoff in seconds
+        attempt: usize,
+        config: &RetryConfig,
+    ) -> Result<FetchOutcome<T>, Box<dyn std::error::Error + Send + Sync>> {
+        let response = self.client.get(endpoint.clone()).send()?;
 
+        // Check for 429 Too Many Requests with Retry-After header
+        if response.status().as_u16() == 429 {
+            let retry_after = Self::handle_rate_limit_response(&response, attempt, config)?;
+            std::thread::sleep(retry_after);
+            // Return error to trigger retry
+            return Err(Box::new(std::io::Error::other("Rate limited, retrying")));
+        }
+
+        if attempt > 0 {
+            logger::success(format!(
+                "Request succeeded on attempt {}/{}",
+                attempt + 1,
+                config.max_retries
+            ));
+        }
+
+        let body = response.text()?;
+        match self.process_successful_response(body, file_path, error_checker) {
+            Ok(outcome) => Ok(outcome),
+            Err(e) => Err(Box::new(std::io::Error::other(e.to_string()))),
+        }
+    }
+
+    /// Try to fetch data with retry logic and rate limit handling
+    ///
+    /// **⚠️ Internal API** - Not intended for external use, may change without notice.
+    ///
+    /// # Arguments
+    /// * `endpoint` - API endpoint URL
+    /// * `file_path` - Path to cache file
+    /// * `error_checker` - Optional function to check for API-specific errors
+    /// * `config` - Retry configuration (max retries, delays, rate limit cap)
+    pub fn try_fetch_with_retry<T: for<'de> Deserialize<'de>>(
+        &self,
+        endpoint: &Url,
+        file_path: &PathBuf,
+        error_checker: Option<ErrorChecker>,
+        config: &RetryConfig,
+    ) -> Result<FetchOutcome<T>, Error> {
         let mut last_error: Option<Box<dyn std::error::Error + Send + Sync>> = None;
 
-        for attempt in 0..MAX_RETRIES {
+        for attempt in 0..config.max_retries {
+            // Apply delay before retry attempts (not on first attempt)
             if attempt > 0 {
-                let delay_secs = retry_delays[(attempt - 1) as usize];
+                let delay_secs = config
+                    .retry_delays
+                    .get(attempt - 1)
+                    .copied()
+                    .unwrap_or(Duration::from_secs(32));
                 logger::detail(format!(
                     "Retrying in {} second{}... (attempt {}/{})",
-                    delay_secs,
-                    if delay_secs == 1 { "" } else { "s" },
+                    delay_secs.as_secs(),
+                    if delay_secs.as_secs() == 1 { "" } else { "s" },
                     attempt + 1,
-                    MAX_RETRIES
+                    config.max_retries
                 ));
-                std::thread::sleep(Duration::from_secs(delay_secs));
+                std::thread::sleep(delay_secs);
             }
 
-            match self.client.get(endpoint.clone()).send() {
-                Ok(response) => {
-                    // Check for 429 Too Many Requests with Retry-After header
-                    if response.status().as_u16() == 429 {
-                        let retry_after = response
-                            .headers()
-                            .get("retry-after")
-                            .and_then(|v| v.to_str().ok())
-                            .and_then(Self::parse_retry_after)
-                            .unwrap_or(retry_delays.get((attempt) as usize).copied().unwrap_or(32));
-
-                        // Cap retry delay at maximum
-                        if retry_after > MAX_RETRY_AFTER_SECS {
-                            // return error immediately if Retry-After is unreasonably high
-                            last_error = Some(Box::new(std::io::Error::other(
-                                format!(
-                                    "Rate limited with Retry-After of {} seconds exceeding max of {} seconds",
-                                    retry_after, MAX_RETRY_AFTER_SECS
-                                ),
-                            )));
-                            break;
-                        }
-
-                        logger::warning(format!(
-                            "Rate limited (HTTP 429). Retrying after {} seconds",
-                            retry_after
-                        ));
-
-                        // Don't count as last attempt yet - respect rate limit
-                        if attempt < MAX_RETRIES - 1 {
-                            std::thread::sleep(Duration::from_secs(retry_after));
-                            continue;
-                        } else {
-                            // Final attempt - fall back to cache
-                            last_error = Some(Box::new(std::io::Error::other(
-                                "Rate limited after max retries",
-                            )));
-                            break;
-                        }
-                    }
-
-                    if attempt > 0 {
-                        logger::success(format!(
-                            "Request succeeded on attempt {}/{}",
-                            attempt + 1,
-                            MAX_RETRIES
-                        ));
-                    }
-
-                    let body = response.text().map_err(Error::msg)?;
-                    return self.process_successful_response(body, file_path, error_checker);
-                }
+            // Execute fetch attempt
+            match self.execute_fetch_attempt(endpoint, file_path, error_checker, attempt, config) {
+                Ok(outcome) => return Ok(outcome),
                 Err(e) => {
-                    self.handle_fetch_error(&e, attempt, MAX_RETRIES);
+                    // Try to downcast to reqwest::Error for proper error handling
+                    if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
+                        self.handle_fetch_error(reqwest_err, attempt, config.max_retries);
 
-                    // Check if error is retryable
-                    let is_retryable = Self::is_error_retryable(&e);
+                        // Check if error is retryable
+                        let is_retryable = Self::is_error_retryable(reqwest_err);
 
-                    if !is_retryable || attempt == MAX_RETRIES - 1 {
-                        // Non-retryable error or final attempt - fall back to cache
-                        last_error = Some(Box::new(e));
-                        break;
+                        if !is_retryable || attempt == config.max_retries - 1 {
+                            // Non-retryable error or final attempt - fall back to cache
+                            last_error = Some(e);
+                            // No point of further retries, since the error is not retryable
+                            break;
+                        }
                     }
 
-                    last_error = Some(Box::new(e));
+                    last_error = Some(e);
                 }
             }
         }
 
         // All retries exhausted, use cached data
-        let dashboard_error = if let Some(e) = last_error {
+        let dashboard_error = self.classify_final_error(last_error)?;
+        self.fallback(file_path, dashboard_error)
+    }
+
+    /// Classify the final error after all retries are exhausted
+    fn classify_final_error(
+        &self,
+        last_error: Option<Box<dyn std::error::Error + Send + Sync>>,
+    ) -> Result<DashboardError, Error> {
+        if let Some(e) = last_error {
             logger::warning("All retry attempts exhausted. Attempting to use cached data");
 
             // Try to downcast to reqwest::Error for proper classification
             if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
-                Self::classify_error(reqwest_err)
+                Ok(Self::classify_error(reqwest_err))
             } else {
-                DashboardError::NetworkError {
+                Ok(DashboardError::NetworkError {
                     details: e.to_string(),
-                }
+                })
             }
         } else {
-            return Err(anyhow::anyhow!(
+            Err(anyhow::anyhow!(
                 "Failed to fetch data and no error information available"
-            ));
-        };
-
-        self.fallback(file_path, dashboard_error)
+            ))
+        }
     }
 
     /// Fetch data from API with caching fallback and retry logic
@@ -329,6 +407,22 @@ impl Fetcher {
     where
         T: for<'de> Deserialize<'de>,
     {
+        const MAX_RETRIES: usize = 5;
+        const RETRY_DELAYS: &[Duration] = &[
+            Duration::from_secs(1),
+            Duration::from_secs(2),
+            Duration::from_secs(4),
+            Duration::from_secs(16),
+            Duration::from_secs(32),
+        ]; // Exponential backoff in seconds
+        const MAX_RETRY_AFTER_SECS: Duration = Duration::from_secs(60); // Cap Retry-After at 60 seconds
+
+        let config = RetryConfig {
+            max_retries: MAX_RETRIES,
+            retry_delays: RETRY_DELAYS,
+            max_retry_after_secs: MAX_RETRY_AFTER_SECS,
+        };
+
         let file_path = self.cache_path.join(cache_filename);
 
         if !file_path.exists() {
@@ -340,7 +434,7 @@ impl Fetcher {
                 let cached = self.load_cached(&file_path)?;
                 Ok(FetchOutcome::Fresh(cached))
             }
-            false => self.try_fetch_with_retry(&endpoint, &file_path, error_checker),
+            false => self.try_fetch_with_retry(&endpoint, &file_path, error_checker, &config),
         }
     }
 }
