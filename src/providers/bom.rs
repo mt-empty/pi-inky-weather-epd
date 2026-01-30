@@ -65,7 +65,7 @@ impl BomProvider {
 impl WeatherProvider for BomProvider {
     fn fetch_hourly_forecast(&self) -> Result<FetchResult<Vec<HourlyForecast>>, Error> {
         match self.fetcher.fetch_data::<HourlyForecastResponse>(
-            HOURLY_FORECAST_ENDPOINT.clone(),
+            (*HOURLY_FORECAST_ENDPOINT).clone(),
             &self.generate_cache_filename(HOURLY_CACHE_SUFFIX),
             Some(check_bom_error),
         )? {
@@ -89,7 +89,7 @@ impl WeatherProvider for BomProvider {
 
     fn fetch_daily_forecast(&self) -> Result<FetchResult<Vec<DailyForecast>>, Error> {
         match self.fetcher.fetch_data::<DailyForecastResponse>(
-            DAILY_FORECAST_ENDPOINT.clone(),
+            (*DAILY_FORECAST_ENDPOINT).clone(),
             &self.generate_cache_filename(DAILY_CACHE_SUFFIX),
             Some(check_bom_error),
         )? {

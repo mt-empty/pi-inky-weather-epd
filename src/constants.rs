@@ -10,8 +10,6 @@ pub const HOURLY_CACHE_SUFFIX: &str = "hourly_forecast.json";
 pub const DAILY_CACHE_SUFFIX: &str = "daily_forecast.json";
 pub const CACHE_SUFFIX: &str = "forecast.json";
 
-const NOT_AVAILABLE_ICON_NAME: &str = "not-available.svg";
-
 fn build_forecast_url(frequency: &str) -> Url {
     // Allow test override via environment variable (for wiremock/fixtures)
     let base_url = std::env::var("BOM_BASE_URL")
@@ -90,9 +88,5 @@ pub static OPEN_METEO_DAILY_ENDPOINT: Lazy<Url> = Lazy::new(|| {
     Url::parse(&url).expect("Failed to construct Open Meteo daily endpoint URL")
 });
 
-pub static NOT_AVAILABLE_ICON_PATH: Lazy<PathBuf> = Lazy::new(|| {
-    CONFIG
-        .misc
-        .svg_icons_directory
-        .join(NOT_AVAILABLE_ICON_NAME)
-});
+pub static NOT_AVAILABLE_ICON_PATH: Lazy<PathBuf> =
+    Lazy::new(|| CONFIG.misc.svg_icons_directory.join("not-available.svg"));

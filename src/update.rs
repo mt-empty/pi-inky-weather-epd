@@ -83,7 +83,7 @@ fn fetch_release_info(
     header_value: &str,
 ) -> Result<GithubRelease, anyhow::Error> {
     let response = client
-        .get(CONFIG.release.release_info_url.clone())
+        .get(CONFIG.release.release_info_url.as_str())
         .header(reqwest::header::USER_AGENT, header_value)
         .send()
         .context("Failed to fetch latest release info")?;

@@ -273,7 +273,7 @@ impl Fetcher {
         attempt: usize,
         config: &RetryConfig,
     ) -> Result<FetchOutcome<T>, Box<dyn std::error::Error + Send + Sync>> {
-        let response = self.client.get(endpoint.clone()).send()?;
+        let response = self.client.get(endpoint.as_str()).send()?;
 
         // Check for 429 Too Many Requests with Retry-After header
         if response.status().as_u16() == 429 {

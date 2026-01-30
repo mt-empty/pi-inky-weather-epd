@@ -49,7 +49,7 @@ impl OpenMeteoProvider {
 impl WeatherProvider for OpenMeteoProvider {
     fn fetch_hourly_forecast(&self) -> Result<FetchResult<Vec<HourlyForecast>>, Error> {
         let result = match self.fetcher.fetch_data::<OpenMeteoHourlyResponse>(
-            OPEN_METEO_HOURLY_ENDPOINT.clone(),
+            (*OPEN_METEO_HOURLY_ENDPOINT).clone(),
             &self.generate_cache_filename(HOURLY_CACHE_SUFFIX),
             Some(check_open_meteo_error),
         )? {
@@ -62,7 +62,7 @@ impl WeatherProvider for OpenMeteoProvider {
 
     fn fetch_daily_forecast(&self) -> Result<FetchResult<Vec<DailyForecast>>, Error> {
         let result = match self.fetcher.fetch_data::<OpenMeteoDailyResponse>(
-            OPEN_METEO_DAILY_ENDPOINT.clone(),
+            (*OPEN_METEO_DAILY_ENDPOINT).clone(),
             &self.generate_cache_filename(DAILY_CACHE_SUFFIX),
             Some(check_open_meteo_error),
         )? {
