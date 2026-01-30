@@ -58,6 +58,19 @@
         </text>
     </svg>
 
+    <!-- Version Information (displayed when debugging enabled) -->
+    <svg x="690" y="15" width="100" height="20" text-anchor="end" visibility="{debug_info_visibility}">
+        <text x="90" y="0" font-size="9" fill="{text_colour}">
+            {debug_version}
+        </text>
+        <text x="90" y="10" font-size="8" fill="{text_colour}">
+            {debug_provider}
+        </text>
+        <text x="90" y="18" font-size="7" fill="{text_colour}">
+            {debug_location} {debug_timezone}
+        </text>
+    </svg>
+
     <!-- Sunset/Sunrise Information -->
     <svg x="30" y="150">
         <image x="0" y="0" width="75" height="75" href="{sunrise_icon}" />
