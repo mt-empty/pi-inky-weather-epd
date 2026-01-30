@@ -32,3 +32,4 @@ dashboard*.svg
 dashboard*.png
 tests/output/*
 comparison_output
+inky.log

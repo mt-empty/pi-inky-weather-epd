@@ -9,6 +9,7 @@ use anyhow::Error;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use std::time::Duration;
 use tinytemplate::{format_unescaped, TinyTemplate};
 pub use utils::*;
 
@@ -40,6 +41,8 @@ fn update_forecast_context(
         logger::success("Daily forecast retrieved");
     }
     context_builder.with_daily_forecast_data(daily_result.data, clock);
+
+    std::thread::sleep(Duration::from_secs(3));
 
     logger::subsection("Fetching hourly forecast");
     let hourly_result = provider.fetch_hourly_forecast()?;
