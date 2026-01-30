@@ -97,6 +97,12 @@ pub struct Context {
     pub diagnostic_visibility: String,
     // cascading diagnostic icons (SVG fragments for multiple stacked icons)
     pub diagnostic_icons_svg: String,
+    // Debug information (displayed when debugging enabled)
+    pub debug_info_visibility: String,
+    pub debug_version: String,
+    pub debug_provider: String,
+    pub debug_location: String,
+    pub debug_timezone: String,
 }
 
 impl Default for Context {
@@ -181,6 +187,11 @@ impl Default for Context {
             diagnostic_message: na,
             diagnostic_visibility: ElementVisibility::Hidden.to_string(),
             diagnostic_icons_svg: String::new(),
+            debug_version: String::new(),
+            debug_info_visibility: ElementVisibility::Hidden.to_string(),
+            debug_provider: String::new(),
+            debug_location: String::new(),
+            debug_timezone: String::new(),
         }
     }
 }
@@ -198,8 +209,26 @@ impl Default for ContextBuilder {
 
 impl ContextBuilder {
     pub fn new() -> Self {
+        let mut context = Context::default();
+
+        if CONFIG.debugging.enable_debug_logs {
+            context.debug_info_visibility = ElementVisibility::Visible.to_string();
+            context.debug_version = format!("v{}", env!("CARGO_PKG_VERSION"));
+
+            context.debug_provider = CONFIG.api.provider.to_string();
+
+            // Location with reduced precision for privacy (1 decimal place ≈ 11km accuracy)
+            let lat = CONFIG.api.latitude.into_inner();
+            let lon = CONFIG.api.longitude.into_inner();
+            context.debug_location = format!("{:.1}, {:.1}", lat, lon);
+
+            // Timezone offset (e.g., "+11:00" or "-05:00")
+            let now = chrono::Local::now();
+            context.debug_timezone = now.format("%z").to_string();
+        }
+
         Self {
-            context: Context::default(),
+            context,
             diagnostics: Vec::new(),
         }
     }

@@ -1,6 +1,5 @@
 ---
 source: tests/snapshot_provider_test.rs
-assertion_line: 508
 expression: svg_content
 ---
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
@@ -60,6 +59,19 @@ expression: svg_content
         <!-- Message for highest priority error only -->
         <text x="100" y="60" width="200" font-size="12">
             NA
+        </text>
+    </svg>
+
+    <!-- Version Information (displayed when debugging enabled) -->
+    <svg x="690" y="15" width="100" height="20" text-anchor="end" visibility="visible">
+        <text x="90" y="0" font-size="9" fill="black">
+            v0.8.2-beta.1
+        </text>
+        <text x="90" y="10" font-size="8" fill="black">
+            Bom
+        </text>
+        <text x="90" y="18" font-size="7" fill="black">
+            -37.8, 145.0 +1100
         </text>
     </svg>
 
