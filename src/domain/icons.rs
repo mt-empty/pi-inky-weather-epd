@@ -1,7 +1,7 @@
 use super::models::{DailyForecast, HourlyForecast, Precipitation, Wind};
 use crate::logger;
 use crate::weather::icons::{
-    DayNight, HumidityIconName, Icon, PrecipitationChanceName, RainAmountIcon, RainAmountName,
+    DayNight, HumidityIconName, Icon, PrecipitationChanceName, PrecipitationKind, RainAmountIcon,
     UVIndexIcon, WindIconName,
 };
 use crate::weather::utils::get_moon_phase_icon_name;
@@ -24,7 +24,7 @@ impl Icon for Wind {
 }
 
 impl Precipitation {
-    /// Converts the precipitation amount to a corresponding `RainAmountName`.
+    /// Converts the precipitation amount to a corresponding `PrecipitationKind`.
     ///
     /// # Arguments
     ///
@@ -32,8 +32,8 @@ impl Precipitation {
     ///
     /// # Returns
     ///
-    /// * A `RainAmountName` variant representing the precipitation amount.
-    pub fn amount_to_name(&self, is_hourly: bool) -> RainAmountName {
+    /// * A `PrecipitationKind` variant representing the precipitation amount.
+    pub fn amount_to_name(&self, is_hourly: bool) -> PrecipitationKind {
         let mut median = self.calculate_median();
 
         if is_hourly {
@@ -43,15 +43,15 @@ impl Precipitation {
         // If primarily snow, return snow variant instead of rain
         if self.is_primarily_snow() {
             return match median {
-                0.0..1.4 => RainAmountName::None,
-                _ => RainAmountName::Snow,
+                0.0..1.4 => PrecipitationKind::None,
+                _ => PrecipitationKind::Snow,
             };
         }
 
         match median {
-            0.0..3.0 => RainAmountName::None,
-            3.0..=20.0 => RainAmountName::Drizzle,
-            _ => RainAmountName::Rain,
+            0.0..3.0 => PrecipitationKind::None,
+            3.0..=20.0 => PrecipitationKind::Drizzle,
+            _ => PrecipitationKind::Rain,
         }
     }
 
@@ -101,18 +101,18 @@ fn cloud_cover_to_name(cloud_cover: u16) -> PrecipitationChanceName {
 /// * Adjusted cloud level ensuring consistency with precipitation amount
 fn apply_precipitation_override(
     cloud_name: PrecipitationChanceName,
-    amount_name: RainAmountName,
+    amount_name: PrecipitationKind,
 ) -> PrecipitationChanceName {
     match amount_name {
-        RainAmountName::None => cloud_name,
-        RainAmountName::Drizzle => {
+        PrecipitationKind::None => cloud_name,
+        PrecipitationKind::Drizzle => {
             // Drizzle requires at least partly cloudy
             match cloud_name {
                 PrecipitationChanceName::Clear => PrecipitationChanceName::PartlyCloudy,
                 _ => cloud_name,
             }
         }
-        RainAmountName::Rain => {
+        PrecipitationKind::Rain => {
             // Heavy rain requires at least overcast
             match cloud_name {
                 PrecipitationChanceName::Clear | PrecipitationChanceName::PartlyCloudy => {
@@ -121,7 +121,7 @@ fn apply_precipitation_override(
                 _ => cloud_name,
             }
         }
-        RainAmountName::Snow => {
+        PrecipitationKind::Snow => {
             // Snow requires at least partly cloudy
             match cloud_name {
                 PrecipitationChanceName::Clear => PrecipitationChanceName::PartlyCloudy,

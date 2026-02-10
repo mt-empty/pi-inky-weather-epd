@@ -642,7 +642,7 @@ impl ContextBuilder {
             .for_each(|forecast| {
                 if x == 0 {
                     self.with_current_hour_data(forecast, clock);
-                    self.set_now_values_for_table(forecast)
+                    self.populate_current_hour_table(forecast)
                 } else if x >= 24 {
                     logger::warning(
                         "More than 24 hours of hourly forecast data, this should not happen",
@@ -688,7 +688,7 @@ impl ContextBuilder {
         self
     }
 
-    fn set_now_values_for_table(&mut self, current_hour: &HourlyForecast) {
+    fn populate_current_hour_table(&mut self, current_hour: &HourlyForecast) {
         self.context.current_hour_wind_speed = current_hour
             .wind
             .get_speed_in_unit(

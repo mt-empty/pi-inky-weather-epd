@@ -17,7 +17,7 @@ pub enum PrecipitationChanceName {
 }
 
 #[derive(Debug, Display, Copy, Clone, PartialEq)]
-pub enum RainAmountName {
+pub enum PrecipitationKind {
     #[strum(to_string = "")]
     None,
     #[strum(to_string = "-drizzle")]
