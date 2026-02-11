@@ -128,14 +128,14 @@ fn apply_precipitation_override(
                 _ => cloud_name,
             }
         }
-        RainAmountName::Sleet => {
+        PrecipitationKind::Sleet => {
             // Sleet (freezing rain/drizzle) requires at least partly cloudy
             match cloud_name {
                 PrecipitationChanceName::Clear => PrecipitationChanceName::PartlyCloudy,
                 _ => cloud_name,
             }
         }
-        RainAmountName::Hail => {
+        PrecipitationKind::Hail => {
             // Hail requires at least overcast (severe weather)
             match cloud_name {
                 PrecipitationChanceName::Clear | PrecipitationChanceName::PartlyCloudy => {
@@ -144,7 +144,7 @@ fn apply_precipitation_override(
                 _ => cloud_name,
             }
         }
-        RainAmountName::Fog => {
+        PrecipitationKind::Fog => {
             // Fog can occur with any cloud cover, no override needed
             cloud_name
         }
