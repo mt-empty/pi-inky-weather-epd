@@ -146,7 +146,7 @@ impl Precipitation {
             snowfall_amount: None,
         }
     }
-
+    // TODO: should use a single new with optional snowfall
     pub fn new_with_snowfall(
         chance: Option<u16>,
         amount_min: Option<u16>,

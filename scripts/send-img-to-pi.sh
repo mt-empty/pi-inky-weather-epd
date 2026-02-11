@@ -7,7 +7,7 @@
 # Default saturation if not provided
 SATURATION=${1:-1.0}
 
-REMOTE_HOST="pizero"
+REMOTE_HOST="pizero.local"
 
 REMOTE_TMP="/tmp"
 LOCAL_IMAGE="dashboard.png"

@@ -33,6 +33,12 @@ impl Curve {
 }
 
 #[derive(Clone, Debug)]
+pub struct RainBlock {
+    pub path: String,
+    pub pattern: String,
+}
+
+#[derive(Clone, Debug)]
 pub struct GraphData {
     pub points: Vec<Point>,
     pub smooth: bool,
@@ -120,7 +126,7 @@ impl Default for HourlyForecastGraph {
 pub enum GraphDataPath {
     Temp(String),
     TempFeelLike(String),
-    Rain(String),
+    Rain(Vec<RainBlock>),
 }
 
 #[derive(Debug, Display)]
@@ -553,6 +559,29 @@ impl HourlyForecastGraph {
         gradient
     }
 
+    /// Select rain pattern based on precipitation chance percentage
+    fn select_rain_pattern(chance: f32) -> &'static str {
+        if chance >= 50.0 {
+            "heavy-rain"
+        } else {
+            "rain"
+        }
+    }
+
+    /// Generate SVG for all rain blocks with per-hour patterns
+    pub fn generate_rain_pattern_svg(blocks: &[RainBlock]) -> String {
+        blocks
+            .iter()
+            .map(|block| {
+                format!(
+                    r#"<path d="{}" fill="url(#{})" fill-opacity="25%" />"#,
+                    block.path, block.pattern
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n            ")
+    }
+
     pub fn draw_graph(&mut self) -> Result<Vec<GraphDataPath>, Error> {
         // Calculate the minimum and maximum x values from the points
         let mut data_path = vec![];
@@ -600,45 +629,82 @@ impl HourlyForecastGraph {
                 })
                 .collect();
 
-            // Generate the SVG path data
-            let path = if curve.get_smooth() {
-                catmull_rom_to_bezier(scaled_points)
-                    .iter()
-                    .enumerate()
-                    .map(|(i, val)| {
-                        if i == 0 {
-                            format!("M {:.4} {:.4}", val.c1.x, val.c1.y)
-                        } else {
-                            val.to_svg()
-                        }
-                    })
-                    .collect::<Vec<String>>()
-                    .join("")
-            } else {
-                scaled_points
-                    .iter()
-                    .enumerate()
-                    .map(|(i, val)| {
-                        if i == 0 {
-                            format!("M {:.4} {:.4}", val.x, val.y)
-                        } else {
-                            val.to_svg()
-                        }
-                    })
-                    .collect::<Vec<String>>()
-                    .join("")
-            };
-
             match curve {
-                CurveType::ActualTemp(_) => {
-                    data_path.push(GraphDataPath::Temp(path));
-                }
-                CurveType::TempFeelLike(_) => {
-                    data_path.push(GraphDataPath::TempFeelLike(path));
-                }
                 CurveType::RainChance(_) => {
-                    let bounding_area_path = format!("{} L {} 0 L 0 0Z", path, self.width);
-                    data_path.push(GraphDataPath::Rain(bounding_area_path));
+                    // Generate individual blocks for each hour with stepped path segments
+                    let mut blocks = Vec::new();
+
+                    for i in 0..scaled_points.len() {
+                        let current = scaled_points[i];
+                        let next = if i + 1 < scaled_points.len() {
+                            scaled_points[i + 1]
+                        } else {
+                            // Last point - use same x as current to close the path
+                            Point {
+                                x: current.x
+                                    + (current.x
+                                        - if i > 0 { scaled_points[i - 1].x } else { 0.0 }),
+                                y: current.y,
+                            }
+                        };
+
+                        // Get original rain chance percentage for pattern selection
+                        let rain_chance = curve.get_points()[i].y;
+                        let pattern = Self::select_rain_pattern(rain_chance);
+
+                        // Create stepped path: bottom-left -> top-left -> top-right -> bottom-right
+                        let block_path = format!(
+                            "M {:.4} 0 L {:.4} {:.4} L {:.4} {:.4} L {:.4} 0 Z",
+                            current.x, current.x, current.y, next.x, next.y, next.x
+                        );
+
+                        blocks.push(RainBlock {
+                            path: block_path,
+                            pattern: pattern.to_string(),
+                        });
+                    }
+
+                    data_path.push(GraphDataPath::Rain(blocks));
+                }
+                CurveType::ActualTemp(_) | CurveType::TempFeelLike(_) => {
+                    // Generate the SVG path data for temperature curves
+                    let path = if curve.get_smooth() {
+                        catmull_rom_to_bezier(scaled_points)
+                            .iter()
+                            .enumerate()
+                            .map(|(i, val)| {
+                                if i == 0 {
+                                    format!("M {:.4} {:.4}", val.c1.x, val.c1.y)
+                                } else {
+                                    val.to_svg()
+                                }
+                            })
+                            .collect::<Vec<String>>()
+                            .join("")
+                    } else {
+                        scaled_points
+                            .iter()
+                            .enumerate()
+                            .map(|(i, val)| {
+                                if i == 0 {
+                                    format!("M {:.4} {:.4}", val.x, val.y)
+                                } else {
+                                    val.to_svg()
+                                }
+                            })
+                            .collect::<Vec<String>>()
+                            .join("")
+                    };
+
+                    match curve {
+                        CurveType::ActualTemp(_) => {
+                            data_path.push(GraphDataPath::Temp(path));
+                        }
+                        CurveType::TempFeelLike(_) => {
+                            data_path.push(GraphDataPath::TempFeelLike(path));
+                        }
+                        _ => unreachable!(),
+                    }
                 }
             }
         }
