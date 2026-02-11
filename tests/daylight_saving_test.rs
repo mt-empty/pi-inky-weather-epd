@@ -117,6 +117,7 @@ fn test_open_meteo_forecast_time_conversion_during_dst() {
             "apparent_temperature": "°C",
             "precipitation_probability": "%",
             "precipitation": "mm",
+            "snowfall": "cm",
             "uv_index": "",
             "wind_speed_10m": "km/h",
             "wind_gusts_10m": "km/h",
@@ -133,6 +134,7 @@ fn test_open_meteo_forecast_time_conversion_during_dst() {
             "apparent_temperature": [18.2, 17.2, 16.5, 15.8],
             "precipitation_probability": [10, 20, 15, 10],
             "precipitation": [0.0, 0.0, 0.0, 0.0],
+            "snowfall": [0.0, 0.0, 0.0, 0.0],
             "uv_index": [1, 2, 3, 4],
             "wind_speed_10m": [10, 15, 12, 10],
             "wind_gusts_10m": [18, 22, 18, 15],
@@ -146,7 +148,8 @@ fn test_open_meteo_forecast_time_conversion_during_dst() {
             "temperature_2m_max": "°C",
             "temperature_2m_min": "°C",
             "precipitation_sum": "mm",
-            "precipitation_probability_max": "%"
+            "precipitation_probability_max": "%",
+            "snowfall_sum": "cm"
         },
         "daily": {
             "time": ["2025-04-06"],
@@ -156,6 +159,7 @@ fn test_open_meteo_forecast_time_conversion_during_dst() {
             "temperature_2m_min": [15.2],
             "precipitation_sum": [0.0],
             "precipitation_probability_max": [20],
+            "snowfall_sum": [0.0],
             "cloud_cover_mean": [32]
         }
     }"#;

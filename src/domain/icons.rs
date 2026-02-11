@@ -1,8 +1,8 @@
 use super::models::{DailyForecast, HourlyForecast, Precipitation, Wind};
 use crate::logger;
 use crate::weather::icons::{
-    DayNight, HumidityIconName, Icon, RainAmountIcon, RainAmountName, RainChanceName, UVIndexIcon,
-    WindIconName,
+    DayNight, HumidityIconName, Icon, PrecipitationChanceName, PrecipitationKind, RainAmountIcon,
+    UVIndexIcon, WindIconName,
 };
 use crate::weather::utils::get_moon_phase_icon_name;
 use crate::CONFIG;
@@ -24,7 +24,7 @@ impl Icon for Wind {
 }
 
 impl Precipitation {
-    /// Converts the precipitation amount to a corresponding `RainAmountName`.
+    /// Converts the precipitation amount to a corresponding `PrecipitationKind`.
     ///
     /// # Arguments
     ///
@@ -32,37 +32,45 @@ impl Precipitation {
     ///
     /// # Returns
     ///
-    /// * A `RainAmountName` variant representing the precipitation amount.
-    pub fn amount_to_name(&self, is_hourly: bool) -> RainAmountName {
+    /// * A `PrecipitationKind` variant representing the precipitation amount.
+    pub fn amount_to_name(&self, is_hourly: bool) -> PrecipitationKind {
         let mut median = self.calculate_median();
 
         if is_hourly {
             median *= 24.0;
         }
+
+        // If primarily snow, return snow variant instead of rain
+        if self.is_primarily_snow() {
+            return match median {
+                0.0..1.4 => PrecipitationKind::None,
+                _ => PrecipitationKind::Snow,
+            };
+        }
+
         match median {
-            0.0..=2.0 => RainAmountName::None,
-            3.0..=20.0 => RainAmountName::Drizzle,
-            21.0.. => RainAmountName::Rain,
-            _ => RainAmountName::None,
+            0.0..3.0 => PrecipitationKind::None,
+            3.0..=20.0 => PrecipitationKind::Drizzle,
+            _ => PrecipitationKind::Rain,
         }
     }
 
-    /// Converts the precipitation chance (percentage) to a corresponding `RainChanceName`.
+    /// Converts the precipitation chance (percentage) to a corresponding `PrecipitationChanceName`.
     ///
     /// # Returns
     ///
-    /// * A `RainChanceName` variant representing the precipitation chance.
-    pub fn chance_to_name(&self) -> RainChanceName {
+    /// * A `PrecipitationChanceName` variant representing the precipitation chance.
+    pub fn chance_to_name(&self) -> PrecipitationChanceName {
         match self.chance.unwrap_or(0) {
-            0..=25 => RainChanceName::Clear,
-            26..=50 => RainChanceName::PartlyCloudy,
-            51..=75 => RainChanceName::Overcast,
-            76.. => RainChanceName::Extreme,
+            0..=25 => PrecipitationChanceName::Clear,
+            26..=50 => PrecipitationChanceName::PartlyCloudy,
+            51..=75 => PrecipitationChanceName::Overcast,
+            76.. => PrecipitationChanceName::Extreme,
         }
     }
 }
 
-/// Converts cloud cover percentage to a corresponding `RainChanceName`.
+/// Converts cloud cover percentage to a corresponding `PrecipitationChanceName`.
 ///
 /// # Arguments
 ///
@@ -70,13 +78,13 @@ impl Precipitation {
 ///
 /// # Returns
 ///
-/// * A `RainChanceName` variant representing the cloud cover level
-fn cloud_cover_to_name(cloud_cover: u16) -> RainChanceName {
+/// * A `PrecipitationChanceName` variant representing the cloud cover level
+fn cloud_cover_to_name(cloud_cover: u16) -> PrecipitationChanceName {
     match cloud_cover {
-        0..=25 => RainChanceName::Clear,
-        26..=50 => RainChanceName::PartlyCloudy,
-        51..=75 => RainChanceName::Overcast,
-        76.. => RainChanceName::Extreme,
+        0..=25 => PrecipitationChanceName::Clear,
+        26..=50 => PrecipitationChanceName::PartlyCloudy,
+        51..=75 => PrecipitationChanceName::Overcast,
+        76.. => PrecipitationChanceName::Extreme,
     }
 }
 
@@ -92,22 +100,31 @@ fn cloud_cover_to_name(cloud_cover: u16) -> RainChanceName {
 ///
 /// * Adjusted cloud level ensuring consistency with precipitation amount
 fn apply_precipitation_override(
-    cloud_name: RainChanceName,
-    amount_name: RainAmountName,
-) -> RainChanceName {
+    cloud_name: PrecipitationChanceName,
+    amount_name: PrecipitationKind,
+) -> PrecipitationChanceName {
     match amount_name {
-        RainAmountName::None => cloud_name,
-        RainAmountName::Drizzle => {
+        PrecipitationKind::None => cloud_name,
+        PrecipitationKind::Drizzle => {
             // Drizzle requires at least partly cloudy
             match cloud_name {
-                RainChanceName::Clear => RainChanceName::PartlyCloudy,
+                PrecipitationChanceName::Clear => PrecipitationChanceName::PartlyCloudy,
                 _ => cloud_name,
             }
         }
-        RainAmountName::Rain => {
+        PrecipitationKind::Rain => {
             // Heavy rain requires at least overcast
             match cloud_name {
-                RainChanceName::Clear | RainChanceName::PartlyCloudy => RainChanceName::Overcast,
+                PrecipitationChanceName::Clear | PrecipitationChanceName::PartlyCloudy => {
+                    PrecipitationChanceName::Overcast
+                }
+                _ => cloud_name,
+            }
+        }
+        PrecipitationKind::Snow => {
+            // Snow requires at least partly cloudy
+            match cloud_name {
+                PrecipitationChanceName::Clear => PrecipitationChanceName::PartlyCloudy,
                 _ => cloud_name,
             }
         }
@@ -139,7 +156,7 @@ impl Icon for DailyForecast {
             format!("{adjusted_chance_name}{}{amount_name}.svg", DayNight::Day)
         } else {
             // Default to clear day if no precipitation data
-            format!("{}{}.svg", RainChanceName::Clear, DayNight::Day)
+            format!("{}{}.svg", PrecipitationChanceName::Clear, DayNight::Day)
         }
     }
 }
@@ -167,7 +184,11 @@ impl Icon for HourlyForecast {
         let mut icon_name = format!("{adjusted_chance_name}{day_night}{amount_name}.svg");
 
         if CONFIG.render_options.use_moon_phase_instead_of_clear_night
-            && icon_name.ends_with(&format!("{}{}.svg", RainChanceName::Clear, DayNight::Night))
+            && icon_name.ends_with(&format!(
+                "{}{}.svg",
+                PrecipitationChanceName::Clear,
+                DayNight::Night
+            ))
         {
             logger::detail("Using moon phase icon instead of clear night");
             icon_name = get_moon_phase_icon_name().to_string();
