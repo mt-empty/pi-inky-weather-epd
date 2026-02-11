@@ -21,7 +21,20 @@
         <pattern id="crosshatch" patternUnits="userSpaceOnUse" width="10" height="10">
             <path d="M 0 0 L 10 10 M 10 0 L 0 10" stroke="{rain_colour}" stroke-width="1" />
         </pattern>
-    </defs>
+        <!-- Rain patterns based on precipitation intensity -->
+        <pattern id="rain" patternUnits="userSpaceOnUse" width="12" height="16">
+            <rect width="12" height="16" fill="{rain_colour}" />
+            <path d="M4,0.990777969 C4,0.443586406 4.44386482,0 5,0 C5.55228475,0 6,0.45097518 6,0.990777969 L6,5.00922203 C6,5.55641359 5.55613518,6 5,6 C4.44771525,6 4,5.54902482 4,5.00922203 L4,0.990777969 Z M10,8.99077797 C10,8.44358641 10.4438648,8 11,8 C11.5522847,8 12,8.45097518 12,8.99077797 L12,13.009222 C12,13.5564136 11.5561352,14 11,14 C10.4477153,14 10,13.5490248 10,13.009222 L10,8.99077797 Z" fill="white" />
+        </pattern>
+        <pattern id="heavy-rain" patternUnits="userSpaceOnUse" width="12" height="24">
+            <rect width="12" height="24" fill="{rain_colour}" />
+            <path d="M2 0h2v12H2V0zm1 20c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM9 8c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm-1 4h2v12H8V12z" fill="white" />
+        </pattern>
+        <pattern id="snow" patternUnits="userSpaceOnUse" width="10" height="10">
+            <rect width="10" height="10" fill="{rain_colour}" />
+            <path d="M 0 0 L 10 10 M 10 0 L 0 10" stroke="white" stroke-width="1" />
+        </pattern>
+</defs>
 
     <rect width="100%" height="100%" fill="{background_colour}" />
 
@@ -214,12 +227,16 @@
         {y_left_labels}
         <!-- Y right Labels -->
         {y_right_labels}
+        <!-- rain curve - Per-hour rain blocks with intensity-based patterns -->
+        <g transform="translate(0, 300) scale(1, -1)">
+            {rain_curve_data}
+        </g>
+        <!-- temp curve -->
         <path stroke="{actual_temp_colour}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
             d="{actual_temp_curve_data}" stroke-width="3.0" fill="none" />
+        <!-- feels like temp curve -->
         <path stroke="{feels_like_colour}" stroke-linejoin="round" stroke-dasharray="5,5"
             transform="translate(0, 300) scale(1, -1)" d="{feel_like_curve_data}" stroke-width="3.0" fill="none" />
-        <path transform="translate(0, 300) scale(1, -1)" d="{rain_curve_data}" fill="{rain_colour}"
-            fill-opacity="25%" />
         <defs>
             <linearGradient id="UVGradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%">
                 {uv_gradient}
