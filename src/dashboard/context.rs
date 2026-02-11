@@ -618,7 +618,10 @@ impl ContextBuilder {
                 match path {
                     GraphDataPath::Temp(data) => temp_acc.push_str(data),
                     GraphDataPath::TempFeelLike(data) => feel_like_acc.push_str(data),
-                    GraphDataPath::Rain(data) => rain_acc.push_str(data),
+                    GraphDataPath::Rain(blocks) => {
+                        // Convert rain blocks to SVG with per-hour patterns
+                        rain_acc.push_str(&HourlyForecastGraph::generate_rain_pattern_svg(blocks));
+                    }
                 }
                 (temp_acc, feel_like_acc, rain_acc)
             },
