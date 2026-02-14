@@ -25,7 +25,7 @@ strum = "0.27"
 strum_macros = "0.27"
 config = "0.15"
 tinytemplate = "1.2"
-resvg = "0.46"
+resvg = "0.47"
 image = "0.25"
 openssl = { version = "0.10", features = ["vendored"] }
 zip = "7.0.0"
