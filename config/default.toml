@@ -63,3 +63,4 @@ disable_weather_api_requests = false # Load cached data instead of making API re
 disable_png_output = false
 allow_pre_release_version = false
 enable_debug_logs = false
+use_weather_codes = true # Use WMO weather codes for icon selection when available (more accurate than derived logic)

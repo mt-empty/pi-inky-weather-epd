@@ -30,6 +30,7 @@ fn test_cloud_cover_overrides_low_precipitation_chance() {
         relative_humidity: 70,
         is_night: false,
         cloud_cover: Some(80), // High cloud cover - should override
+        weather_code: None,
     };
 
     assert_eq!(forecast.get_icon_name(), "extreme-day.svg");
@@ -48,6 +49,7 @@ fn test_cloud_cover_boundary_25_percent() {
         relative_humidity: 50,
         is_night: false,
         cloud_cover: Some(25), // Boundary - still Clear
+        weather_code: None,
     };
 
     let forecast_26 = HourlyForecast {
@@ -72,6 +74,7 @@ fn test_cloud_cover_boundary_50_and_51_percent() {
         relative_humidity: 65,
         is_night: false,
         cloud_cover: Some(50),
+        weather_code: None,
     };
 
     let forecast_51 = HourlyForecast {
@@ -96,6 +99,7 @@ fn test_cloud_cover_boundary_75_and_76_percent() {
         relative_humidity: 80,
         is_night: false,
         cloud_cover: Some(75),
+        weather_code: None,
     };
 
     let forecast_76 = HourlyForecast {
@@ -124,6 +128,7 @@ fn test_null_cloud_cover_falls_back_to_precipitation() {
         relative_humidity: 60,
         is_night: false,
         cloud_cover: None, // Fallback to precipitation
+        weather_code: None,
     };
 
     assert_eq!(forecast.get_icon_name(), "partly-cloudy-day.svg");
@@ -150,6 +155,7 @@ fn test_precipitation_override_drizzle_requires_partly_cloudy() {
         relative_humidity: 65,
         is_night: false,
         cloud_cover: Some(15), // Clear range, but drizzle present
+        weather_code: None,
     };
 
     // Should be bumped to partly-cloudy due to drizzle
@@ -173,6 +179,7 @@ fn test_precipitation_override_rain_requires_overcast() {
         relative_humidity: 85,
         is_night: false,
         cloud_cover: Some(20), // Clear range, but heavy rain present
+        weather_code: None,
     };
 
     // Should be bumped to overcast due to heavy rain
@@ -196,6 +203,7 @@ fn test_precipitation_override_partly_cloudy_rain_becomes_overcast() {
         relative_humidity: 90,
         is_night: false,
         cloud_cover: Some(40), // PartlyCloudy range, but heavy rain present
+        weather_code: None,
     };
 
     // Should be bumped to overcast due to heavy rain
@@ -217,6 +225,7 @@ fn test_fallback_with_precipitation_override() {
         )),
         astronomical: None,
         cloud_cover: None, // Fallback to precipitation
+        weather_code: None,
     };
 
     assert_eq!(forecast.get_icon_name(), "clear-day.svg");
@@ -244,6 +253,7 @@ fn test_partly_cloudy_with_drizzle_is_valid() {
         relative_humidity: 70,
         is_night: false,
         cloud_cover: None,
+        weather_code: None,
     };
 
     let icon_name = forecast.get_icon_name();
@@ -270,6 +280,7 @@ fn test_overcast_with_rain_is_valid() {
         relative_humidity: 85,
         is_night: false,
         cloud_cover: None,
+        weather_code: None,
     };
 
     let icon_name = forecast.get_icon_name();
@@ -296,6 +307,7 @@ fn test_extreme_with_drizzle_is_valid() {
         relative_humidity: 90,
         is_night: true,
         cloud_cover: None,
+        weather_code: None,
     };
 
     let icon_name = forecast.get_icon_name();
@@ -319,6 +331,7 @@ fn test_zero_chance_zero_amount_produces_clear() {
         )),
         astronomical: None,
         cloud_cover: None,
+        weather_code: None,
     };
 
     let icon_name = forecast.get_icon_name();
@@ -344,6 +357,7 @@ fn test_boundary_case_25_percent_is_still_clear() {
         relative_humidity: 55,
         is_night: false,
         cloud_cover: Some(22), // Explicitly set low cloud cover to test clear sky logic
+        weather_code: None,
     };
 
     let icon_name = forecast.get_icon_name();
@@ -370,6 +384,7 @@ fn test_boundary_case_26_percent_allows_precipitation_suffix() {
         relative_humidity: 55,
         is_night: false,
         cloud_cover: None,
+        weather_code: None,
     };
 
     let icon_name = forecast.get_icon_name();
@@ -400,6 +415,7 @@ fn test_snow_icon_selected_with_high_snowfall() {
         relative_humidity: 85,
         is_night: false,
         cloud_cover: Some(80),
+        weather_code: None,
     };
 
     assert_eq!(
@@ -427,6 +443,7 @@ fn test_snow_icon_at_60_percent_threshold() {
         relative_humidity: 80,
         is_night: true,
         cloud_cover: Some(70),
+        weather_code: None,
     };
 
     assert_eq!(
@@ -454,6 +471,7 @@ fn test_rain_icon_below_snow_threshold() {
         relative_humidity: 85,
         is_night: false,
         cloud_cover: Some(75),
+        weather_code: None,
     };
 
     // Below 60% threshold, should be rain not snow
@@ -482,6 +500,7 @@ fn test_snow_override_requires_partly_cloudy() {
         relative_humidity: 70,
         is_night: false,
         cloud_cover: Some(20), // Clear range
+        weather_code: None,
     };
 
     // Should be bumped to partly-cloudy due to snow
@@ -510,6 +529,7 @@ fn test_low_snowfall_shows_clear_not_snow() {
         relative_humidity: 60,
         is_night: false,
         cloud_cover: Some(10),
+        weather_code: None,
     };
 
     // Below 1.4mm threshold for snow, should show clear
@@ -538,6 +558,7 @@ fn test_mixed_precipitation_favors_rain() {
         relative_humidity: 90,
         is_night: true,
         cloud_cover: Some(65),
+        weather_code: None,
     };
 
     // Below 60% snow threshold -> rain
@@ -566,6 +587,7 @@ fn test_partly_cloudy_snow_at_night() {
         relative_humidity: 80,
         is_night: true,
         cloud_cover: Some(40),
+        weather_code: None,
     };
 
     assert_eq!(
@@ -593,6 +615,7 @@ fn test_overcast_day_snow() {
         relative_humidity: 85,
         is_night: false,
         cloud_cover: Some(60),
+        weather_code: None,
     };
 
     assert_eq!(
@@ -620,6 +643,7 @@ fn test_extreme_night_snow() {
         relative_humidity: 90,
         is_night: true,
         cloud_cover: Some(85),
+        weather_code: None,
     };
 
     assert_eq!(
