@@ -1,47 +1,25 @@
+<!-- E-ink adapted: removed all linearGradient definitions -->
+<!-- Sun: gradient fill → yellow, gradient stroke → black -->
+<!-- Fog lines: gradient stroke → white for e-ink contrast -->
 <svg
   xmlns="http://www.w3.org/2000/svg"
   xmlns:xlink="http://www.w3.org/1999/xlink"
   viewBox="0 0 512 512"
 >
   <defs>
-    <linearGradient
-      id="a"
-      x1="96"
-      x2="168"
-      y1="-2.4"
-      y2="122.3"
-      gradientUnits="userSpaceOnUse"
-    >
-      <stop offset="0" stop-color="#d4d7dd" />
-      <stop offset=".5" stop-color="#d4d7dd" />
-      <stop offset="1" stop-color="#bec1c6" />
-    </linearGradient>
-    <linearGradient xlink:href="#a" id="b" x2="168" y1="-50.4" y2="74.3" />
-    <linearGradient
-      id="c"
-      x1="150"
-      x2="234"
-      y1="119.2"
-      y2="264.8"
-      gradientUnits="userSpaceOnUse"
-    >
-      <stop offset="0" stop-color="#fbbf24" />
-      <stop offset=".5" stop-color="#fbbf24" />
-      <stop offset="1" stop-color="#f59e0b" />
-    </linearGradient>
     <symbol id="e" viewBox="0 0 384 384">
       <circle
         cx="192"
         cy="192"
         r="84"
-        fill="url(#c)"
-        stroke="#f8af18"
+        fill="yellow"
+        stroke="black"
         stroke-miterlimit="10"
-        stroke-width="6"
+        stroke-width="8"
       />
       <path
         fill="none"
-        stroke="#fbbf24"
+        stroke="yellow"
         stroke-linecap="round"
         stroke-miterlimit="10"
         stroke-width="24"
@@ -51,7 +29,7 @@
     <symbol id="f" viewBox="0 0 264 72">
       <path
         fill="none"
-        stroke="url(#a)"
+        stroke="white"
         stroke-linecap="round"
         stroke-miterlimit="10"
         stroke-width="24"
@@ -59,7 +37,7 @@
       />
       <path
         fill="none"
-        stroke="url(#b)"
+        stroke="white"
         stroke-linecap="round"
         stroke-miterlimit="10"
         stroke-width="24"
