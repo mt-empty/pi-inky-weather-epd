@@ -253,6 +253,8 @@ Before submitting, please make sure the following is done:
    cargo run
    ```
 
+   Use [zoom.earth](https://zoom.earth/maps/radar/#view=40.7128,-74.0060,5z) to simulate different weather conditions by finding a location with the desired weather and using its latitude and longitude in your config.
+
 ### Running Tests
 
 ```bash
