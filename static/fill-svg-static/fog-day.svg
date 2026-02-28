@@ -1,6 +1,6 @@
 <!-- E-ink adapted: removed all linearGradient definitions -->
 <!-- Sun: gradient fill → yellow, gradient stroke → black -->
-<!-- Fog lines: gradient stroke → white for e-ink contrast -->
+<!-- Fog lines: white fill with black stroke for e-ink visibility on any background -->
 <svg
   xmlns="http://www.w3.org/2000/svg"
   xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -26,23 +26,11 @@
         d="M192 61.7V12m0 360v-49.7m92.2-222.5 35-35M64.8 319.2l35.1-35.1m0-184.4-35-35m254.5 254.5-35.1-35.1M61.7 192H12m360 0h-49.7"
       />
     </symbol>
-    <symbol id="f" viewBox="0 0 264 72">
-      <path
-        fill="none"
-        stroke="white"
-        stroke-linecap="round"
-        stroke-miterlimit="10"
-        stroke-width="24"
-        d="M12 60h240"
-      />
-      <path
-        fill="none"
-        stroke="white"
-        stroke-linecap="round"
-        stroke-miterlimit="10"
-        stroke-width="24"
-        d="M12 12h240"
-      />
+    <symbol id="f" viewBox="0 0 264 72" style="overflow:visible">
+      <rect x="0" y="0" width="264" height="24" rx="12" ry="12"
+        fill="white" stroke="black" stroke-width="4" />
+      <rect x="0" y="48" width="264" height="24" rx="12" ry="12"
+        fill="white" stroke="black" stroke-width="4" />
     </symbol>
     <clipPath id="d"><path fill="none" d="M0 0h512v306H0z" /></clipPath>
   </defs>
