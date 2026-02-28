@@ -22,7 +22,7 @@ chrono-tz = "0.10"
 
 anyhow = "1"
 strum = "0.27"
-strum_macros = "0.27"
+strum_macros = "0.28"
 config = "0.15"
 tinytemplate = "1.2"
 resvg = "0.47"
