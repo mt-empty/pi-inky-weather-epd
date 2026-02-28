@@ -6,7 +6,7 @@ use crate::{
     errors::{DashboardError, Description},
     logger,
     utils::{find_max_item_between_dates, get_total_between_dates},
-    weather::icons::{Icon, SunPositionIconName},
+    weather::icons::{HumidityIconName, Icon, SunPositionIconName, UVIndexIcon},
     CONFIG,
 };
 use chrono::{DateTime, Local, NaiveDate, Timelike, Utc};
@@ -699,10 +699,10 @@ impl ContextBuilder {
         self.context.current_hour_wind_icon = current_hour.wind.get_icon_path();
         self.context.current_hour_uv_index = current_hour.uv_index.to_string();
         self.context.current_hour_uv_index_icon =
-            crate::domain::icons::UVIndex(current_hour.uv_index).get_icon_path();
+            UVIndexIcon::from(current_hour.uv_index).get_icon_path();
         self.context.current_hour_relative_humidity = current_hour.relative_humidity.to_string();
         self.context.current_hour_relative_humidity_icon =
-            crate::domain::icons::RelativeHumidity(current_hour.relative_humidity).get_icon_path();
+            HumidityIconName::from(current_hour.relative_humidity).get_icon_path();
     }
 
     fn set_max_values_for_table(

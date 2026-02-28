@@ -1,8 +1,7 @@
 use super::models::{DailyForecast, HourlyForecast, Precipitation, Wind};
 use crate::logger;
 use crate::weather::icons::{
-    DayNight, HumidityIconName, Icon, PrecipitationChanceName, PrecipitationKind, RainAmountIcon,
-    UVIndexIcon, WindIconName,
+    DayNight, Icon, PrecipitationChanceName, PrecipitationKind, RainAmountIcon, WindIconName,
 };
 use crate::weather::utils::get_moon_phase_icon_name;
 use crate::CONFIG;
@@ -160,13 +159,14 @@ impl Icon for Precipitation {
 impl Icon for DailyForecast {
     fn get_icon_name(&self) -> String {
         // Priority 1: Use WMO weather code if available (most accurate)
-        if CONFIG.debugging.use_weather_codes {
+        if CONFIG.render_options.prefer_weather_codes {
             if let Some(code) = self.weather_code {
                 logger::debug("DailyForecast: Using WMO weather code for icon selection");
                 let wmo_code = crate::domain::weather_code::WmoWeatherCode::from(code);
                 // Daily forecasts always use day icons
                 return wmo_code.to_icon_name(false);
             }
+            logger::debug("DailyForecast: WMO weather code not available, falling back to precipitation-based icon logic");
         }
 
         logger::debug("DailyForecast: Falling back to precipitation-based icon logic");
@@ -197,7 +197,7 @@ impl Icon for DailyForecast {
 impl Icon for HourlyForecast {
     fn get_icon_name(&self) -> String {
         // Priority 1: Use WMO weather code if available (most accurate)
-        if CONFIG.debugging.use_weather_codes {
+        if CONFIG.render_options.prefer_weather_codes {
             if let Some(code) = self.weather_code {
                 logger::debug("HourlyForecast: Using WMO weather code for icon selection");
                 let wmo_code = crate::domain::weather_code::WmoWeatherCode::from(code);
@@ -219,6 +219,7 @@ impl Icon for HourlyForecast {
 
                 return icon_name;
             }
+            logger::debug("HourlyForecast: WMO weather code not available, falling back to precipitation-based icon logic");
         }
 
         logger::debug("HourlyForecast: Falling back to precipitation-based icon logic");
@@ -256,35 +257,5 @@ impl Icon for HourlyForecast {
         }
 
         icon_name
-    }
-}
-
-/// Helper struct for UV index icon selection
-pub struct UVIndex(pub u16);
-
-impl Icon for UVIndex {
-    fn get_icon_name(&self) -> String {
-        match self.0 {
-            0 => UVIndexIcon::None,
-            1..=2 => UVIndexIcon::Low,
-            3..=5 => UVIndexIcon::Moderate,
-            6..=7 => UVIndexIcon::High,
-            8..=10 => UVIndexIcon::VeryHigh,
-            11.. => UVIndexIcon::Extreme,
-        }
-        .to_string()
-    }
-}
-
-/// Helper struct for relative humidity icon selection
-pub struct RelativeHumidity(pub u16);
-
-impl Icon for RelativeHumidity {
-    fn get_icon_name(&self) -> String {
-        match self.0 {
-            0..=40 => HumidityIconName::Humidity.to_string(),
-            41..=70 => HumidityIconName::HumidityPlus.to_string(),
-            71.. => HumidityIconName::HumidityPlusPlus.to_string(),
-        }
     }
 }

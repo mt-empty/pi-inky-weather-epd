@@ -147,6 +147,7 @@ pub struct RenderOptions {
     pub use_moon_phase_instead_of_clear_night: bool,
     pub x_axis_always_at_min: bool,
     pub use_gust_instead_of_wind: bool,
+    pub prefer_weather_codes: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -155,7 +156,6 @@ pub struct Debugging {
     pub disable_png_output: bool,
     pub allow_pre_release_version: bool,
     pub enable_debug_logs: bool,
-    pub use_weather_codes: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -289,6 +289,10 @@ impl DashboardSettings {
             "Use Gust Instead of Wind",
             self.render_options.use_gust_instead_of_wind,
         );
+        logger::kvp(
+            "Prefer Weather Codes",
+            self.render_options.prefer_weather_codes,
+        );
 
         // Colours
         logger::config_group("Display Colours");
@@ -325,6 +329,5 @@ impl DashboardSettings {
         );
         logger::kvp("Disable PNG Output", self.debugging.disable_png_output);
         logger::kvp("Enable Debug Logs", self.debugging.enable_debug_logs);
-        logger::kvp("Use Weather Codes", self.debugging.use_weather_codes);
     }
 }

@@ -50,6 +50,7 @@ date_format = "%A, %d %B"
 use_moon_phase_instead_of_clear_night = true    # When the sky is clear, the moon phase icon will be used instead of the clear night icon
 x_axis_always_at_min = true                     # Controls x-axis placement when temp is below zero
 use_gust_instead_of_wind = false
+prefer_weather_codes = true                     # Prefer WMO weather codes for icon selection when available (falls back to derived logic)
 
 [misc]
 weather_data_cache_path = "./cached_data/"
@@ -63,4 +64,3 @@ disable_weather_api_requests = false # Load cached data instead of making API re
 disable_png_output = false
 allow_pre_release_version = false
 enable_debug_logs = false
-use_weather_codes = true # Use WMO weather codes for icon selection when available (more accurate than derived logic)

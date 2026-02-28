@@ -8,6 +8,8 @@
 
 use std::fmt;
 
+use crate::weather::icons::{DayNight, PrecipitationChanceName, PrecipitationKind};
+
 /// WMO Weather Interpretation Codes
 ///
 /// These codes are provided by Open-Meteo API and represent the current
@@ -125,59 +127,181 @@ impl WmoWeatherCode {
     /// # Returns
     /// Icon filename (e.g., "partly-cloudy-day-rain.svg", "thunderstorms-night.svg")
     pub fn to_icon_name(&self, is_night: bool) -> String {
-        let day_night = if is_night { "night" } else { "day" };
+        let day_night = if is_night {
+            DayNight::Night
+        } else {
+            DayNight::Day
+        };
 
         match self {
             // Clear sky conditions (0-3)
-            Self::ClearSky => format!("clear-{day_night}.svg"),
-            Self::MainlyClear => format!("partly-cloudy-{day_night}.svg"),
-            Self::PartlyCloudy => format!("partly-cloudy-{day_night}.svg"),
-            Self::Overcast => format!("overcast-{day_night}.svg"),
+            Self::ClearSky => format!("{}{day_night}.svg", PrecipitationChanceName::Clear),
+            // TODO: add mainly-clear icon variant to distinguish from partly-cloudy
+            Self::MainlyClear | Self::PartlyCloudy => {
+                format!("{}{day_night}.svg", PrecipitationChanceName::PartlyCloudy)
+            }
+            Self::Overcast => format!("{}{day_night}.svg", PrecipitationChanceName::Overcast),
 
             // Fog (45, 48)
-            Self::Fog | Self::RimeFog => "fog.svg".to_string(),
+            Self::Fog | Self::RimeFog => format!("fog{day_night}.svg"),
 
-            // Drizzle (51, 53, 55) - Light → PartlyCloudy, Moderate → Overcast, Dense → Overcast
-            Self::DrizzleLight => format!("partly-cloudy-{day_night}-drizzle.svg"),
+            // Drizzle (51, 53, 55) - Light → PartlyCloudy, Moderate/Dense → Overcast
+            Self::DrizzleLight => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::PartlyCloudy,
+                    PrecipitationKind::Drizzle
+                )
+            }
+            // TODO: add extreme drizzle icon variant for dense drizzle (code 55)
             Self::DrizzleModerate | Self::DrizzleDense => {
-                format!("overcast-{day_night}-drizzle.svg")
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::Overcast,
+                    PrecipitationKind::Drizzle
+                )
             }
 
             // Freezing drizzle (56, 57) - Use sleet as closest match
-            Self::FreezingDrizzleLight => format!("partly-cloudy-{day_night}-sleet.svg"),
-            Self::FreezingDrizzleDense => format!("overcast-{day_night}-sleet.svg"),
+            Self::FreezingDrizzleLight => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::PartlyCloudy,
+                    PrecipitationKind::Sleet
+                )
+            }
+            Self::FreezingDrizzleDense => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::Overcast,
+                    PrecipitationKind::Sleet
+                )
+            }
 
             // Rain (61, 63, 65) - Slight → PartlyCloudy, Moderate → Overcast, Heavy → Extreme
-            Self::RainSlight => format!("partly-cloudy-{day_night}-rain.svg"),
-            Self::RainModerate => format!("overcast-{day_night}-rain.svg"),
-            Self::RainHeavy => format!("extreme-{day_night}-rain.svg"),
+            Self::RainSlight => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::PartlyCloudy,
+                    PrecipitationKind::Rain
+                )
+            }
+            Self::RainModerate => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::Overcast,
+                    PrecipitationKind::Rain
+                )
+            }
+            Self::RainHeavy => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::Extreme,
+                    PrecipitationKind::Rain
+                )
+            }
 
             // Freezing rain (66, 67) - Use sleet as closest match
-            Self::FreezingRainLight => format!("partly-cloudy-{day_night}-sleet.svg"),
-            Self::FreezingRainHeavy => format!("extreme-{day_night}-sleet.svg"),
+            Self::FreezingRainLight => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::PartlyCloudy,
+                    PrecipitationKind::Sleet
+                )
+            }
+            Self::FreezingRainHeavy => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::Extreme,
+                    PrecipitationKind::Sleet
+                )
+            }
 
             // Snow (71, 73, 75, 77) - Slight → PartlyCloudy, Moderate → Overcast, Heavy → Extreme
-            Self::SnowSlight => format!("partly-cloudy-{day_night}-snow.svg"),
-            Self::SnowModerate => format!("overcast-{day_night}-snow.svg"),
-            Self::SnowHeavy => format!("extreme-{day_night}-snow.svg"),
-            Self::SnowGrains => format!("overcast-{day_night}-snow.svg"), // No specific icon
+            Self::SnowSlight => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::PartlyCloudy,
+                    PrecipitationKind::Snow
+                )
+            }
+            Self::SnowModerate => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::Overcast,
+                    PrecipitationKind::Snow
+                )
+            }
+            Self::SnowHeavy => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::Extreme,
+                    PrecipitationKind::Snow
+                )
+            }
+            // TODO: add snow-grains specific icon
+            Self::SnowGrains => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::Overcast,
+                    PrecipitationKind::Snow
+                )
+            }
 
             // Rain showers (80, 81, 82) - Slight → PartlyCloudy, Moderate → Overcast, Violent → Extreme
-            Self::RainShowersSlight => format!("partly-cloudy-{day_night}-rain.svg"),
-            Self::RainShowersModerate => format!("overcast-{day_night}-rain.svg"),
-            Self::RainShowersViolent => format!("extreme-{day_night}-rain.svg"),
+            Self::RainShowersSlight => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::PartlyCloudy,
+                    PrecipitationKind::Rain
+                )
+            }
+            Self::RainShowersModerate => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::Overcast,
+                    PrecipitationKind::Rain
+                )
+            }
+            Self::RainShowersViolent => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::Extreme,
+                    PrecipitationKind::Rain
+                )
+            }
 
             // Snow showers (85, 86) - Slight → PartlyCloudy, Heavy → Extreme
-            Self::SnowShowersSlight => format!("partly-cloudy-{day_night}-snow.svg"),
-            Self::SnowShowersHeavy => format!("extreme-{day_night}-snow.svg"),
+            Self::SnowShowersSlight => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::PartlyCloudy,
+                    PrecipitationKind::Snow
+                )
+            }
+            Self::SnowShowersHeavy => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::Extreme,
+                    PrecipitationKind::Snow
+                )
+            }
 
             // Thunderstorms (95, 96, 99)
-            Self::Thunderstorm => format!("thunderstorms-{day_night}.svg"),
-            Self::ThunderstormHailSlight => format!("thunderstorms-{day_night}-rain.svg"), // Hail shown as heavy rain
-            Self::ThunderstormHailHeavy => format!("thunderstorms-{day_night}-extreme-rain.svg"),
+            Self::Thunderstorm => format!("thunderstorms{day_night}.svg"),
+            // TODO: switch to PrecipitationKind::Hail when thunderstorm-hail icons are available
+            Self::ThunderstormHailSlight => {
+                format!("thunderstorms{day_night}{}.svg", PrecipitationKind::Rain)
+            }
+            Self::ThunderstormHailHeavy => {
+                format!(
+                    "thunderstorms{day_night}-extreme{}.svg",
+                    PrecipitationKind::Rain
+                )
+            }
 
             // Fallback for unknown codes
-            Self::Unknown => format!("overcast-{day_night}.svg"),
+            Self::Unknown => format!("{}{day_night}.svg", PrecipitationChanceName::Overcast),
         }
     }
 
@@ -284,7 +408,7 @@ mod tests {
             WmoWeatherCode::PartlyCloudy.to_icon_name(false),
             "partly-cloudy-day.svg"
         );
-        assert_eq!(WmoWeatherCode::Fog.to_icon_name(false), "fog.svg");
+        assert_eq!(WmoWeatherCode::Fog.to_icon_name(false), "fog-day.svg");
         assert_eq!(
             WmoWeatherCode::RainModerate.to_icon_name(false),
             "overcast-day-rain.svg"
@@ -305,6 +429,7 @@ mod tests {
             WmoWeatherCode::ClearSky.to_icon_name(true),
             "clear-night.svg"
         );
+        assert_eq!(WmoWeatherCode::Fog.to_icon_name(true), "fog-night.svg");
         assert_eq!(
             WmoWeatherCode::RainHeavy.to_icon_name(true),
             "extreme-night-rain.svg"

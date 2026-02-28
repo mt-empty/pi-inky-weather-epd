@@ -139,32 +139,6 @@ pub enum ElementVisibility {
     Hidden,
 }
 
-type UVIndexCategory = UVIndexIcon;
-
-impl UVIndexCategory {
-    pub fn from_u8(value: u16) -> Self {
-        match value {
-            0 => UVIndexCategory::None,
-            1..=2 => UVIndexCategory::Low,
-            3..=5 => UVIndexCategory::Moderate,
-            6..=7 => UVIndexCategory::High,
-            8..=10 => UVIndexCategory::VeryHigh,
-            11.. => UVIndexCategory::Extreme,
-        }
-    }
-
-    pub fn to_colour(self) -> &'static str {
-        match self {
-            UVIndexCategory::None => "white",
-            UVIndexCategory::Low => "green",
-            UVIndexCategory::Moderate => "yellow",
-            UVIndexCategory::High => "orange",
-            UVIndexCategory::VeryHigh => "red",
-            UVIndexCategory::Extreme => "purple",
-        }
-    }
-}
-
 /// Convert a list of points to a list of Bézier curves
 /// using the Catmull-Rom to Bézier conversion
 ///
@@ -544,7 +518,7 @@ impl HourlyForecastGraph {
 
         for (i, &uv) in self.uv_data.iter().enumerate() {
             let offset = (i as f32 / 23.0) * 100.0;
-            let colour = UVIndexCategory::from_u8(uv).to_colour();
+            let colour = UVIndexIcon::from(uv).to_colour();
             gradient.push_str(&format!(
                 r#"<stop offset="{offset:.2}%" stop-color="{colour}"/>"#
             ));
