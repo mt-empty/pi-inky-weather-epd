@@ -126,7 +126,7 @@ impl WmoWeatherCode {
     ///
     /// # Returns
     /// Icon filename (e.g., "partly-cloudy-day-rain.svg", "thunderstorms-night.svg")
-    pub fn to_icon_name(&self, is_night: bool) -> String {
+    pub fn icon_name(&self, is_night: bool) -> String {
         let day_night = if is_night {
             DayNight::Night
         } else {
@@ -304,48 +304,6 @@ impl WmoWeatherCode {
             Self::Unknown => format!("{}{day_night}.svg", PrecipitationChanceName::Overcast),
         }
     }
-
-    /// Check if this weather code represents precipitation
-    pub fn is_precipitation(&self) -> bool {
-        matches!(
-            self,
-            Self::DrizzleLight
-                | Self::DrizzleModerate
-                | Self::DrizzleDense
-                | Self::FreezingDrizzleLight
-                | Self::FreezingDrizzleDense
-                | Self::RainSlight
-                | Self::RainModerate
-                | Self::RainHeavy
-                | Self::FreezingRainLight
-                | Self::FreezingRainHeavy
-                | Self::SnowSlight
-                | Self::SnowModerate
-                | Self::SnowHeavy
-                | Self::SnowGrains
-                | Self::RainShowersSlight
-                | Self::RainShowersModerate
-                | Self::RainShowersViolent
-                | Self::SnowShowersSlight
-                | Self::SnowShowersHeavy
-                | Self::Thunderstorm
-                | Self::ThunderstormHailSlight
-                | Self::ThunderstormHailHeavy
-        )
-    }
-
-    /// Check if this weather code represents snow
-    pub fn is_snow(&self) -> bool {
-        matches!(
-            self,
-            Self::SnowSlight
-                | Self::SnowModerate
-                | Self::SnowHeavy
-                | Self::SnowGrains
-                | Self::SnowShowersSlight
-                | Self::SnowShowersHeavy
-        )
-    }
 }
 
 impl fmt::Display for WmoWeatherCode {
@@ -400,42 +358,36 @@ mod tests {
 
     #[test]
     fn test_icon_name_generation_day() {
+        assert_eq!(WmoWeatherCode::ClearSky.icon_name(false), "clear-day.svg");
         assert_eq!(
-            WmoWeatherCode::ClearSky.to_icon_name(false),
-            "clear-day.svg"
-        );
-        assert_eq!(
-            WmoWeatherCode::PartlyCloudy.to_icon_name(false),
+            WmoWeatherCode::PartlyCloudy.icon_name(false),
             "partly-cloudy-day.svg"
         );
-        assert_eq!(WmoWeatherCode::Fog.to_icon_name(false), "fog-day.svg");
+        assert_eq!(WmoWeatherCode::Fog.icon_name(false), "fog-day.svg");
         assert_eq!(
-            WmoWeatherCode::RainModerate.to_icon_name(false),
+            WmoWeatherCode::RainModerate.icon_name(false),
             "overcast-day-rain.svg"
         );
         assert_eq!(
-            WmoWeatherCode::SnowHeavy.to_icon_name(false),
+            WmoWeatherCode::SnowHeavy.icon_name(false),
             "extreme-day-snow.svg"
         );
         assert_eq!(
-            WmoWeatherCode::Thunderstorm.to_icon_name(false),
+            WmoWeatherCode::Thunderstorm.icon_name(false),
             "thunderstorms-day.svg"
         );
     }
 
     #[test]
     fn test_icon_name_generation_night() {
+        assert_eq!(WmoWeatherCode::ClearSky.icon_name(true), "clear-night.svg");
+        assert_eq!(WmoWeatherCode::Fog.icon_name(true), "fog-night.svg");
         assert_eq!(
-            WmoWeatherCode::ClearSky.to_icon_name(true),
-            "clear-night.svg"
-        );
-        assert_eq!(WmoWeatherCode::Fog.to_icon_name(true), "fog-night.svg");
-        assert_eq!(
-            WmoWeatherCode::RainHeavy.to_icon_name(true),
+            WmoWeatherCode::RainHeavy.icon_name(true),
             "extreme-night-rain.svg"
         );
         assert_eq!(
-            WmoWeatherCode::Thunderstorm.to_icon_name(true),
+            WmoWeatherCode::Thunderstorm.icon_name(true),
             "thunderstorms-night.svg"
         );
     }
@@ -444,50 +396,33 @@ mod tests {
     fn test_intensity_gradation() {
         // Light → PartlyCloudy
         assert!(WmoWeatherCode::DrizzleLight
-            .to_icon_name(false)
+            .icon_name(false)
             .contains("partly-cloudy"));
         assert!(WmoWeatherCode::RainSlight
-            .to_icon_name(false)
+            .icon_name(false)
             .contains("partly-cloudy"));
         assert!(WmoWeatherCode::SnowSlight
-            .to_icon_name(false)
+            .icon_name(false)
             .contains("partly-cloudy"));
 
         // Moderate → Overcast
         assert!(WmoWeatherCode::DrizzleModerate
-            .to_icon_name(false)
+            .icon_name(false)
             .contains("overcast"));
         assert!(WmoWeatherCode::RainModerate
-            .to_icon_name(false)
+            .icon_name(false)
             .contains("overcast"));
         assert!(WmoWeatherCode::SnowModerate
-            .to_icon_name(false)
+            .icon_name(false)
             .contains("overcast"));
 
         // Heavy → Extreme
         assert!(WmoWeatherCode::RainHeavy
-            .to_icon_name(false)
+            .icon_name(false)
             .contains("extreme"));
         assert!(WmoWeatherCode::SnowHeavy
-            .to_icon_name(false)
+            .icon_name(false)
             .contains("extreme"));
-    }
-
-    #[test]
-    fn test_is_precipitation() {
-        assert!(WmoWeatherCode::RainModerate.is_precipitation());
-        assert!(WmoWeatherCode::SnowSlight.is_precipitation());
-        assert!(WmoWeatherCode::Thunderstorm.is_precipitation());
-        assert!(!WmoWeatherCode::ClearSky.is_precipitation());
-        assert!(!WmoWeatherCode::Fog.is_precipitation());
-    }
-
-    #[test]
-    fn test_is_snow() {
-        assert!(WmoWeatherCode::SnowSlight.is_snow());
-        assert!(WmoWeatherCode::SnowShowersHeavy.is_snow());
-        assert!(!WmoWeatherCode::RainModerate.is_snow());
-        assert!(!WmoWeatherCode::FreezingRainLight.is_snow());
     }
 
     #[test]

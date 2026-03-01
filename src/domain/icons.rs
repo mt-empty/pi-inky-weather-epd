@@ -24,6 +24,7 @@ impl Icon for Wind {
 
 /// If `use_moon_phase_instead_of_clear_night` is enabled and the icon represents
 /// a clear night, replaces it with the current moon phase icon.
+/// only relevant for hourly forecasts, as daily forecasts always use day icons.
 fn apply_moon_phase_override(icon: String, is_night: bool) -> String {
     if !is_night || !CONFIG.render_options.use_moon_phase_instead_of_clear_night {
         return icon;
@@ -52,10 +53,14 @@ fn percentage_to_cloud_name(pct: u16) -> PrecipitationChanceName {
 }
 
 /// Converts the precipitation amount to a corresponding `PrecipitationKind`.
+/// Returns `None` when there is no meaningful precipitation.
 ///
 /// `is_hourly`: if true, scales the amount to a daily equivalent before classifying.
 #[must_use]
-fn precipitation_amount_to_name(precip: &Precipitation, is_hourly: bool) -> PrecipitationKind {
+fn precipitation_amount_to_name(
+    precip: &Precipitation,
+    is_hourly: bool,
+) -> Option<PrecipitationKind> {
     let mut median = precip.median();
 
     if is_hourly {
@@ -65,15 +70,15 @@ fn precipitation_amount_to_name(precip: &Precipitation, is_hourly: bool) -> Prec
     // If primarily snow, return snow variant instead of rain
     if precip.is_primarily_snow() {
         return match median {
-            0.0..1.4 => PrecipitationKind::None,
-            _ => PrecipitationKind::Snow,
+            0.0..1.4 => None,
+            _ => Some(PrecipitationKind::Snow),
         };
     }
 
     match median {
-        0.0..3.0 => PrecipitationKind::None,
-        3.0..=20.0 => PrecipitationKind::Drizzle,
-        _ => PrecipitationKind::Rain,
+        0.0..3.0 => None,
+        3.0..=20.0 => Some(PrecipitationKind::Drizzle),
+        _ => Some(PrecipitationKind::Rain),
     }
 }
 
@@ -91,10 +96,12 @@ fn precipitation_amount_to_name(precip: &Precipitation, is_hourly: bool) -> Prec
 #[must_use]
 fn apply_precipitation_override(
     cloud_name: PrecipitationChanceName,
-    amount_name: PrecipitationKind,
+    amount_name: Option<PrecipitationKind>,
 ) -> PrecipitationChanceName {
-    match amount_name {
-        PrecipitationKind::None => cloud_name,
+    let Some(kind) = amount_name else {
+        return cloud_name;
+    };
+    match kind {
         PrecipitationKind::Drizzle => {
             // Drizzle requires at least partly cloudy
             match cloud_name {
@@ -134,10 +141,6 @@ fn apply_precipitation_override(
                 _ => cloud_name,
             }
         }
-        PrecipitationKind::Fog => {
-            // Fog can occur with any cloud cover, no override needed
-            cloud_name
-        }
     }
 }
 
@@ -155,12 +158,12 @@ impl Icon for DailyForecast {
                 logger::debug("DailyForecast: Using WMO weather code for icon selection");
                 let wmo_code = crate::domain::weather_code::WmoWeatherCode::from(code);
                 // Daily forecasts always use day icons
-                return wmo_code.to_icon_name(false);
+                return wmo_code.icon_name(false);
             }
             logger::debug("DailyForecast: WMO weather code not available, falling back to precipitation-based icon logic");
+        } else {
+            logger::debug("DailyForecast: Falling back to precipitation-based icon logic");
         }
-
-        logger::debug("DailyForecast: Falling back to precipitation-based icon logic");
 
         // Priority 2: Fall back to precipitation-based logic (BOM provider, missing codes)
         if let Some(ref precip) = self.precipitation {
@@ -176,8 +179,9 @@ impl Icon for DailyForecast {
             // Apply precipitation override: ensure heavy rain requires adequate cloud cover
             // Note: After override, Clear can only occur with amount_name = None
             let cloud_name = apply_precipitation_override(raw_cloud_name, amount_name);
+            let suffix = amount_name.map(|k| k.to_string()).unwrap_or_default();
 
-            format!("{cloud_name}{}{amount_name}.svg", DayNight::Day)
+            format!("{cloud_name}{}{suffix}.svg", DayNight::Day)
         } else {
             // Default to clear day if no precipitation data
             format!("{}{}.svg", PrecipitationChanceName::Clear, DayNight::Day)
@@ -192,13 +196,13 @@ impl Icon for HourlyForecast {
             if let Some(code) = self.weather_code {
                 logger::debug("HourlyForecast: Using WMO weather code for icon selection");
                 let wmo_code = crate::domain::weather_code::WmoWeatherCode::from(code);
-                let icon = wmo_code.to_icon_name(self.is_night);
+                let icon = wmo_code.icon_name(self.is_night);
                 return apply_moon_phase_override(icon, self.is_night);
             }
             logger::debug("HourlyForecast: WMO weather code not available, falling back to precipitation-based icon logic");
+        } else {
+            logger::debug("HourlyForecast: Falling back to precipitation-based icon logic");
         }
-
-        logger::debug("HourlyForecast: Falling back to precipitation-based icon logic");
 
         // Priority 2: Fall back to cloud_cover + precipitation logic (BOM provider, missing codes)
         // Determine cloud coverage from cloud_cover data if available, otherwise fall back to precipitation chance
@@ -218,8 +222,9 @@ impl Icon for HourlyForecast {
         // Apply precipitation override: ensure heavy rain requires adequate cloud cover
         // Note: After override, Clear can only occur with amount_name = None
         let cloud_name = apply_precipitation_override(raw_cloud_name, amount_name);
+        let suffix = amount_name.map(|k| k.to_string()).unwrap_or_default();
 
-        let icon = format!("{cloud_name}{day_night}{amount_name}.svg");
+        let icon = format!("{cloud_name}{day_night}{suffix}.svg");
         apply_moon_phase_override(icon, self.is_night)
     }
 }

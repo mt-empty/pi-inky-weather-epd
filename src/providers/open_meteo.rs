@@ -1,4 +1,4 @@
-// According to this issues https://github.com/open-meteo/open-meteo/issues/228
+// According to this issue https://github.com/open-meteo/open-meteo/issues/228
 // the WMO code represents the worst case, so you might get Rime Fog in middle of summer, even most of the day is sunny
 
 use anyhow::Error;
