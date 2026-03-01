@@ -33,7 +33,7 @@ fn test_cloud_cover_overrides_low_precipitation_chance() {
         weather_code: None,
     };
 
-    assert_eq!(forecast.get_icon_name(), "extreme-day.svg");
+    assert_eq!(forecast.icon_name(), "extreme-day.svg");
 }
 
 #[test]
@@ -57,8 +57,8 @@ fn test_cloud_cover_boundary_25_percent() {
         ..forecast_25.clone()
     };
 
-    assert_eq!(forecast_25.get_icon_name(), "clear-day.svg");
-    assert_eq!(forecast_26.get_icon_name(), "partly-cloudy-day.svg");
+    assert_eq!(forecast_25.icon_name(), "clear-day.svg");
+    assert_eq!(forecast_26.icon_name(), "partly-cloudy-day.svg");
 }
 
 #[test]
@@ -82,8 +82,8 @@ fn test_cloud_cover_boundary_50_and_51_percent() {
         ..forecast_50.clone()
     };
 
-    assert_eq!(forecast_50.get_icon_name(), "partly-cloudy-day.svg");
-    assert_eq!(forecast_51.get_icon_name(), "overcast-day.svg");
+    assert_eq!(forecast_50.icon_name(), "partly-cloudy-day.svg");
+    assert_eq!(forecast_51.icon_name(), "overcast-day.svg");
 }
 
 #[test]
@@ -107,8 +107,8 @@ fn test_cloud_cover_boundary_75_and_76_percent() {
         ..forecast_75.clone()
     };
 
-    assert_eq!(forecast_75.get_icon_name(), "overcast-day.svg");
-    assert_eq!(forecast_76.get_icon_name(), "extreme-day.svg");
+    assert_eq!(forecast_75.icon_name(), "overcast-day.svg");
+    assert_eq!(forecast_76.icon_name(), "extreme-day.svg");
 }
 
 #[test]
@@ -131,7 +131,7 @@ fn test_null_cloud_cover_falls_back_to_precipitation() {
         weather_code: None,
     };
 
-    assert_eq!(forecast.get_icon_name(), "partly-cloudy-day.svg");
+    assert_eq!(forecast.icon_name(), "partly-cloudy-day.svg");
 }
 
 // ============================================================================
@@ -159,7 +159,7 @@ fn test_precipitation_override_drizzle_requires_partly_cloudy() {
     };
 
     // Should be bumped to partly-cloudy due to drizzle
-    assert_eq!(forecast.get_icon_name(), "partly-cloudy-day-drizzle.svg");
+    assert_eq!(forecast.icon_name(), "partly-cloudy-day-drizzle.svg");
 }
 
 #[test]
@@ -183,7 +183,7 @@ fn test_precipitation_override_rain_requires_overcast() {
     };
 
     // Should be bumped to overcast due to heavy rain
-    assert_eq!(forecast.get_icon_name(), "overcast-day-rain.svg");
+    assert_eq!(forecast.icon_name(), "overcast-day-rain.svg");
 }
 
 #[test]
@@ -207,7 +207,7 @@ fn test_precipitation_override_partly_cloudy_rain_becomes_overcast() {
     };
 
     // Should be bumped to overcast due to heavy rain
-    assert_eq!(forecast.get_icon_name(), "overcast-day-rain.svg");
+    assert_eq!(forecast.icon_name(), "overcast-day-rain.svg");
 }
 
 #[test]
@@ -228,7 +228,7 @@ fn test_fallback_with_precipitation_override() {
         weather_code: None,
     };
 
-    assert_eq!(forecast.get_icon_name(), "clear-day.svg");
+    assert_eq!(forecast.icon_name(), "clear-day.svg");
 }
 
 // ============================================================================
@@ -256,7 +256,7 @@ fn test_partly_cloudy_with_drizzle_is_valid() {
         weather_code: None,
     };
 
-    let icon_name = forecast.get_icon_name();
+    let icon_name = forecast.icon_name();
 
     // Should be "partly-cloudy-day-drizzle.svg" - this file exists
     assert_eq!(icon_name, "partly-cloudy-day-drizzle.svg");
@@ -283,7 +283,7 @@ fn test_overcast_with_rain_is_valid() {
         weather_code: None,
     };
 
-    let icon_name = forecast.get_icon_name();
+    let icon_name = forecast.icon_name();
 
     // Should be "overcast-day-rain.svg" - this file exists
     assert_eq!(icon_name, "overcast-day-rain.svg");
@@ -310,7 +310,7 @@ fn test_extreme_with_drizzle_is_valid() {
         weather_code: None,
     };
 
-    let icon_name = forecast.get_icon_name();
+    let icon_name = forecast.icon_name();
 
     // Should be "extreme-night-drizzle.svg" - this file exists
     assert_eq!(icon_name, "extreme-night-drizzle.svg");
@@ -334,7 +334,7 @@ fn test_zero_chance_zero_amount_produces_clear() {
         weather_code: None,
     };
 
-    let icon_name = forecast.get_icon_name();
+    let icon_name = forecast.icon_name();
 
     assert_eq!(icon_name, "clear-day.svg");
 }
@@ -360,7 +360,7 @@ fn test_boundary_case_25_percent_is_still_clear() {
         weather_code: None,
     };
 
-    let icon_name = forecast.get_icon_name();
+    let icon_name = forecast.icon_name();
 
     // 25% is still Clear, so should ignore the amount
     assert_eq!(icon_name, "clear-day.svg");
@@ -387,7 +387,7 @@ fn test_boundary_case_26_percent_allows_precipitation_suffix() {
         weather_code: None,
     };
 
-    let icon_name = forecast.get_icon_name();
+    let icon_name = forecast.icon_name();
 
     // 26% is PartlyCloudy, so drizzle suffix should appear
     assert_eq!(icon_name, "partly-cloudy-day-drizzle.svg");
@@ -419,7 +419,7 @@ fn test_snow_icon_selected_with_high_snowfall() {
     };
 
     assert_eq!(
-        forecast.get_icon_name(),
+        forecast.icon_name(),
         "extreme-day-snow.svg",
         "Heavy snowfall should produce snow icon"
     );
@@ -447,7 +447,7 @@ fn test_snow_icon_at_60_percent_threshold() {
     };
 
     assert_eq!(
-        forecast.get_icon_name(),
+        forecast.icon_name(),
         "overcast-night-snow.svg",
         "Exactly 60% snow threshold should produce snow icon"
     );
@@ -476,7 +476,7 @@ fn test_rain_icon_below_snow_threshold() {
 
     // Below 60% threshold, should be rain not snow
     assert_eq!(
-        forecast.get_icon_name(),
+        forecast.icon_name(),
         "overcast-day-rain.svg",
         "Below 60% snow threshold should produce rain icon"
     );
@@ -505,7 +505,7 @@ fn test_snow_override_requires_partly_cloudy() {
 
     // Should be bumped to partly-cloudy due to snow
     assert_eq!(
-        forecast.get_icon_name(),
+        forecast.icon_name(),
         "partly-cloudy-day-snow.svg",
         "Snow with clear skies should be upgraded to partly-cloudy"
     );
@@ -534,7 +534,7 @@ fn test_low_snowfall_shows_clear_not_snow() {
 
     // Below 1.4mm threshold for snow, should show clear
     assert_eq!(
-        forecast.get_icon_name(),
+        forecast.icon_name(),
         "clear-day.svg",
         "Very light snow below threshold should show clear icon"
     );
@@ -563,7 +563,7 @@ fn test_mixed_precipitation_favors_rain() {
 
     // Below 60% snow threshold -> rain
     assert_eq!(
-        forecast.get_icon_name(),
+        forecast.icon_name(),
         "overcast-night-rain.svg",
         "Mixed precipitation below 60% snow should show rain icon"
     );
@@ -591,7 +591,7 @@ fn test_partly_cloudy_snow_at_night() {
     };
 
     assert_eq!(
-        forecast.get_icon_name(),
+        forecast.icon_name(),
         "partly-cloudy-night-snow.svg",
         "Partly cloudy with snow at night should produce night snow icon"
     );
@@ -619,7 +619,7 @@ fn test_overcast_day_snow() {
     };
 
     assert_eq!(
-        forecast.get_icon_name(),
+        forecast.icon_name(),
         "overcast-day-snow.svg",
         "Overcast day with snow should produce overcast-day-snow icon"
     );
@@ -647,7 +647,7 @@ fn test_extreme_night_snow() {
     };
 
     assert_eq!(
-        forecast.get_icon_name(),
+        forecast.icon_name(),
         "extreme-night-snow.svg",
         "Extreme night conditions with heavy snow should produce extreme-night-snow icon"
     );

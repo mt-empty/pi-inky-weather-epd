@@ -52,11 +52,11 @@ impl CurveType {
         }
     }
 
-    pub fn get_points(&self) -> &Vec<Point> {
+    pub fn points(&self) -> &Vec<Point> {
         &self.data().points
     }
 
-    pub fn get_smooth(&self) -> bool {
+    pub fn smooth(&self) -> bool {
         self.data().smooth
     }
 }
@@ -478,18 +478,18 @@ impl HourlyForecastGraph {
     fn initialize_x_y_bounds(&mut self) {
         for curve in &self.curves {
             let min_y_data = curve
-                .get_points()
+                .points()
                 .iter()
                 .map(|val| val.y)
                 .fold(f32::NAN, f32::min);
             let max_y_data = curve
-                .get_points()
+                .points()
                 .iter()
                 .map(|val| val.y)
                 .fold(f32::NAN, f32::max);
 
-            let starting_x_data = curve.get_points().first().map(|val| val.x).unwrap_or(0.0);
-            let ending_x_data = curve.get_points().last().map(|val| val.x).unwrap_or(0.0);
+            let starting_x_data = curve.points().first().map(|val| val.x).unwrap_or(0.0);
+            let ending_x_data = curve.points().last().map(|val| val.x).unwrap_or(0.0);
 
             match curve {
                 CurveType::RainChance(_) => {}
@@ -555,7 +555,7 @@ impl HourlyForecastGraph {
 
             // Scale the points according to the calculated factors
             let scaled_points: Vec<Point> = curve
-                .get_points()
+                .points()
                 .iter()
                 .map(|val| Point {
                     x: (val.x * xfactor), // x always start from 0 so no need to adjust the x value
@@ -575,7 +575,7 @@ impl HourlyForecastGraph {
                 .collect();
 
             // Generate the SVG path data
-            let path = if curve.get_smooth() {
+            let path = if curve.smooth() {
                 catmull_rom_to_bezier(scaled_points)
                     .iter()
                     .enumerate()

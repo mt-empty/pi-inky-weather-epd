@@ -99,7 +99,7 @@ impl Wind {
         }
     }
 
-    pub fn get_speed(&self, use_gust: bool) -> u16 {
+    pub fn speed(&self, use_gust: bool) -> u16 {
         if use_gust {
             self.gust_speed_kmh
         } else {
@@ -118,12 +118,12 @@ impl Wind {
     }
 
     /// Get the wind speed in the configured unit
-    pub fn get_speed_in_unit(
+    pub fn speed_in_unit(
         &self,
         use_gust: bool,
         unit: crate::configs::settings::WindSpeedUnit,
     ) -> u16 {
-        let speed_kmh = self.get_speed(use_gust);
+        let speed_kmh = self.speed(use_gust);
         Self::convert_speed(speed_kmh, unit)
     }
 }
@@ -161,7 +161,7 @@ impl Precipitation {
         }
     }
 
-    pub fn calculate_median(&self) -> f32 {
+    pub fn median(&self) -> f32 {
         let min = self.amount_min.unwrap_or(0);
         let max = self.amount_max.unwrap_or(min);
         (min + max) as f32 / 2.0
@@ -176,7 +176,7 @@ impl Precipitation {
     /// Using Open-Meteo's ratio: 7 cm snow ≈ 10 mm water (0.7 density)
     pub fn is_primarily_snow(&self) -> bool {
         let snow_cm = self.snowfall_amount.unwrap_or(0) as f32;
-        let precip_mm = self.calculate_median();
+        let precip_mm = self.median();
 
         if snow_cm == 0.0 {
             return false;
@@ -190,7 +190,7 @@ impl Precipitation {
     }
 
     /// Get snowfall amount in cm
-    pub fn get_snowfall_cm(&self) -> f32 {
+    pub fn snowfall_cm(&self) -> f32 {
         self.snowfall_amount.unwrap_or(0) as f32
     }
 }

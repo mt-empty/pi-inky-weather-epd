@@ -144,45 +144,45 @@ impl From<u16> for HumidityIconName {
 ///
 /// # Methods
 ///
-/// - `get_icon_name(&self) -> String`
+/// - `icon_name(&self) -> String`
 ///
 ///   Returns the name of the icon as a `String`.
 ///
-/// - `get_icon_path(&self) -> String`
+/// - `icon_path(&self) -> String`
 ///
 ///   Returns the full path to the icon as a `String`. The path is constructed
 ///   by concatenating the `svg_icons_directory` from the `CONFIG` with the icon name.
 pub trait Icon {
     /// Returns the name of the icon
-    fn get_icon_name(&self) -> String;
+    fn icon_name(&self) -> String;
 
     /// Returns the path of the icon as a `String`.
     /// The path is constructed using the `svg_icons_directory` from the configuration
-    /// and the icon name obtained from `get_icon_name`.
-    fn get_icon_path(&self) -> String {
+    /// and the icon name obtained from `icon_name`.
+    fn icon_path(&self) -> String {
         CONFIG
             .misc
             .svg_icons_directory
-            .join(Path::new(&self.get_icon_name()))
+            .join(Path::new(&self.icon_name()))
             .to_string_lossy()
             .to_string()
     }
 }
 
 impl Icon for SunPositionIconName {
-    fn get_icon_name(&self) -> String {
+    fn icon_name(&self) -> String {
         self.to_string()
     }
 }
 
 impl Icon for HumidityIconName {
-    fn get_icon_name(&self) -> String {
+    fn icon_name(&self) -> String {
         self.to_string()
     }
 }
 
 impl Icon for UVIndexIcon {
-    fn get_icon_name(&self) -> String {
+    fn icon_name(&self) -> String {
         self.to_string()
     }
 }

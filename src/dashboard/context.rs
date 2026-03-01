@@ -5,7 +5,7 @@ use crate::{
     domain::models::{DailyForecast, HourlyForecast},
     errors::{DashboardError, Description},
     logger,
-    utils::{find_max_item_between_dates, get_total_between_dates},
+    utils::{find_max_item_between_dates, total_between_dates},
     weather::icons::{HumidityIconName, Icon, SunPositionIconName, UVIndexIcon},
     CONFIG,
 };
@@ -145,8 +145,8 @@ impl Default for Context {
             current_hour_rain_measure_icon: not_available_icon_path.clone(),
             sunrise_time: NA.to_string(),
             sunset_time: NA.to_string(),
-            sunset_icon: SunPositionIconName::Sunset.get_icon_path(),
-            sunrise_icon: SunPositionIconName::Sunrise.get_icon_path(),
+            sunset_icon: SunPositionIconName::Sunset.icon_path(),
+            sunrise_icon: SunPositionIconName::Sunrise.icon_path(),
             graph_height,
             graph_width,
             actual_temp_curve_data: String::new(),
@@ -274,7 +274,7 @@ impl ContextBuilder {
                 let y_pos = y_start + (index as i32 * y_offset);
                 format!(
                     r#"<image x="{x_pos}" y="{y_pos}" width="{icon_size}" height="{icon_size}" href="{}"/>"#,
-                    error.get_icon_path()
+                    error.icon_path()
                 )
             })
             .collect::<Vec<String>>()
@@ -314,7 +314,7 @@ impl ContextBuilder {
             .map_or("NA".to_string(), |temp| temp.to_string());
         let icon_value = forecast.map_or_else(
             || NOT_AVAILABLE_ICON_PATH.to_string_lossy().to_string(),
-            |f| f.get_icon_path(),
+            |f| f.icon_path(),
         );
 
         match day_index {
@@ -553,11 +553,11 @@ impl ContextBuilder {
             local_forecast_window_end,
         );
 
-        self.context.total_rain_today = (get_total_between_dates(
+        self.context.total_rain_today = (total_between_dates(
             &hourly_forecast_data,
             &local_forecast_window_start,
             &local_forecast_window_end,
-            |item: &HourlyForecast| item.precipitation.calculate_median(),
+            |item: &HourlyForecast| item.precipitation.median(),
             |item| item.time.with_timezone(&Local),
         ))
         .to_string();
@@ -675,15 +675,14 @@ impl ContextBuilder {
         clock: &dyn Clock,
     ) -> &mut Self {
         self.context.current_hour_actual_temp = current_hour.temperature.to_string();
-        self.context.current_hour_weather_icon = current_hour.get_icon_path();
+        self.context.current_hour_weather_icon = current_hour.icon_path();
         self.context.current_hour_feels_like = current_hour.apparent_temperature.to_string();
         self.context.current_day_date = clock
             .now_local()
             .format(&CONFIG.render_options.date_format)
             .to_string();
-        self.context.current_hour_rain_amount =
-            current_hour.precipitation.calculate_median().to_string();
-        self.context.current_hour_rain_measure_icon = current_hour.precipitation.get_icon_path();
+        self.context.current_hour_rain_amount = current_hour.precipitation.median().to_string();
+        self.context.current_hour_rain_measure_icon = current_hour.precipitation.icon_path();
 
         self
     }
@@ -691,18 +690,18 @@ impl ContextBuilder {
     fn populate_current_hour_table(&mut self, current_hour: &HourlyForecast) {
         self.context.current_hour_wind_speed = current_hour
             .wind
-            .get_speed_in_unit(
+            .speed_in_unit(
                 CONFIG.render_options.use_gust_instead_of_wind,
                 CONFIG.render_options.wind_speed_unit,
             )
             .to_string();
-        self.context.current_hour_wind_icon = current_hour.wind.get_icon_path();
+        self.context.current_hour_wind_icon = current_hour.wind.icon_path();
         self.context.current_hour_uv_index = current_hour.uv_index.to_string();
         self.context.current_hour_uv_index_icon =
-            UVIndexIcon::from(current_hour.uv_index).get_icon_path();
+            UVIndexIcon::from(current_hour.uv_index).icon_path();
         self.context.current_hour_relative_humidity = current_hour.relative_humidity.to_string();
         self.context.current_hour_relative_humidity_icon =
-            HumidityIconName::from(current_hour.relative_humidity).get_icon_path();
+            HumidityIconName::from(current_hour.relative_humidity).icon_path();
     }
 
     fn set_max_values_for_table(
@@ -756,7 +755,7 @@ impl ContextBuilder {
 
         let (max_wind_today, max_wind_tomorrow) = max_in_today_and_tomorrow!(|item| item
             .wind
-            .get_speed(CONFIG.render_options.use_gust_instead_of_wind));
+            .speed(CONFIG.render_options.use_gust_instead_of_wind));
 
         // Convert wind speed to configured unit
         let max_wind_today_converted = crate::domain::models::Wind::convert_speed(
