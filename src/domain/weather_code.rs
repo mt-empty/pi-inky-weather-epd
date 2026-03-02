@@ -136,8 +136,8 @@ impl WmoWeatherCode {
         match self {
             // Clear sky conditions (0-3)
             Self::ClearSky => format!("{}{day_night}.svg", PrecipitationChanceName::Clear),
-            // TODO: add mainly-clear icon variant to distinguish from partly-cloudy
-            Self::MainlyClear | Self::PartlyCloudy => {
+            Self::MainlyClear => format!("mainly-clear{day_night}.svg"),
+            Self::PartlyCloudy => {
                 format!("{}{day_night}.svg", PrecipitationChanceName::PartlyCloudy)
             }
             Self::Overcast => format!("{}{day_night}.svg", PrecipitationChanceName::Overcast),
@@ -153,11 +153,17 @@ impl WmoWeatherCode {
                     PrecipitationKind::Drizzle
                 )
             }
-            // TODO: add extreme drizzle icon variant for dense drizzle (code 55)
-            Self::DrizzleModerate | Self::DrizzleDense => {
+            Self::DrizzleModerate => {
                 format!(
                     "{}{day_night}{}.svg",
                     PrecipitationChanceName::Overcast,
+                    PrecipitationKind::Drizzle
+                )
+            }
+            Self::DrizzleDense => {
+                format!(
+                    "{}{day_night}{}.svg",
+                    PrecipitationChanceName::Extreme,
                     PrecipitationKind::Drizzle
                 )
             }
@@ -239,14 +245,7 @@ impl WmoWeatherCode {
                     PrecipitationKind::Snow
                 )
             }
-            // TODO: add snow-grains specific icon
-            Self::SnowGrains => {
-                format!(
-                    "{}{day_night}{}.svg",
-                    PrecipitationChanceName::Overcast,
-                    PrecipitationKind::Snow
-                )
-            }
+            Self::SnowGrains => format!("overcast{day_night}-snow-grains.svg"),
 
             // Rain showers (80, 81, 82) - Slight → PartlyCloudy, Moderate → Overcast, Violent → Extreme
             Self::RainShowersSlight => {
@@ -289,14 +288,13 @@ impl WmoWeatherCode {
 
             // Thunderstorms (95, 96, 99)
             Self::Thunderstorm => format!("thunderstorms{day_night}.svg"),
-            // TODO: switch to PrecipitationKind::Hail when thunderstorm-hail icons are available
             Self::ThunderstormHailSlight => {
-                format!("thunderstorms{day_night}{}.svg", PrecipitationKind::Rain)
+                format!("thunderstorms{day_night}{}.svg", PrecipitationKind::Hail)
             }
             Self::ThunderstormHailHeavy => {
                 format!(
-                    "thunderstorms{day_night}-extreme{}.svg",
-                    PrecipitationKind::Rain
+                    "thunderstorms{day_night}-extreme-{}.svg",
+                    PrecipitationKind::Hail
                 )
             }
 

@@ -74,7 +74,7 @@ pub struct Wind {
 }
 
 impl Wind {
-    pub fn get_speed(&self) -> u16 {
+    pub fn speed(&self) -> u16 {
         if CONFIG.render_options.use_gust_instead_of_wind {
             self.gust_speed_kilometre
         } else {

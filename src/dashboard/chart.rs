@@ -56,7 +56,7 @@ impl CurveType {
         &self.data().points
     }
 
-    pub fn smooth(&self) -> bool {
+    pub fn is_smooth(&self) -> bool {
         self.data().smooth
     }
 }
@@ -575,7 +575,7 @@ impl HourlyForecastGraph {
                 .collect();
 
             // Generate the SVG path data
-            let path = if curve.smooth() {
+            let path = if curve.is_smooth() {
                 catmull_rom_to_bezier(scaled_points)
                     .iter()
                     .enumerate()
