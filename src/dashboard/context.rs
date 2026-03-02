@@ -211,7 +211,7 @@ impl ContextBuilder {
     pub fn new() -> Self {
         let mut context = Context::default();
 
-        if CONFIG.debugging.enable_debug_logs {
+        if CONFIG.dev.enable_debug_logs {
             context.debug_info_visibility = ElementVisibility::Visible.to_string();
             context.debug_version = format!("v{}", env!("CARGO_PKG_VERSION"));
 

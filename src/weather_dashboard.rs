@@ -94,17 +94,16 @@ fn render_dashboard_template(
 
 /// Render an existing SVG file to PNG without fetching weather data or re-rendering the template.
 ///
-/// Reads the configured SVG output path and converts it directly to PNG.
+/// Converts the given SVG file directly to PNG using the configured output path.
 /// Useful when the SVG has already been generated and only the PNG conversion is needed.
-pub fn render_svg_to_png_only() -> Result<(), Error> {
+pub fn render_svg_to_png(svg_path: &Path) -> Result<(), Error> {
     let current_dir = std::env::current_dir()?;
-    let svg_path = &CONFIG.misc.generated_svg_name;
 
     logger::section("Render SVG → PNG");
 
     if !svg_path.exists() {
         return Err(anyhow::anyhow!(
-            "SVG file not found: {}. Run without --render-svg-only first to generate it.",
+            "SVG file not found: {}",
             current_dir.join(svg_path).display()
         ));
     }
@@ -189,7 +188,7 @@ pub fn generate_weather_dashboard_injection(
         current_dir.join(output_svg_name).display()
     ));
 
-    if !CONFIG.debugging.disable_png_output {
+    if !CONFIG.dev.disable_png_output {
         logger::subsection("Converting SVG to PNG");
         // Ensure the parent directory for the generated PNG exists
         if let Some(png_parent) = CONFIG.misc.generated_png_name.parent() {

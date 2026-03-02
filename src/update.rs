@@ -55,8 +55,8 @@ fn fetch_latest_release() -> Result<(), anyhow::Error> {
     if latest_version > current_version {
         logger::debug(format!("Newer version available: {}", latest_version));
 
-        // return early if CONFIG.debugging.allow_pre_release_version is false and the latest version is a pre-release
-        if !latest_version.pre.is_empty() && !CONFIG.debugging.allow_pre_release_version {
+        // return early if CONFIG.release.allow_pre_release_version is false and the latest version is a pre-release
+        if !latest_version.pre.is_empty() && !CONFIG.release.allow_pre_release_version {
             logger::debug(format!("Skipping pre-release version: {}", latest_version));
             return Ok(());
         }

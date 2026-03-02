@@ -165,7 +165,7 @@ pub fn error(message: impl Display) {
 /// Log a debug message
 #[allow(dead_code)]
 pub fn debug(message: impl Display) {
-    if crate::CONFIG.debugging.enable_debug_logs {
+    if crate::CONFIG.dev.enable_debug_logs {
         log_message(LogLevel::Debug, message);
     }
 }

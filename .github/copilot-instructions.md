@@ -95,7 +95,7 @@ Hierarchical merge via `config` crate:
 
 **Provider selection**: `CONFIG.api.provider` (enum: `Bom` or `OpenMeteo`)
 
-**Environment variable format**: Use double underscores for nested keys: `APP_API__PROVIDER`, `APP_DEBUGGING__DISABLE_PNG_OUTPUT`
+**Environment variable format**: Use double underscores for nested keys: `APP_API__PROVIDER`, `APP_DEV__DISABLE_PNG_OUTPUT`
 
 ### Type Safety Patterns
 

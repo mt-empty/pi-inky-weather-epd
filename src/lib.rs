@@ -21,7 +21,7 @@ use update::update_app;
 
 // Re-export for testing
 pub use crate::weather_dashboard::generate_weather_dashboard_injection;
-pub use crate::weather_dashboard::render_svg_to_png_only;
+pub use crate::weather_dashboard::render_svg_to_png;
 pub use clock::{Clock, FixedClock, SystemClock};
 
 pub static CONFIG: Lazy<DashboardSettings> = Lazy::new(|| match DashboardSettings::new() {

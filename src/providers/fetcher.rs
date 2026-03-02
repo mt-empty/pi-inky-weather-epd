@@ -429,7 +429,7 @@ impl Fetcher {
             fs::create_dir_all(file_path.parent().unwrap())?;
         }
 
-        match CONFIG.debugging.disable_weather_api_requests {
+        match CONFIG.dev.disable_weather_api_requests {
             true => {
                 let cached = self.load_cached(&file_path)?;
                 Ok(FetchOutcome::Fresh(cached))
