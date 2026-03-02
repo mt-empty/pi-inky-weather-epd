@@ -210,7 +210,7 @@ cargo run
 **Simulate specific time**:
 ```bash
 # Run as if it's a specific time (RFC3339 format)
-cargo run --features cli -- --simulate-time "2025-12-26T09:00:00Z"
+cargo run --features cli -- simulate "2025-12-26T09:00:00Z"
 ```
 
 **24-hour dashboard generation** (`scripts/simulate-24h.sh`):
@@ -460,7 +460,7 @@ When `update_interval_days > 0`:
 
 ### Core Workflow Understanding
 - **Entry point**: `src/main.rs` → `run_weather_dashboard()` → `generate_weather_dashboard()` in `src/weather_dashboard.rs`
-- **CLI feature** (optional): When built with `--features cli`, enables `--simulate-time` argument for testing
+- **CLI feature** (optional): When built with `--features cli`, enables the `simulate` subcommand for time-based testing
 - **Provider instantiation**: `create_provider()` in `src/providers/factory.rs` returns `Box<dyn WeatherProvider>` based on `CONFIG.api.provider`
 - **Data flow**: Provider → Domain models → ContextBuilder (accumulates diagnostics) → Template vars → TinyTemplate → SVG string → resvg → PNG
 
@@ -475,7 +475,7 @@ When `update_interval_days > 0`:
 ### Development Tips
 - **SVG debugging**: Set `disable_png_output = true` in config and inspect `dashboard.svg` directly
 - **Skip API calls**: Set `disable_weather_api_requests = true` to use cached JSON (requires one successful fetch first)
-- **Simulate time**: Build with `--features cli` and use `--simulate-time "2025-12-26T09:00:00Z"` for time-dependent testing
+- **Simulate time**: Build with `--features cli` and use `simulate "2025-12-26T09:00:00Z"` for time-dependent testing
 - **24-hour simulation**: Run `./scripts/simulate-24h.sh` to generate hourly dashboards for visual regression testing
 - **Adding weather icons**:
   1. Create SVG in `static/fill-svg-static/`

@@ -1,5 +1,6 @@
 [release]
 update_interval_days = 0
+allow_pre_release_version = false
 
 [api]
 provider = "open_meteo"  # Default to Open-Meteo for tests (override with APP_API__PROVIDER=bom if needed)
@@ -25,5 +26,4 @@ prefer_weather_codes = false
 # Note: To run BOM tests, override with: APP_DEV__DISABLE_WEATHER_API_REQUESTS=true APP_API__PROVIDER=bom
 disable_weather_api_requests = false
 disable_png_output = true
-allow_pre_release_version = false
 enable_debug_logs = false

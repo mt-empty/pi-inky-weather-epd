@@ -177,7 +177,7 @@ pub struct DashboardSettings {
 /// * `colours` - Colour settings.
 /// * `misc` - Miscellaneous settings.
 /// * `render_options` - Render options.
-/// * `debugging` - Debugging settings.
+/// * `dev` - Development/debug settings.
 ///
 /// # Errors
 ///

@@ -151,8 +151,14 @@ impl Icon for DailyForecast {
             if let Some(code) = self.weather_code {
                 logger::debug("DailyForecast: Using WMO weather code for icon selection");
                 let wmo_code = crate::domain::weather_code::WmoWeatherCode::from(code);
-                // Daily forecasts always use day icons
-                return wmo_code.icon_name(false);
+                if wmo_code != crate::domain::weather_code::WmoWeatherCode::Unknown {
+                    // Daily forecasts always use day icons
+                    return wmo_code.icon_name(false);
+                }
+
+                logger::debug(format!(
+                    "DailyForecast: Unknown WMO weather code ({code}), falling back to precipitation-based icon logic"
+                ));
             }
             logger::debug("DailyForecast: WMO weather code not available, falling back to precipitation-based icon logic");
         } else {
@@ -190,8 +196,14 @@ impl Icon for HourlyForecast {
             if let Some(code) = self.weather_code {
                 logger::debug("HourlyForecast: Using WMO weather code for icon selection");
                 let wmo_code = crate::domain::weather_code::WmoWeatherCode::from(code);
-                let icon = wmo_code.icon_name(self.is_night);
-                return apply_moon_phase_override(icon, self.is_night);
+                if wmo_code != crate::domain::weather_code::WmoWeatherCode::Unknown {
+                    let icon = wmo_code.icon_name(self.is_night);
+                    return apply_moon_phase_override(icon, self.is_night);
+                }
+
+                logger::debug(format!(
+                    "HourlyForecast: Unknown WMO weather code ({code}), falling back to precipitation-based icon logic"
+                ));
             }
             logger::debug("HourlyForecast: WMO weather code not available, falling back to precipitation-based icon logic");
         } else {

@@ -145,7 +145,7 @@ impl WmoWeatherCode {
             // Fog (45, 48)
             Self::Fog | Self::RimeFog => format!("fog{day_night}.svg"),
 
-            // Drizzle (51, 53, 55) - Light → PartlyCloudy, Moderate/Dense → Overcast
+            // Drizzle (51, 53, 55) - Light → PartlyCloudy, Moderate → Overcast, Dense → Extreme
             Self::DrizzleLight => {
                 format!(
                     "{}{day_night}{}.svg",
