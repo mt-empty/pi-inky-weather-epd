@@ -92,6 +92,42 @@ fn render_dashboard_template(
     }
 }
 
+/// Render an existing SVG file to PNG without fetching weather data or re-rendering the template.
+///
+/// Reads the configured SVG output path and converts it directly to PNG.
+/// Useful when the SVG has already been generated and only the PNG conversion is needed.
+pub fn render_svg_to_png_only() -> Result<(), Error> {
+    let current_dir = std::env::current_dir()?;
+    let svg_path = &CONFIG.misc.generated_svg_name;
+
+    logger::section("Render SVG → PNG");
+
+    if !svg_path.exists() {
+        return Err(anyhow::anyhow!(
+            "SVG file not found: {}. Run without --render-svg-only first to generate it.",
+            current_dir.join(svg_path).display()
+        ));
+    }
+
+    logger::subsection("Converting SVG to PNG");
+    if let Some(png_parent) = CONFIG.misc.generated_png_name.parent() {
+        std::fs::create_dir_all(png_parent)?;
+    }
+
+    convert_svg_to_png(
+        &svg_path.to_path_buf(),
+        &CONFIG.misc.generated_png_name,
+        2.0,
+    )?;
+
+    logger::success(format!(
+        "PNG saved: {}",
+        current_dir.join(&CONFIG.misc.generated_png_name).display()
+    ));
+
+    Ok(())
+}
+
 /// Generate weather dashboard using the system clock (production)
 pub fn generate_weather_dashboard() -> Result<(), Error> {
     let clock = SystemClock;
