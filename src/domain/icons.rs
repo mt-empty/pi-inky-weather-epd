@@ -1,7 +1,7 @@
 use super::models::{DailyForecast, HourlyForecast, Precipitation, Wind};
 use crate::logger;
 use crate::weather::icons::{
-    DayNight, Icon, PrecipitationChanceName, PrecipitationKind, RainAmountIcon, WindIconName,
+    DayNight, Icon, PrecipitationChanceName, PrecipitationKind, WindIconName,
 };
 use crate::weather::utils::moon_phase_icon_name;
 use crate::CONFIG;
@@ -141,12 +141,6 @@ fn apply_precipitation_override(
                 _ => cloud_name,
             }
         }
-    }
-}
-
-impl Icon for Precipitation {
-    fn icon_name(&self) -> String {
-        RainAmountIcon::RainAmount.to_string()
     }
 }
 

@@ -11,7 +11,7 @@ weather_data_cache_path = "tests/output/cached_data/"  # Separate from fixtures 
 
 [render_options]
 use_moon_phase_instead_of_clear_night = false
-prefer_weather_codes = true
+prefer_weather_codes = false
 
 [dev]
 # For Open-Meteo tests (wiremock):

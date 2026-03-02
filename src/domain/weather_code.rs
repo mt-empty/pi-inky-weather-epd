@@ -293,7 +293,8 @@ impl WmoWeatherCode {
             }
             Self::ThunderstormHailHeavy => {
                 format!(
-                    "thunderstorms{day_night}-extreme-{}.svg",
+                    "thunderstorms{day_night}-{}{}.svg",
+                    PrecipitationChanceName::Extreme,
                     PrecipitationKind::Hail
                 )
             }
@@ -374,6 +375,14 @@ mod tests {
             WmoWeatherCode::Thunderstorm.icon_name(false),
             "thunderstorms-day.svg"
         );
+        assert_eq!(
+            WmoWeatherCode::ThunderstormHailSlight.icon_name(false),
+            "thunderstorms-day-hail.svg"
+        );
+        assert_eq!(
+            WmoWeatherCode::ThunderstormHailHeavy.icon_name(false),
+            "thunderstorms-day-extreme-hail.svg"
+        );
     }
 
     #[test]
@@ -387,6 +396,14 @@ mod tests {
         assert_eq!(
             WmoWeatherCode::Thunderstorm.icon_name(true),
             "thunderstorms-night.svg"
+        );
+        assert_eq!(
+            WmoWeatherCode::ThunderstormHailSlight.icon_name(true),
+            "thunderstorms-night-hail.svg"
+        );
+        assert_eq!(
+            WmoWeatherCode::ThunderstormHailHeavy.icon_name(true),
+            "thunderstorms-night-extreme-hail.svg"
         );
     }
 

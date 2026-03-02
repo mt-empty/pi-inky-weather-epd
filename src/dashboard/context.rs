@@ -47,7 +47,6 @@ pub struct Context {
     pub current_hour_relative_humidity_icon: String,
     pub current_day_date: String,
     pub current_hour_rain_amount: String,
-    pub current_hour_rain_measure_icon: String,
     pub sunset_time: String,
     pub sunrise_time: String,
     pub sunset_icon: String,
@@ -142,7 +141,6 @@ impl Default for Context {
             current_hour_relative_humidity_icon: not_available_icon_path.clone(),
             current_day_date: NA.to_string(),
             current_hour_rain_amount: NA.to_string(),
-            current_hour_rain_measure_icon: not_available_icon_path.clone(),
             sunrise_time: NA.to_string(),
             sunset_time: NA.to_string(),
             sunset_icon: SunPositionIconName::Sunset.icon_path(),
@@ -682,7 +680,6 @@ impl ContextBuilder {
             .format(&CONFIG.render_options.date_format)
             .to_string();
         self.context.current_hour_rain_amount = current_hour.precipitation.median().to_string();
-        self.context.current_hour_rain_measure_icon = current_hour.precipitation.icon_path();
 
         self
     }

@@ -78,12 +78,6 @@ pub enum HumidityIcon {
     Humidity,
 }
 
-#[derive(Debug, Display)]
-pub enum RainAmountIcon {
-    #[strum(to_string = "raindrop-measure.svg")]
-    RainAmount,
-}
-
 #[derive(Debug, Display, Copy, Clone)]
 pub enum UVIndexIcon {
     #[strum(to_string = "uv-index-none.svg")]

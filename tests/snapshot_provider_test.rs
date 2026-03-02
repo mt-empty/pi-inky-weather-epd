@@ -60,8 +60,9 @@ use std::path::Path;
 ///
 /// **Fixed Time**: Oct 25, 2025, 1:00 AM UTC = Oct 25, 2025, 12:00 PM Melbourne (AEDT)
 ///
-/// **Mocked Endpoint**:
-/// - `GET /v1/forecast` → Returns `tests/fixtures/open_meteo_forecast.json`
+/// **Mocked Endpoints**:
+/// - `GET /v1/forecast` (hourly, `timezone=UTC`) → Returns `tests/fixtures/open_meteo_hourly_forecast.json`
+/// - `GET /v1/forecast` (daily, `timezone=auto`) → Returns `tests/fixtures/open_meteo_daily_forecast.json`
 ///
 /// **What This Tests**:
 /// - Open-Meteo API response parsing (parallel array structure)
