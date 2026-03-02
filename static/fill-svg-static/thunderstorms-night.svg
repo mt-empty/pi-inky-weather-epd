@@ -1,7 +1,3 @@
-<!-- E-ink adapted: removed all linearGradient definitions -->
-<!-- Moon: teal gradient fill → blue, gradient stroke → black -->
-<!-- Cloud: gradient fill → white, subtle stroke → black -->
-<!-- Lightning bolt: gradient fill → yellow, stroke → black -->
 <svg
   xmlns="http://www.w3.org/2000/svg"
   xmlns:xlink="http://www.w3.org/1999/xlink"
