@@ -22,7 +22,7 @@ prefer_weather_codes = false
 # - Would need disable_weather_api_requests = true to use cached fixtures
 # - For now, set to false globally since Open-Meteo tests are the default
 #
-# Note: To run BOM tests, override with: APP_DEBUGGING__DISABLE_WEATHER_API_REQUESTS=true APP_API__PROVIDER=bom
+# Note: To run BOM tests, override with: APP_DEV__DISABLE_WEATHER_API_REQUESTS=true APP_API__PROVIDER=bom
 disable_weather_api_requests = false
 disable_png_output = true
 allow_pre_release_version = false

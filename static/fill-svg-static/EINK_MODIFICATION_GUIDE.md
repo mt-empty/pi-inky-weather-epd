@@ -73,7 +73,43 @@ This 10px width padding on small clouds and 1px height padding on big clouds ens
 ### Fog
 | Element | Fill | Stroke | Stroke-width |
 |---------|------|--------|-------------|
-| Fog lines | *(none)* | `white` | `24` (keep original) |
+| Fog lines | `white` | `black` | `4` |
+
+Fog lines are rendered as `<rect rx="12" ry="12">` (rounded rectangles) — **not** the original stroke-only paths. This ensures visibility on white backgrounds. The symbol must have `style="overflow:visible"`:
+```xml
+<symbol id="f" viewBox="0 0 264 96" style="overflow:visible">
+  <rect x="0" y="0"  width="264" height="24" rx="12" ry="12" fill="white" stroke="black" stroke-width="4"/>
+  <rect x="0" y="36" width="264" height="24" rx="12" ry="12" fill="white" stroke="black" stroke-width="4"/>
+  <rect x="0" y="72" width="264" height="24" rx="12" ry="12" fill="white" stroke="black" stroke-width="4"/>
+</symbol>
+```
+
+### Sleet Gears (Ice Crystals)
+| Element | Fill | Stroke | Stroke-width |
+|---------|------|--------|-------------|
+| Gear body | `white` | `blue` | `4` |
+| Gear center hole | `blue` | *(none)* | — |
+
+The center hole of each gear is overlaid with a solid blue circle (SVG has no cutout mechanism without CSS masking). Both the gear-body symbol and its wrapper must have `style="overflow:visible"` — the third gear's teeth reach x≈159.5, past the 156.2 viewBox width:
+```xml
+<circle cx="22"  cy="24"  r="5" fill="blue" />
+<circle cx="78"  cy="114" r="5" fill="blue" />
+<circle cx="134" cy="64"  r="5" fill="blue" />
+```
+
+### Hail Circles
+| Element | Fill | Stroke | Stroke-width |
+|---------|------|--------|-------------|
+| Hail pellet | `white` | `blue` | `4` |
+
+`r="16"`, `style="overflow:visible"` on the symbol, multiple pellets spread across the viewBox.
+
+### Snow Grains
+| Element | Fill | Stroke | Stroke-width |
+|---------|------|--------|-------------|
+| Snow grain | `white` | `blue` | `4` |
+
+Same as hail but `r="8"` (smaller), 5 grains at the positions previously occupied by the snowflake cluster.
 
 ## Universal Transformation Rules
 

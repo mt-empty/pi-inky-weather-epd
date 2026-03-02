@@ -62,7 +62,7 @@ run_dashboard() {
     APP_API__PROVIDER="$provider" \
     APP_API__LATITUDE="$lat" \
     APP_API__LONGITUDE="$lon" \
-    APP_DEBUGGING__DISABLE_PNG_OUTPUT=true \
+    APP_DEV__DISABLE_PNG_OUTPUT=true \
     cargo run --quiet 2>&1 | grep -v "Compiling\|Finished\|Running"
 
     # Copy the generated SVG to comparison directory with versioned name
