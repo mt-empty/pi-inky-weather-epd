@@ -84,7 +84,7 @@ for (( page=0; page<TOTAL_PAGES; page++ )); do
         cat <<EOF
 <svg width="$CANVAS_W" height="$CANVAS_H" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
     <rect width="100%" height="100%" fill="white" />
-    <text x="$(( CANVAS_W / 2 ))" y="15" text-anchor="middle" font-size="12" fill="#555">E-ink Icon Preview — Page ${PAGE_NUM}/${TOTAL_PAGES} · icons $(( START + 1 ))–${END} of ${TOTAL}</text>
+    <text x="$(( CANVAS_W / 2 ))" y="15" text-anchor="middle" font-size="12" fill="black">E-ink Icon Preview — Page ${PAGE_NUM}/${TOTAL_PAGES} · icons $(( START + 1 ))–${END} of ${TOTAL}</text>
 EOF
 
         for (( i=START; i<END; i++ )); do
@@ -104,12 +104,12 @@ EOF
             printf '        <image x="%d" y="%d" width="%d" height="%d" href="static/fill-svg-static/%s" />\n' \
                 "$ICON_X" "$ICON_Y" "$ICON_W" "$ICON_H" "$name"
             if [[ -n "$l2" ]]; then
-                printf '        <text x="%d" y="%d" text-anchor="middle" font-size="9" fill="black">%s</text>\n' \
+                printf '        <text x="%d" y="%d" text-anchor="middle" font-size="10" fill="black">%s</text>\n' \
                     "$COL_MID" "$LABEL_Y1" "$l1"
-                printf '        <text x="%d" y="%d" text-anchor="middle" font-size="9" fill="#555">%s</text>\n' \
+                printf '        <text x="%d" y="%d" text-anchor="middle" font-size="10" fill="black">%s</text>\n' \
                     "$COL_MID" "$LABEL_Y2" "$l2"
             else
-                printf '        <text x="%d" y="%d" text-anchor="middle" font-size="9" fill="black">%s</text>\n' \
+                printf '        <text x="%d" y="%d" text-anchor="middle" font-size="10" fill="black">%s</text>\n' \
                     "$COL_MID" "$LABEL_Y1" "$l1"
             fi
             printf '    </svg>\n'

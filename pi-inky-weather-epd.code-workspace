@@ -25,8 +25,11 @@
         "svg.preview.background": "dark-transparent",
         // Search Settings
         "explorer.excludeGitIgnore": false,
-        "search.useParentIgnoreFiles": false,
         "search.useIgnoreFiles": false,
+        "search.exclude": {
+            "**/other": true,
+            "static/line-svg-static": true
+        },
         // Rust Settings
         "rust-analyzer.check.command": "clippy",
         "rust-analyzer.cargo.features": "all",
