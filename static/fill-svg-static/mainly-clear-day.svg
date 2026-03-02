@@ -1,0 +1,43 @@
+<!-- E-ink adapted: mainly clear day - large sun with a small cloud hint -->
+<!-- Sun: same as clear-day.svg (large, dominant, yellow fill + black stroke) -->
+<!-- Cloud: small cloud at bottom-right corner, white fill + black stroke -->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  viewBox="0 0 512 512"
+>
+  <defs>
+    <symbol id="sun" viewBox="0 0 384 384">
+      <circle
+        cx="192"
+        cy="192"
+        r="84"
+        fill="yellow"
+        stroke="black"
+        stroke-miterlimit="10"
+        stroke-width="8"
+      />
+      <path
+        fill="none"
+        stroke="yellow"
+        stroke-linecap="round"
+        stroke-miterlimit="10"
+        stroke-width="24"
+        d="M192 61.7V12m0 360v-49.7m92.2-222.5 35-35M64.8 319.2l35.1-35.1m0-184.4-35-35m254.5 254.5-35.1-35.1M61.7 192H12m360 0h-49.7"
+      />
+    </symbol>
+    <symbol id="cloud" viewBox="-5 0 360 222">
+      <path
+        fill="white"
+        stroke="black"
+        stroke-miterlimit="10"
+        stroke-width="10"
+        d="m291 107-2.5.1A83.9 83.9 0 00135.6 43 56 56 0 0051 91a56.6 56.6 0 00.8 9A60 60 0 0063 219l4-.2v.2h224a56 56 0 000-112Z"
+      />
+    </symbol>
+  </defs>
+  <!-- Large sun fills most of canvas, same as clear-day.svg -->
+  <use xlink:href="#sun" width="384" height="384" transform="translate(64 64)" />
+  <!-- Small cloud hint at bottom-right, partially behind sun rays -->
+  <use xlink:href="#cloud" width="230" height="146" transform="translate(235 320)" />
+</svg>
