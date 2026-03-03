@@ -108,6 +108,7 @@ pub struct Release {
     pub release_info_url: Url,
     pub download_base_url: Url,
     pub update_interval_days: UpdateIntervalDays,
+    pub allow_pre_release_version: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -147,13 +148,13 @@ pub struct RenderOptions {
     pub use_moon_phase_instead_of_clear_night: bool,
     pub x_axis_always_at_min: bool,
     pub use_gust_instead_of_wind: bool,
+    pub prefer_weather_codes: bool,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Debugging {
+pub struct Dev {
     pub disable_weather_api_requests: bool,
     pub disable_png_output: bool,
-    pub allow_pre_release_version: bool,
     pub enable_debug_logs: bool,
 }
 
@@ -164,7 +165,7 @@ pub struct DashboardSettings {
     pub colours: Colours,
     pub misc: Misc,
     pub render_options: RenderOptions,
-    pub debugging: Debugging,
+    pub dev: Dev,
 }
 
 /// Dashboard settings.
@@ -176,7 +177,7 @@ pub struct DashboardSettings {
 /// * `colours` - Colour settings.
 /// * `misc` - Miscellaneous settings.
 /// * `render_options` - Render options.
-/// * `debugging` - Debugging settings.
+/// * `dev` - Development/debug settings.
 ///
 /// # Errors
 ///
@@ -288,6 +289,10 @@ impl DashboardSettings {
             "Use Gust Instead of Wind",
             self.render_options.use_gust_instead_of_wind,
         );
+        logger::kvp(
+            "Prefer Weather Codes",
+            self.render_options.prefer_weather_codes,
+        );
 
         // Colours
         logger::config_group("Display Colours");
@@ -311,18 +316,15 @@ impl DashboardSettings {
         // Release/Update Settings
         logger::config_group("Update Settings");
         logger::kvp("Update Interval (days)", self.release.update_interval_days);
-        logger::kvp(
-            "Allow Pre-release",
-            self.debugging.allow_pre_release_version,
-        );
+        logger::kvp("Allow Pre-release", self.release.allow_pre_release_version);
 
-        // Debugging Flags
-        logger::config_group("Debug Flags");
+        // Dev Flags
+        logger::config_group("Dev Flags");
         logger::kvp(
             "Disable API Requests",
-            self.debugging.disable_weather_api_requests,
+            self.dev.disable_weather_api_requests,
         );
-        logger::kvp("Disable PNG Output", self.debugging.disable_png_output);
-        logger::kvp("Enable Debug Logs", self.debugging.enable_debug_logs);
+        logger::kvp("Disable PNG Output", self.dev.disable_png_output);
+        logger::kvp("Enable Debug Logs", self.dev.enable_debug_logs);
     }
 }

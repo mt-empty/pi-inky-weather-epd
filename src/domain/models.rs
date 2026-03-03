@@ -99,7 +99,7 @@ impl Wind {
         }
     }
 
-    pub fn get_speed(&self, use_gust: bool) -> u16 {
+    pub fn speed(&self, use_gust: bool) -> u16 {
         if use_gust {
             self.gust_speed_kmh
         } else {
@@ -118,12 +118,12 @@ impl Wind {
     }
 
     /// Get the wind speed in the configured unit
-    pub fn get_speed_in_unit(
+    pub fn speed_in_unit(
         &self,
         use_gust: bool,
         unit: crate::configs::settings::WindSpeedUnit,
     ) -> u16 {
-        let speed_kmh = self.get_speed(use_gust);
+        let speed_kmh = self.speed(use_gust);
         Self::convert_speed(speed_kmh, unit)
     }
 }
@@ -161,7 +161,7 @@ impl Precipitation {
         }
     }
 
-    pub fn calculate_median(&self) -> f32 {
+    pub fn median(&self) -> f32 {
         let min = self.amount_min.unwrap_or(0);
         let max = self.amount_max.unwrap_or(min);
         (min + max) as f32 / 2.0
@@ -176,7 +176,7 @@ impl Precipitation {
     /// Using Open-Meteo's ratio: 7 cm snow ≈ 10 mm water (0.7 density)
     pub fn is_primarily_snow(&self) -> bool {
         let snow_cm = self.snowfall_amount.unwrap_or(0) as f32;
-        let precip_mm = self.calculate_median();
+        let precip_mm = self.median();
 
         if snow_cm == 0.0 {
             return false;
@@ -190,7 +190,7 @@ impl Precipitation {
     }
 
     /// Get snowfall amount in cm
-    pub fn get_snowfall_cm(&self) -> f32 {
+    pub fn snowfall_cm(&self) -> f32 {
         self.snowfall_amount.unwrap_or(0) as f32
     }
 }
@@ -217,6 +217,9 @@ pub struct HourlyForecast {
     pub relative_humidity: u16,
     pub is_night: bool,
     pub cloud_cover: Option<u16>,
+    /// WMO Weather Interpretation Code (0-99)
+    /// Provides more precise weather classification than derived conditions
+    pub weather_code: Option<u8>,
 }
 
 /// Domain model for daily weather forecast
@@ -230,6 +233,39 @@ pub struct DailyForecast {
     pub precipitation: Option<Precipitation>,
     pub astronomical: Option<Astronomical>,
     pub cloud_cover: Option<u16>,
+    /// WMO Weather Interpretation Code (0-99) for the day
+    /// Represents the dominant weather condition for the entire day
+    pub weather_code: Option<u8>,
+}
+
+// ============================================================================
+// WMO weather code accessors
+// ============================================================================
+
+impl HourlyForecast {
+    /// Returns the WMO weather code as a typed enum, if present and recognised.
+    ///
+    /// The raw `weather_code: Option<u8>` field is retained for diagnosability
+    /// (unknown codes can still be logged). This method provides the typed view
+    /// for callers that only need to act on known codes.
+    #[must_use]
+    pub fn wmo_code(&self) -> Option<crate::domain::weather_code::WmoWeatherCode> {
+        self.weather_code
+            .and_then(|c| crate::domain::weather_code::WmoWeatherCode::try_from(c).ok())
+    }
+}
+
+impl DailyForecast {
+    /// Returns the WMO weather code as a typed enum, if present and recognised.
+    ///
+    /// The raw `weather_code: Option<u8>` field is retained for diagnosability
+    /// (unknown codes can still be logged). This method provides the typed view
+    /// for callers that only need to act on known codes.
+    #[must_use]
+    pub fn wmo_code(&self) -> Option<crate::domain::weather_code::WmoWeatherCode> {
+        self.weather_code
+            .and_then(|c| crate::domain::weather_code::WmoWeatherCode::try_from(c).ok())
+    }
 }
 
 // ============================================================================
@@ -251,7 +287,8 @@ impl From<crate::apis::bom::models::HourlyForecast> for HourlyForecast {
             uv_index: bom.uv.unwrap_or_default().0,
             relative_humidity: bom.relative_humidity.0,
             is_night: bom.is_night,
-            cloud_cover: None, // BOM API doesn't provide cloud cover data
+            cloud_cover: None,  // BOM API doesn't provide cloud cover data
+            weather_code: None, // BOM API doesn't provide WMO weather codes
         }
     }
 }
@@ -277,7 +314,8 @@ impl From<crate::apis::bom::models::DailyEntry> for DailyForecast {
                     .sunset_time
                     .map(|dt| dt.with_timezone(&chrono::Local).naive_local()),
             }),
-            cloud_cover: None, // BOM API doesn't provide cloud cover data
+            cloud_cover: None,  // BOM API doesn't provide cloud cover data
+            weather_code: None, // BOM API doesn't provide WMO weather codes
         }
     }
 }

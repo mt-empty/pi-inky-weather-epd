@@ -2,6 +2,7 @@
 release_info_url = "https://api.github.com/repos/mt-empty/pi-inky-weather-epd/releases/latest"
 download_base_url = "https://github.com/mt-empty/pi-inky-weather-epd/releases/download"
 update_interval_days = 7  # Set to 0 to disable auto-updating
+allow_pre_release_version = false
 
 [api]
 # Note: The weather data reflects the selected location’s conditions, but all times are displayed
@@ -50,6 +51,7 @@ date_format = "%A, %d %B"
 use_moon_phase_instead_of_clear_night = true    # When the sky is clear, the moon phase icon will be used instead of the clear night icon
 x_axis_always_at_min = true                     # Controls x-axis placement when temp is below zero
 use_gust_instead_of_wind = false
+prefer_weather_codes = true                     # Prefer WMO weather codes for icon selection when available (falls back to derived logic)
 
 [misc]
 weather_data_cache_path = "./cached_data/"
@@ -58,8 +60,7 @@ generated_svg_name = "dashboard.svg"
 generated_png_name = "dashboard.png"
 svg_icons_directory = "static/fill-svg-static/"
 
-[debugging]
+[dev]
 disable_weather_api_requests = false # Load cached data instead of making API requests (requires at least one successful run first)
 disable_png_output = false
-allow_pre_release_version = false
 enable_debug_logs = false

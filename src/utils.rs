@@ -103,7 +103,7 @@ fn load_fonts(font_db: &mut fontdb::Database) {
 /// # Returns
 ///
 /// * `V` - The total value between the specified dates.
-pub fn get_total_between_dates<T, V, TZ: TimeZone>(
+pub fn total_between_dates<T, V, TZ: TimeZone>(
     data: &[T],
     start_date: &DateTime<TZ>,
     end_date: &DateTime<TZ>,

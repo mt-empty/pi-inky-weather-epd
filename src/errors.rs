@@ -42,7 +42,7 @@ pub trait Description {
 }
 
 impl Icon for DashboardError {
-    fn get_icon_name(&self) -> String {
+    fn icon_name(&self) -> String {
         match self {
             DashboardError::NetworkError { .. } => DashboardErrorIconName::NoInternet,
             DashboardError::ApiError { .. } => DashboardErrorIconName::ApiError,

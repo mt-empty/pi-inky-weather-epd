@@ -25,8 +25,11 @@
         "svg.preview.background": "dark-transparent",
         // Search Settings
         "explorer.excludeGitIgnore": false,
-        "search.useParentIgnoreFiles": false,
         "search.useIgnoreFiles": false,
+        "search.exclude": {
+            "**/other": true,
+            "static/line-svg-static": true
+        },
         // Rust Settings
         "rust-analyzer.check.command": "clippy",
         "rust-analyzer.cargo.features": "all",
@@ -200,6 +203,27 @@
                     "env": {
                         "RUN_MODE": "test",
                         "APP_API__PROVIDER": "bom"
+                    }
+                },
+                "problemMatcher": [
+                    "$rustc"
+                ],
+                "group": "test"
+            },
+            {
+                "type": "shell",
+                "label": "cargo-test(open_meteo prefer_weather_codes)",
+                "command": "cargo",
+                "args": [
+                    "test",
+                    "--test",
+                    "snapshot_open_meteo_prefer_codes_test"
+                ],
+                "options": {
+                    "cwd": "${workspaceFolder}",
+                    "env": {
+                        "RUN_MODE": "test",
+                        "APP_RENDER_OPTIONS__PREFER_WEATHER_CODES": "true"
                     }
                 },
                 "problemMatcher": [

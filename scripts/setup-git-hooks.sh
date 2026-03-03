@@ -51,6 +51,13 @@ if ! RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_tes
     exit 1
 fi
 
+echo "Running Open-Meteo prefer_weather_codes snapshot tests..."
+
+if ! RUN_MODE=test APP_RENDER_OPTIONS__PREFER_WEATHER_CODES=true cargo test --test snapshot_open_meteo_prefer_codes_test; then
+    echo "❌ prefer_weather_codes snapshot tests failed. Please fix failing tests before pushing."
+    exit 1
+fi
+
 # Checking if latest tag matches that in cargo.toml
 echo "Checking if latest tag matches that in Cargo.toml..."
 
@@ -79,6 +86,7 @@ echo "  1. Code formatting (cargo fmt)"
 echo "  2. Clippy linting (cargo clippy -- -D warnings)"
 echo "  3. All tests (RUN_MODE=test cargo test)"
 echo "  4. BOM snapshot tests"
-echo "  5. Version tag validation"
+echo "  5. Open-Meteo prefer_weather_codes snapshot tests"
+echo "  6. Version tag validation"
 echo ""
 echo "🎉 Git hooks setup complete!"

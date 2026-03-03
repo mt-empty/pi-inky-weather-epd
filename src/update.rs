@@ -55,8 +55,8 @@ fn fetch_latest_release() -> Result<(), anyhow::Error> {
     if latest_version > current_version {
         logger::debug(format!("Newer version available: {}", latest_version));
 
-        // return early if CONFIG.debugging.allow_pre_release_version is false and the latest version is a pre-release
-        if !latest_version.pre.is_empty() && !CONFIG.debugging.allow_pre_release_version {
+        // return early if CONFIG.release.allow_pre_release_version is false and the latest version is a pre-release
+        if !latest_version.pre.is_empty() && !CONFIG.release.allow_pre_release_version {
             logger::debug(format!("Skipping pre-release version: {}", latest_version));
             return Ok(());
         }
@@ -244,7 +244,7 @@ fn download_and_extract_release(
     };
 
     let temp_zip = download_zip_archive(client, header_value, download_url)?;
-    let base_dir = get_base_dir_path()?;
+    let base_dir = base_dir_path()?;
     let temp_dir =
         tempfile::tempdir_in(&base_dir).context("Failed to create temporary directory")?;
 
@@ -264,7 +264,7 @@ fn download_and_extract_release(
 }
 
 /// Gets the base directory path of the current executable.
-fn get_base_dir_path() -> Result<PathBuf> {
+fn base_dir_path() -> Result<PathBuf> {
     let exe_path = std::env::current_exe()?;
     let base_dir = exe_path.parent().ok_or_else(|| {
         std::io::Error::new(
@@ -283,7 +283,7 @@ fn get_base_dir_path() -> Result<PathBuf> {
 /// if the timestamp cannot be parsed, or if the update process fails.
 pub fn update_app() -> Result<(), anyhow::Error> {
     // create a file to store the last time we checked for an update
-    let base_dir = get_base_dir_path()?;
+    let base_dir = base_dir_path()?;
     let last_checked_path = base_dir.join(LAST_CHECKED_FILE_NAME);
 
     let update_result = if !Path::new(&last_checked_path).exists() {
@@ -388,6 +388,6 @@ pub fn read_update_status_from_dir(base_dir: &Path) -> Option<String> {
 /// Returns Some(error_message) if the last update failed, None otherwise.
 /// This is used by the dashboard to display update failures.
 pub fn read_last_update_status() -> Option<String> {
-    let base_dir = get_base_dir_path().ok()?;
+    let base_dir = base_dir_path().ok()?;
     read_update_status_from_dir(&base_dir)
 }

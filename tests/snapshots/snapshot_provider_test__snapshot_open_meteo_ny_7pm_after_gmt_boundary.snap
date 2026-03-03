@@ -78,10 +78,10 @@ expression: svg_content
     <!-- Sunset/Sunrise Information -->
     <svg x="30" y="150">
         <image x="0" y="0" width="75" height="75" href="static/fill-svg-static/sunrise.svg" />
-        <text x="12" y="70" text-anchor="start" font-size="20" fill="black">NA</text>
+        <text x="12" y="70" text-anchor="start" font-size="20" fill="black">N/A</text>
 
         <image x="70" y="0" width="75" height="75" href="static/fill-svg-static/sunset.svg" />
-        <text x="83" y="70" text-anchor="start" font-size="20" fill="black">NA</text>
+        <text x="83" y="70" text-anchor="start" font-size="20" fill="black">N/A</text>
     </svg>
 
     <g transform="translate(-15, 0)">

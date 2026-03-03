@@ -52,7 +52,7 @@ echo ""
 
 # Fetch fresh weather data before simulation
 echo -e "${BLUE}Fetching fresh weather data...${NC}"
-if TZ=$TIMEZONE APP_DEBUGGING__DISABLE_WEATHER_API_REQUESTS=false ./target/debug/pi-inky-weather-epd > /dev/null 2>&1; then
+if TZ=$TIMEZONE APP_DEV__DISABLE_WEATHER_API_REQUESTS=false ./target/debug/pi-inky-weather-epd > /dev/null 2>&1; then
     echo -e "${GREEN}[OK] Weather data cached successfully${NC}"
 else
     echo -e "${YELLOW}Warning: Failed to fetch data, will use existing cache if available${NC}"
@@ -96,7 +96,7 @@ for hour in $(seq "$START_HOUR" $((START_HOUR + 23))); do
 
     # Run the application with simulated time
     # Redirect stdout to capture only the generated SVG
-    if TZ=$TIMEZONE APP_DEBUGGING__DISABLE_WEATHER_API_REQUESTS=true ./target/debug/pi-inky-weather-epd --simulate-time "$timestamp" > /dev/null 2>&1; then
+    if TZ=$TIMEZONE APP_DEV__DISABLE_WEATHER_API_REQUESTS=true ./target/debug/pi-inky-weather-epd simulate "$timestamp" > /dev/null 2>&1; then
         # Copy the generated dashboard.svg to the timestamped file
         if [ -f "dashboard.svg" ]; then
             cp "dashboard.svg" "$output_file"

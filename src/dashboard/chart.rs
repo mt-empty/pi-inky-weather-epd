@@ -52,11 +52,11 @@ impl CurveType {
         }
     }
 
-    pub fn get_points(&self) -> &Vec<Point> {
+    pub fn points(&self) -> &Vec<Point> {
         &self.data().points
     }
 
-    pub fn get_smooth(&self) -> bool {
+    pub fn is_smooth(&self) -> bool {
         self.data().smooth
     }
 }
@@ -137,32 +137,6 @@ pub enum ElementVisibility {
     Visible,
     #[strum(to_string = "hidden")]
     Hidden,
-}
-
-type UVIndexCategory = UVIndexIcon;
-
-impl UVIndexCategory {
-    pub fn from_u8(value: u16) -> Self {
-        match value {
-            0 => UVIndexCategory::None,
-            1..=2 => UVIndexCategory::Low,
-            3..=5 => UVIndexCategory::Moderate,
-            6..=7 => UVIndexCategory::High,
-            8..=10 => UVIndexCategory::VeryHigh,
-            11.. => UVIndexCategory::Extreme,
-        }
-    }
-
-    pub fn to_colour(self) -> &'static str {
-        match self {
-            UVIndexCategory::None => "white",
-            UVIndexCategory::Low => "green",
-            UVIndexCategory::Moderate => "yellow",
-            UVIndexCategory::High => "orange",
-            UVIndexCategory::VeryHigh => "red",
-            UVIndexCategory::Extreme => "purple",
-        }
-    }
 }
 
 /// Convert a list of points to a list of Bézier curves
@@ -504,18 +478,18 @@ impl HourlyForecastGraph {
     fn initialize_x_y_bounds(&mut self) {
         for curve in &self.curves {
             let min_y_data = curve
-                .get_points()
+                .points()
                 .iter()
                 .map(|val| val.y)
                 .fold(f32::NAN, f32::min);
             let max_y_data = curve
-                .get_points()
+                .points()
                 .iter()
                 .map(|val| val.y)
                 .fold(f32::NAN, f32::max);
 
-            let starting_x_data = curve.get_points().first().map(|val| val.x).unwrap_or(0.0);
-            let ending_x_data = curve.get_points().last().map(|val| val.x).unwrap_or(0.0);
+            let starting_x_data = curve.points().first().map(|val| val.x).unwrap_or(0.0);
+            let ending_x_data = curve.points().last().map(|val| val.x).unwrap_or(0.0);
 
             match curve {
                 CurveType::RainChance(_) => {}
@@ -544,7 +518,7 @@ impl HourlyForecastGraph {
 
         for (i, &uv) in self.uv_data.iter().enumerate() {
             let offset = (i as f32 / 23.0) * 100.0;
-            let colour = UVIndexCategory::from_u8(uv).to_colour();
+            let colour = UVIndexIcon::from(uv).to_colour();
             gradient.push_str(&format!(
                 r#"<stop offset="{offset:.2}%" stop-color="{colour}"/>"#
             ));
@@ -581,7 +555,7 @@ impl HourlyForecastGraph {
 
             // Scale the points according to the calculated factors
             let scaled_points: Vec<Point> = curve
-                .get_points()
+                .points()
                 .iter()
                 .map(|val| Point {
                     x: (val.x * xfactor), // x always start from 0 so no need to adjust the x value
@@ -601,7 +575,7 @@ impl HourlyForecastGraph {
                 .collect();
 
             // Generate the SVG path data
-            let path = if curve.get_smooth() {
+            let path = if curve.is_smooth() {
                 catmull_rom_to_bezier(scaled_points)
                     .iter()
                     .enumerate()

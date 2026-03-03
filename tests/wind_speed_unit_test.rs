@@ -49,18 +49,18 @@ fn test_wind_speed_high_values() {
 fn test_get_speed_in_unit_without_gust() {
     let wind = Wind::new(20, 30);
 
-    assert_eq!(wind.get_speed_in_unit(false, WindSpeedUnit::KmH), 20);
-    assert_eq!(wind.get_speed_in_unit(false, WindSpeedUnit::Mph), 12);
-    assert_eq!(wind.get_speed_in_unit(false, WindSpeedUnit::Knots), 11);
+    assert_eq!(wind.speed_in_unit(false, WindSpeedUnit::KmH), 20);
+    assert_eq!(wind.speed_in_unit(false, WindSpeedUnit::Mph), 12);
+    assert_eq!(wind.speed_in_unit(false, WindSpeedUnit::Knots), 11);
 }
 
 #[test]
 fn test_get_speed_in_unit_with_gust() {
     let wind = Wind::new(20, 30);
 
-    assert_eq!(wind.get_speed_in_unit(true, WindSpeedUnit::KmH), 30);
-    assert_eq!(wind.get_speed_in_unit(true, WindSpeedUnit::Mph), 19); // 30 * 0.621371 = 18.64113 ≈ 19
-    assert_eq!(wind.get_speed_in_unit(true, WindSpeedUnit::Knots), 16); // 30 * 0.539957 = 16.19871 ≈ 16
+    assert_eq!(wind.speed_in_unit(true, WindSpeedUnit::KmH), 30);
+    assert_eq!(wind.speed_in_unit(true, WindSpeedUnit::Mph), 19); // 30 * 0.621371 = 18.64113 ≈ 19
+    assert_eq!(wind.speed_in_unit(true, WindSpeedUnit::Knots), 16); // 30 * 0.539957 = 16.19871 ≈ 16
 }
 
 #[test]

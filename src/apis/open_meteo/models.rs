@@ -104,6 +104,8 @@ pub struct Hourly {
     pub relative_humidity_2m: Vec<u16>,
     #[serde(rename = "cloud_cover")]
     pub cloud_cover: Vec<Option<u16>>,
+    #[serde(rename = "weather_code")]
+    pub weather_code: Option<Vec<u8>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
@@ -148,6 +150,8 @@ pub struct Daily {
     pub snowfall_sum: Vec<f32>,
     #[serde(rename = "cloud_cover_mean")]
     pub cloud_cover_mean: Vec<Option<u16>>,
+    #[serde(rename = "weather_code")]
+    pub weather_code: Option<Vec<u8>>,
 }
 
 impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast> {
@@ -200,6 +204,10 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast
                 let time = hourly_data.time[i];
                 let is_night = response.current.is_day == 0;
                 let cloud_cover = hourly_data.cloud_cover[i];
+                let weather_code = hourly_data
+                    .weather_code
+                    .as_ref()
+                    .and_then(|codes| codes.get(i).copied());
 
                 crate::domain::models::HourlyForecast {
                     time,
@@ -211,6 +219,7 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast
                     relative_humidity,
                     is_night,
                     cloud_cover,
+                    weather_code,
                 }
             })
             .collect()
@@ -289,6 +298,11 @@ impl From<OpenMeteoDailyResponse> for Vec<crate::domain::models::DailyForecast> 
                 };
 
                 let cloud_cover = response.daily.cloud_cover_mean.get(i).and_then(|&c| c);
+                let weather_code = response
+                    .daily
+                    .weather_code
+                    .as_ref()
+                    .and_then(|codes| codes.get(i).copied());
 
                 crate::domain::models::DailyForecast {
                     // Use NaiveDate directly - API returns dates in user's local timezone
@@ -300,6 +314,7 @@ impl From<OpenMeteoDailyResponse> for Vec<crate::domain::models::DailyForecast> 
                     precipitation,
                     astronomical,
                     cloud_cover,
+                    weather_code,
                 }
             })
             .collect()

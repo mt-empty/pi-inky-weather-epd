@@ -1,12 +1,12 @@
 use crate::{
     clock::Clock,
-    constants::NOT_AVAILABLE_ICON_PATH,
+    constants::{NOT_AVAILABLE, NOT_AVAILABLE_ICON_PATH},
     dashboard::chart::{GraphDataPath, HourlyForecastGraph},
     domain::models::{DailyForecast, HourlyForecast},
     errors::{DashboardError, Description},
     logger,
-    utils::{find_max_item_between_dates, get_total_between_dates},
-    weather::icons::{Icon, SunPositionIconName},
+    utils::{find_max_item_between_dates, total_between_dates},
+    weather::icons::{HumidityIconName, Icon, SunPositionIconName, UVIndexIcon},
     CONFIG,
 };
 use chrono::{DateTime, Local, NaiveDate, Timelike, Utc};
@@ -47,7 +47,6 @@ pub struct Context {
     pub current_hour_relative_humidity_icon: String,
     pub current_day_date: String,
     pub current_hour_rain_amount: String,
-    pub current_hour_rain_measure_icon: String,
     pub sunset_time: String,
     pub sunrise_time: String,
     pub sunset_icon: String,
@@ -107,7 +106,6 @@ pub struct Context {
 
 impl Default for Context {
     fn default() -> Self {
-        const NA: &str = "NA";
         let not_available_icon_path = NOT_AVAILABLE_ICON_PATH.to_string_lossy().to_string();
         let colours = CONFIG.colours.clone();
         let render_options = CONFIG.render_options.clone();
@@ -122,31 +120,30 @@ impl Default for Context {
             actual_temp_colour: colours.actual_temp_colour.to_string(),
             feels_like_colour: colours.feels_like_colour.to_string(),
             rain_colour: colours.rain_colour.to_string(),
-            max_uv_index: NA.to_string(),
+            max_uv_index: NOT_AVAILABLE.to_string(),
             max_uv_index_font_style: FontStyle::Normal.to_string(),
-            max_gust_speed: NA.to_string(),
+            max_gust_speed: NOT_AVAILABLE.to_string(),
             max_gust_speed_font_style: FontStyle::Normal.to_string(),
-            max_relative_humidity: NA.to_string(),
+            max_relative_humidity: NOT_AVAILABLE.to_string(),
             max_relative_humidity_font_style: FontStyle::Normal.to_string(),
-            total_rain_today: NA.to_string(),
+            total_rain_today: NOT_AVAILABLE.to_string(),
             temp_unit: render_options.temp_unit.to_string(),
             current_wind_speed_unit: render_options.wind_speed_unit.to_string(),
-            current_hour_actual_temp: NA.to_string(),
+            current_hour_actual_temp: NOT_AVAILABLE.to_string(),
             current_hour_weather_icon: not_available_icon_path.clone(),
-            current_hour_feels_like: NA.to_string(),
-            current_hour_wind_speed: NA.to_string(),
+            current_hour_feels_like: NOT_AVAILABLE.to_string(),
+            current_hour_wind_speed: NOT_AVAILABLE.to_string(),
             current_hour_wind_icon: not_available_icon_path.clone(),
-            current_hour_uv_index: NA.to_string(),
+            current_hour_uv_index: NOT_AVAILABLE.to_string(),
             current_hour_uv_index_icon: not_available_icon_path.clone(),
-            current_hour_relative_humidity: NA.to_string(),
+            current_hour_relative_humidity: NOT_AVAILABLE.to_string(),
             current_hour_relative_humidity_icon: not_available_icon_path.clone(),
-            current_day_date: NA.to_string(),
-            current_hour_rain_amount: NA.to_string(),
-            current_hour_rain_measure_icon: not_available_icon_path.clone(),
-            sunrise_time: NA.to_string(),
-            sunset_time: NA.to_string(),
-            sunset_icon: SunPositionIconName::Sunset.get_icon_path(),
-            sunrise_icon: SunPositionIconName::Sunrise.get_icon_path(),
+            current_day_date: NOT_AVAILABLE.to_string(),
+            current_hour_rain_amount: NOT_AVAILABLE.to_string(),
+            sunrise_time: NOT_AVAILABLE.to_string(),
+            sunset_time: NOT_AVAILABLE.to_string(),
+            sunset_icon: SunPositionIconName::Sunset.icon_path(),
+            sunrise_icon: SunPositionIconName::Sunrise.icon_path(),
             graph_height,
             graph_width,
             actual_temp_curve_data: String::new(),
@@ -160,31 +157,31 @@ impl Default for Context {
             y_right_axis_path: String::new(),
             y_right_labels: String::new(),
             uv_gradient: String::new(),
-            day2_mintemp: NA.to_string(),
-            day2_maxtemp: NA.to_string(),
+            day2_mintemp: NOT_AVAILABLE.to_string(),
+            day2_maxtemp: NOT_AVAILABLE.to_string(),
             day2_icon: not_available_icon_path.clone(),
-            day2_name: NA.to_string(),
-            day3_mintemp: NA.to_string(),
-            day3_maxtemp: NA.to_string(),
+            day2_name: NOT_AVAILABLE.to_string(),
+            day3_mintemp: NOT_AVAILABLE.to_string(),
+            day3_maxtemp: NOT_AVAILABLE.to_string(),
             day3_icon: not_available_icon_path.clone(),
-            day3_name: NA.to_string(),
-            day4_mintemp: NA.to_string(),
-            day4_maxtemp: NA.to_string(),
+            day3_name: NOT_AVAILABLE.to_string(),
+            day4_mintemp: NOT_AVAILABLE.to_string(),
+            day4_maxtemp: NOT_AVAILABLE.to_string(),
             day4_icon: not_available_icon_path.clone(),
-            day4_name: NA.to_string(),
-            day5_mintemp: NA.to_string(),
-            day5_maxtemp: NA.to_string(),
+            day4_name: NOT_AVAILABLE.to_string(),
+            day5_mintemp: NOT_AVAILABLE.to_string(),
+            day5_maxtemp: NOT_AVAILABLE.to_string(),
             day5_icon: not_available_icon_path.clone(),
-            day5_name: NA.to_string(),
-            day6_mintemp: NA.to_string(),
-            day6_maxtemp: NA.to_string(),
+            day5_name: NOT_AVAILABLE.to_string(),
+            day6_mintemp: NOT_AVAILABLE.to_string(),
+            day6_maxtemp: NOT_AVAILABLE.to_string(),
             day6_icon: not_available_icon_path.clone(),
-            day6_name: NA.to_string(),
-            day7_mintemp: NA.to_string(),
-            day7_maxtemp: NA.to_string(),
+            day6_name: NOT_AVAILABLE.to_string(),
+            day7_mintemp: NOT_AVAILABLE.to_string(),
+            day7_maxtemp: NOT_AVAILABLE.to_string(),
             day7_icon: not_available_icon_path.clone(),
-            day7_name: NA.to_string(),
-            diagnostic_message: NA.to_string(),
+            day7_name: NOT_AVAILABLE.to_string(),
+            diagnostic_message: NOT_AVAILABLE.to_string(),
             diagnostic_visibility: ElementVisibility::Hidden.to_string(),
             diagnostic_icons_svg: String::new(),
             debug_version: String::new(),
@@ -211,7 +208,7 @@ impl ContextBuilder {
     pub fn new() -> Self {
         let mut context = Context::default();
 
-        if CONFIG.debugging.enable_debug_logs {
+        if CONFIG.dev.enable_debug_logs {
             context.debug_info_visibility = ElementVisibility::Visible.to_string();
             context.debug_version = format!("v{}", env!("CARGO_PKG_VERSION"));
 
@@ -274,7 +271,7 @@ impl ContextBuilder {
                 let y_pos = y_start + (index as i32 * y_offset);
                 format!(
                     r#"<image x="{x_pos}" y="{y_pos}" width="{icon_size}" height="{icon_size}" href="{}"/>"#,
-                    error.get_icon_path()
+                    error.icon_path()
                 )
             })
             .collect::<Vec<String>>()
@@ -304,17 +301,17 @@ impl ContextBuilder {
     }
 
     /// Assigns daily forecast data to the appropriate context fields.
-    /// Handles missing data by setting "NA" defaults.
+    /// Handles missing data by setting "N/A" defaults.
     fn assign_day_data(&mut self, day_index: i32, forecast: Option<&DailyForecast>) {
         let min_temp_value = forecast
             .and_then(|f| f.temp_min)
-            .map_or("NA".to_string(), |temp| temp.to_string());
+            .map_or(NOT_AVAILABLE.to_string(), |temp| temp.to_string());
         let max_temp_value = forecast
             .and_then(|f| f.temp_max)
-            .map_or("NA".to_string(), |temp| temp.to_string());
+            .map_or(NOT_AVAILABLE.to_string(), |temp| temp.to_string());
         let icon_value = forecast.map_or_else(
             || NOT_AVAILABLE_ICON_PATH.to_string_lossy().to_string(),
-            |f| f.get_icon_path(),
+            |f| f.icon_path(),
         );
 
         match day_index {
@@ -327,11 +324,11 @@ impl ContextBuilder {
                         self.context.sunrise_time = astro
                             .sunrise_time
                             .map(|dt| dt.format("%H:%M").to_string())
-                            .unwrap_or_else(|| "NA".to_string());
+                            .unwrap_or_else(|| NOT_AVAILABLE.to_string());
                         self.context.sunset_time = astro
                             .sunset_time
                             .map(|dt| dt.format("%H:%M").to_string())
-                            .unwrap_or_else(|| "NA".to_string());
+                            .unwrap_or_else(|| NOT_AVAILABLE.to_string());
                     }
                 }
             }
@@ -416,8 +413,12 @@ impl ContextBuilder {
             };
 
             if let Some(day) = forecast {
-                let min_temp = day.temp_min.map_or("NA".to_string(), |t| t.to_string());
-                let max_temp = day.temp_max.map_or("NA".to_string(), |t| t.to_string());
+                let min_temp = day
+                    .temp_min
+                    .map_or(NOT_AVAILABLE.to_string(), |t| t.to_string());
+                let max_temp = day
+                    .temp_max
+                    .map_or(NOT_AVAILABLE.to_string(), |t| t.to_string());
                 logger::detail(format!(
                     "{day_name} ({expected_date}) - Max {max_temp}°, Min {min_temp}°"
                 ));
@@ -425,7 +426,7 @@ impl ContextBuilder {
                 logger::detail(format!("{day_name} ({expected_date}) - No data available"));
             }
 
-            // Assign data (handles missing data with "NA" defaults)
+            // Assign data (handles missing data with "N/A" defaults)
             self.assign_day_data(day_index as i32, forecast.copied());
         }
 
@@ -553,11 +554,11 @@ impl ContextBuilder {
             local_forecast_window_end,
         );
 
-        self.context.total_rain_today = (get_total_between_dates(
+        self.context.total_rain_today = (total_between_dates(
             &hourly_forecast_data,
             &local_forecast_window_start,
             &local_forecast_window_end,
-            |item: &HourlyForecast| item.precipitation.calculate_median(),
+            |item: &HourlyForecast| item.precipitation.median(),
             |item| item.time.with_timezone(&Local),
         ))
         .to_string();
@@ -675,15 +676,13 @@ impl ContextBuilder {
         clock: &dyn Clock,
     ) -> &mut Self {
         self.context.current_hour_actual_temp = current_hour.temperature.to_string();
-        self.context.current_hour_weather_icon = current_hour.get_icon_path();
+        self.context.current_hour_weather_icon = current_hour.icon_path();
         self.context.current_hour_feels_like = current_hour.apparent_temperature.to_string();
         self.context.current_day_date = clock
             .now_local()
             .format(&CONFIG.render_options.date_format)
             .to_string();
-        self.context.current_hour_rain_amount =
-            current_hour.precipitation.calculate_median().to_string();
-        self.context.current_hour_rain_measure_icon = current_hour.precipitation.get_icon_path();
+        self.context.current_hour_rain_amount = current_hour.precipitation.median().to_string();
 
         self
     }
@@ -691,18 +690,18 @@ impl ContextBuilder {
     fn populate_current_hour_table(&mut self, current_hour: &HourlyForecast) {
         self.context.current_hour_wind_speed = current_hour
             .wind
-            .get_speed_in_unit(
+            .speed_in_unit(
                 CONFIG.render_options.use_gust_instead_of_wind,
                 CONFIG.render_options.wind_speed_unit,
             )
             .to_string();
-        self.context.current_hour_wind_icon = current_hour.wind.get_icon_path();
+        self.context.current_hour_wind_icon = current_hour.wind.icon_path();
         self.context.current_hour_uv_index = current_hour.uv_index.to_string();
         self.context.current_hour_uv_index_icon =
-            crate::domain::icons::UVIndex(current_hour.uv_index).get_icon_path();
+            UVIndexIcon::from(current_hour.uv_index).icon_path();
         self.context.current_hour_relative_humidity = current_hour.relative_humidity.to_string();
         self.context.current_hour_relative_humidity_icon =
-            crate::domain::icons::RelativeHumidity(current_hour.relative_humidity).get_icon_path();
+            HumidityIconName::from(current_hour.relative_humidity).icon_path();
     }
 
     fn set_max_values_for_table(
@@ -756,7 +755,7 @@ impl ContextBuilder {
 
         let (max_wind_today, max_wind_tomorrow) = max_in_today_and_tomorrow!(|item| item
             .wind
-            .get_speed(CONFIG.render_options.use_gust_instead_of_wind));
+            .speed(CONFIG.render_options.use_gust_instead_of_wind));
 
         // Convert wind speed to configured unit
         let max_wind_today_converted = crate::domain::models::Wind::convert_speed(
