@@ -105,3 +105,10 @@ jobs:
           APP_API__PROVIDER: bom
           TZ: Australia/Melbourne
         run: cross test --target=${{ env.TARGET }} --test snapshot_provider_test
+
+      - name: Run tests (Open-Meteo provider, prefer_weather_codes)
+        env:
+          RUN_MODE: test
+          APP_RENDER_OPTIONS__PREFER_WEATHER_CODES: "true"
+          TZ: Australia/Melbourne
+        run: cross test --target=${{ env.TARGET }} --test snapshot_open_meteo_prefer_codes_test
