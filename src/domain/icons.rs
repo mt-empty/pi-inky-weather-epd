@@ -147,23 +147,23 @@ fn apply_precipitation_override(
 impl Icon for DailyForecast {
     fn icon_name(&self) -> String {
         // Priority 1: Use WMO weather code if available (most accurate)
-        if CONFIG.render_options.prefer_weather_codes {
+        let fallback_reason = if CONFIG.render_options.prefer_weather_codes {
             if let Some(code) = self.weather_code {
                 logger::debug("DailyForecast: Using WMO weather code for icon selection");
-                let wmo_code = crate::domain::weather_code::WmoWeatherCode::from(code);
-                if wmo_code != crate::domain::weather_code::WmoWeatherCode::Unknown {
+                if let Some(wmo_code) = self.wmo_code() {
                     // Daily forecasts always use day icons
                     return wmo_code.icon_name(false);
                 }
-
-                logger::debug(format!(
-                    "DailyForecast: Unknown WMO weather code ({code}), falling back to precipitation-based icon logic"
-                ));
+                format!("unknown WMO code ({code})")
+            } else {
+                "no WMO code available".to_string()
             }
-            logger::debug("DailyForecast: WMO weather code not available, falling back to precipitation-based icon logic");
         } else {
-            logger::debug("DailyForecast: Falling back to precipitation-based icon logic");
-        }
+            "prefer_weather_codes disabled".to_string()
+        };
+        logger::debug(format!(
+            "DailyForecast: Falling back to precipitation-based icon logic ({fallback_reason})"
+        ));
 
         // Priority 2: Fall back to precipitation-based logic (BOM provider, missing codes)
         if let Some(ref precip) = self.precipitation {
@@ -192,23 +192,23 @@ impl Icon for DailyForecast {
 impl Icon for HourlyForecast {
     fn icon_name(&self) -> String {
         // Priority 1: Use WMO weather code if available (most accurate)
-        if CONFIG.render_options.prefer_weather_codes {
+        let fallback_reason = if CONFIG.render_options.prefer_weather_codes {
             if let Some(code) = self.weather_code {
                 logger::debug("HourlyForecast: Using WMO weather code for icon selection");
-                let wmo_code = crate::domain::weather_code::WmoWeatherCode::from(code);
-                if wmo_code != crate::domain::weather_code::WmoWeatherCode::Unknown {
+                if let Some(wmo_code) = self.wmo_code() {
                     let icon = wmo_code.icon_name(self.is_night);
                     return apply_moon_phase_override(icon, self.is_night);
                 }
-
-                logger::debug(format!(
-                    "HourlyForecast: Unknown WMO weather code ({code}), falling back to precipitation-based icon logic"
-                ));
+                format!("unknown WMO code ({code})")
+            } else {
+                "no WMO code available".to_string()
             }
-            logger::debug("HourlyForecast: WMO weather code not available, falling back to precipitation-based icon logic");
         } else {
-            logger::debug("HourlyForecast: Falling back to precipitation-based icon logic");
-        }
+            "prefer_weather_codes disabled".to_string()
+        };
+        logger::debug(format!(
+            "HourlyForecast: Falling back to precipitation-based icon logic ({fallback_reason})"
+        ));
 
         // Priority 2: Fall back to cloud_cover + precipitation logic (BOM provider, missing codes)
         // Determine cloud coverage from cloud_cover data if available, otherwise fall back to precipitation chance

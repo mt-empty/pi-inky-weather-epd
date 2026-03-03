@@ -239,6 +239,36 @@ pub struct DailyForecast {
 }
 
 // ============================================================================
+// WMO weather code accessors
+// ============================================================================
+
+impl HourlyForecast {
+    /// Returns the WMO weather code as a typed enum, if present and recognised.
+    ///
+    /// The raw `weather_code: Option<u8>` field is retained for diagnosability
+    /// (unknown codes can still be logged). This method provides the typed view
+    /// for callers that only need to act on known codes.
+    #[must_use]
+    pub fn wmo_code(&self) -> Option<crate::domain::weather_code::WmoWeatherCode> {
+        self.weather_code
+            .and_then(|c| crate::domain::weather_code::WmoWeatherCode::try_from(c).ok())
+    }
+}
+
+impl DailyForecast {
+    /// Returns the WMO weather code as a typed enum, if present and recognised.
+    ///
+    /// The raw `weather_code: Option<u8>` field is retained for diagnosability
+    /// (unknown codes can still be logged). This method provides the typed view
+    /// for callers that only need to act on known codes.
+    #[must_use]
+    pub fn wmo_code(&self) -> Option<crate::domain::weather_code::WmoWeatherCode> {
+        self.weather_code
+            .and_then(|c| crate::domain::weather_code::WmoWeatherCode::try_from(c).ok())
+    }
+}
+
+// ============================================================================
 // Conversion from BOM models to domain models
 // ============================================================================
 

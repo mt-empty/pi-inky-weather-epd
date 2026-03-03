@@ -73,42 +73,42 @@ pub enum WmoWeatherCode {
     ThunderstormHailSlight,
     /// Code 99: Thunderstorm with heavy hail
     ThunderstormHailHeavy,
-    /// Unknown or unsupported code
-    Unknown,
 }
 
-impl From<u8> for WmoWeatherCode {
-    fn from(code: u8) -> Self {
+impl TryFrom<u8> for WmoWeatherCode {
+    type Error = ();
+
+    fn try_from(code: u8) -> Result<Self, ()> {
         match code {
-            0 => Self::ClearSky,
-            1 => Self::MainlyClear,
-            2 => Self::PartlyCloudy,
-            3 => Self::Overcast,
-            45 => Self::Fog,
-            48 => Self::RimeFog,
-            51 => Self::DrizzleLight,
-            53 => Self::DrizzleModerate,
-            55 => Self::DrizzleDense,
-            56 => Self::FreezingDrizzleLight,
-            57 => Self::FreezingDrizzleDense,
-            61 => Self::RainSlight,
-            63 => Self::RainModerate,
-            65 => Self::RainHeavy,
-            66 => Self::FreezingRainLight,
-            67 => Self::FreezingRainHeavy,
-            71 => Self::SnowSlight,
-            73 => Self::SnowModerate,
-            75 => Self::SnowHeavy,
-            77 => Self::SnowGrains,
-            80 => Self::RainShowersSlight,
-            81 => Self::RainShowersModerate,
-            82 => Self::RainShowersViolent,
-            85 => Self::SnowShowersSlight,
-            86 => Self::SnowShowersHeavy,
-            95 => Self::Thunderstorm,
-            96 => Self::ThunderstormHailSlight,
-            99 => Self::ThunderstormHailHeavy,
-            _ => Self::Unknown,
+            0 => Ok(Self::ClearSky),
+            1 => Ok(Self::MainlyClear),
+            2 => Ok(Self::PartlyCloudy),
+            3 => Ok(Self::Overcast),
+            45 => Ok(Self::Fog),
+            48 => Ok(Self::RimeFog),
+            51 => Ok(Self::DrizzleLight),
+            53 => Ok(Self::DrizzleModerate),
+            55 => Ok(Self::DrizzleDense),
+            56 => Ok(Self::FreezingDrizzleLight),
+            57 => Ok(Self::FreezingDrizzleDense),
+            61 => Ok(Self::RainSlight),
+            63 => Ok(Self::RainModerate),
+            65 => Ok(Self::RainHeavy),
+            66 => Ok(Self::FreezingRainLight),
+            67 => Ok(Self::FreezingRainHeavy),
+            71 => Ok(Self::SnowSlight),
+            73 => Ok(Self::SnowModerate),
+            75 => Ok(Self::SnowHeavy),
+            77 => Ok(Self::SnowGrains),
+            80 => Ok(Self::RainShowersSlight),
+            81 => Ok(Self::RainShowersModerate),
+            82 => Ok(Self::RainShowersViolent),
+            85 => Ok(Self::SnowShowersSlight),
+            86 => Ok(Self::SnowShowersHeavy),
+            95 => Ok(Self::Thunderstorm),
+            96 => Ok(Self::ThunderstormHailSlight),
+            99 => Ok(Self::ThunderstormHailHeavy),
+            _ => Err(()),
         }
     }
 }
@@ -298,9 +298,6 @@ impl WmoWeatherCode {
                     PrecipitationKind::Hail
                 )
             }
-
-            // Fallback for unknown codes
-            Self::Unknown => format!("{}{day_night}.svg", PrecipitationChanceName::Overcast),
         }
     }
 }
@@ -336,7 +333,6 @@ impl fmt::Display for WmoWeatherCode {
             Self::Thunderstorm => "Thunderstorm",
             Self::ThunderstormHailSlight => "Thunderstorm with slight hail",
             Self::ThunderstormHailHeavy => "Thunderstorm with heavy hail",
-            Self::Unknown => "Unknown weather",
         };
         write!(f, "{}", description)
     }
@@ -348,11 +344,14 @@ mod tests {
 
     #[test]
     fn test_wmo_code_conversion() {
-        assert_eq!(WmoWeatherCode::from(0), WmoWeatherCode::ClearSky);
-        assert_eq!(WmoWeatherCode::from(45), WmoWeatherCode::Fog);
-        assert_eq!(WmoWeatherCode::from(71), WmoWeatherCode::SnowSlight);
-        assert_eq!(WmoWeatherCode::from(95), WmoWeatherCode::Thunderstorm);
-        assert_eq!(WmoWeatherCode::from(255), WmoWeatherCode::Unknown);
+        assert_eq!(WmoWeatherCode::try_from(0), Ok(WmoWeatherCode::ClearSky));
+        assert_eq!(WmoWeatherCode::try_from(45), Ok(WmoWeatherCode::Fog));
+        assert_eq!(WmoWeatherCode::try_from(71), Ok(WmoWeatherCode::SnowSlight));
+        assert_eq!(
+            WmoWeatherCode::try_from(95),
+            Ok(WmoWeatherCode::Thunderstorm)
+        );
+        assert!(WmoWeatherCode::try_from(255u8).is_err());
     }
 
     #[test]
