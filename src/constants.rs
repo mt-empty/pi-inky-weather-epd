@@ -3,6 +3,7 @@ use once_cell::sync::Lazy;
 use std::path::PathBuf;
 use url::Url;
 
+pub const NOT_AVAILABLE: &str = "N/A";
 pub const BOM_API_TEMP_UNIT: TemperatureUnit = TemperatureUnit::C;
 pub const DEFAULT_AXIS_LABEL_FONT_SIZE: u16 = 19;
 

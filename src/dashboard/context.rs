@@ -1,6 +1,6 @@
 use crate::{
     clock::Clock,
-    constants::NOT_AVAILABLE_ICON_PATH,
+    constants::{NOT_AVAILABLE, NOT_AVAILABLE_ICON_PATH},
     dashboard::chart::{GraphDataPath, HourlyForecastGraph},
     domain::models::{DailyForecast, HourlyForecast},
     errors::{DashboardError, Description},
@@ -106,7 +106,6 @@ pub struct Context {
 
 impl Default for Context {
     fn default() -> Self {
-        const NA: &str = "NA";
         let not_available_icon_path = NOT_AVAILABLE_ICON_PATH.to_string_lossy().to_string();
         let colours = CONFIG.colours.clone();
         let render_options = CONFIG.render_options.clone();
@@ -121,28 +120,28 @@ impl Default for Context {
             actual_temp_colour: colours.actual_temp_colour.to_string(),
             feels_like_colour: colours.feels_like_colour.to_string(),
             rain_colour: colours.rain_colour.to_string(),
-            max_uv_index: NA.to_string(),
+            max_uv_index: NOT_AVAILABLE.to_string(),
             max_uv_index_font_style: FontStyle::Normal.to_string(),
-            max_gust_speed: NA.to_string(),
+            max_gust_speed: NOT_AVAILABLE.to_string(),
             max_gust_speed_font_style: FontStyle::Normal.to_string(),
-            max_relative_humidity: NA.to_string(),
+            max_relative_humidity: NOT_AVAILABLE.to_string(),
             max_relative_humidity_font_style: FontStyle::Normal.to_string(),
-            total_rain_today: NA.to_string(),
+            total_rain_today: NOT_AVAILABLE.to_string(),
             temp_unit: render_options.temp_unit.to_string(),
             current_wind_speed_unit: render_options.wind_speed_unit.to_string(),
-            current_hour_actual_temp: NA.to_string(),
+            current_hour_actual_temp: NOT_AVAILABLE.to_string(),
             current_hour_weather_icon: not_available_icon_path.clone(),
-            current_hour_feels_like: NA.to_string(),
-            current_hour_wind_speed: NA.to_string(),
+            current_hour_feels_like: NOT_AVAILABLE.to_string(),
+            current_hour_wind_speed: NOT_AVAILABLE.to_string(),
             current_hour_wind_icon: not_available_icon_path.clone(),
-            current_hour_uv_index: NA.to_string(),
+            current_hour_uv_index: NOT_AVAILABLE.to_string(),
             current_hour_uv_index_icon: not_available_icon_path.clone(),
-            current_hour_relative_humidity: NA.to_string(),
+            current_hour_relative_humidity: NOT_AVAILABLE.to_string(),
             current_hour_relative_humidity_icon: not_available_icon_path.clone(),
-            current_day_date: NA.to_string(),
-            current_hour_rain_amount: NA.to_string(),
-            sunrise_time: NA.to_string(),
-            sunset_time: NA.to_string(),
+            current_day_date: NOT_AVAILABLE.to_string(),
+            current_hour_rain_amount: NOT_AVAILABLE.to_string(),
+            sunrise_time: NOT_AVAILABLE.to_string(),
+            sunset_time: NOT_AVAILABLE.to_string(),
             sunset_icon: SunPositionIconName::Sunset.icon_path(),
             sunrise_icon: SunPositionIconName::Sunrise.icon_path(),
             graph_height,
@@ -158,31 +157,31 @@ impl Default for Context {
             y_right_axis_path: String::new(),
             y_right_labels: String::new(),
             uv_gradient: String::new(),
-            day2_mintemp: NA.to_string(),
-            day2_maxtemp: NA.to_string(),
+            day2_mintemp: NOT_AVAILABLE.to_string(),
+            day2_maxtemp: NOT_AVAILABLE.to_string(),
             day2_icon: not_available_icon_path.clone(),
-            day2_name: NA.to_string(),
-            day3_mintemp: NA.to_string(),
-            day3_maxtemp: NA.to_string(),
+            day2_name: NOT_AVAILABLE.to_string(),
+            day3_mintemp: NOT_AVAILABLE.to_string(),
+            day3_maxtemp: NOT_AVAILABLE.to_string(),
             day3_icon: not_available_icon_path.clone(),
-            day3_name: NA.to_string(),
-            day4_mintemp: NA.to_string(),
-            day4_maxtemp: NA.to_string(),
+            day3_name: NOT_AVAILABLE.to_string(),
+            day4_mintemp: NOT_AVAILABLE.to_string(),
+            day4_maxtemp: NOT_AVAILABLE.to_string(),
             day4_icon: not_available_icon_path.clone(),
-            day4_name: NA.to_string(),
-            day5_mintemp: NA.to_string(),
-            day5_maxtemp: NA.to_string(),
+            day4_name: NOT_AVAILABLE.to_string(),
+            day5_mintemp: NOT_AVAILABLE.to_string(),
+            day5_maxtemp: NOT_AVAILABLE.to_string(),
             day5_icon: not_available_icon_path.clone(),
-            day5_name: NA.to_string(),
-            day6_mintemp: NA.to_string(),
-            day6_maxtemp: NA.to_string(),
+            day5_name: NOT_AVAILABLE.to_string(),
+            day6_mintemp: NOT_AVAILABLE.to_string(),
+            day6_maxtemp: NOT_AVAILABLE.to_string(),
             day6_icon: not_available_icon_path.clone(),
-            day6_name: NA.to_string(),
-            day7_mintemp: NA.to_string(),
-            day7_maxtemp: NA.to_string(),
+            day6_name: NOT_AVAILABLE.to_string(),
+            day7_mintemp: NOT_AVAILABLE.to_string(),
+            day7_maxtemp: NOT_AVAILABLE.to_string(),
             day7_icon: not_available_icon_path.clone(),
-            day7_name: NA.to_string(),
-            diagnostic_message: NA.to_string(),
+            day7_name: NOT_AVAILABLE.to_string(),
+            diagnostic_message: NOT_AVAILABLE.to_string(),
             diagnostic_visibility: ElementVisibility::Hidden.to_string(),
             diagnostic_icons_svg: String::new(),
             debug_version: String::new(),
@@ -302,14 +301,14 @@ impl ContextBuilder {
     }
 
     /// Assigns daily forecast data to the appropriate context fields.
-    /// Handles missing data by setting "NA" defaults.
+    /// Handles missing data by setting "N/A" defaults.
     fn assign_day_data(&mut self, day_index: i32, forecast: Option<&DailyForecast>) {
         let min_temp_value = forecast
             .and_then(|f| f.temp_min)
-            .map_or("NA".to_string(), |temp| temp.to_string());
+            .map_or(NOT_AVAILABLE.to_string(), |temp| temp.to_string());
         let max_temp_value = forecast
             .and_then(|f| f.temp_max)
-            .map_or("NA".to_string(), |temp| temp.to_string());
+            .map_or(NOT_AVAILABLE.to_string(), |temp| temp.to_string());
         let icon_value = forecast.map_or_else(
             || NOT_AVAILABLE_ICON_PATH.to_string_lossy().to_string(),
             |f| f.icon_path(),
@@ -325,11 +324,11 @@ impl ContextBuilder {
                         self.context.sunrise_time = astro
                             .sunrise_time
                             .map(|dt| dt.format("%H:%M").to_string())
-                            .unwrap_or_else(|| "NA".to_string());
+                            .unwrap_or_else(|| NOT_AVAILABLE.to_string());
                         self.context.sunset_time = astro
                             .sunset_time
                             .map(|dt| dt.format("%H:%M").to_string())
-                            .unwrap_or_else(|| "NA".to_string());
+                            .unwrap_or_else(|| NOT_AVAILABLE.to_string());
                     }
                 }
             }
@@ -414,8 +413,12 @@ impl ContextBuilder {
             };
 
             if let Some(day) = forecast {
-                let min_temp = day.temp_min.map_or("NA".to_string(), |t| t.to_string());
-                let max_temp = day.temp_max.map_or("NA".to_string(), |t| t.to_string());
+                let min_temp = day
+                    .temp_min
+                    .map_or(NOT_AVAILABLE.to_string(), |t| t.to_string());
+                let max_temp = day
+                    .temp_max
+                    .map_or(NOT_AVAILABLE.to_string(), |t| t.to_string());
                 logger::detail(format!(
                     "{day_name} ({expected_date}) - Max {max_temp}°, Min {min_temp}°"
                 ));
@@ -423,7 +426,7 @@ impl ContextBuilder {
                 logger::detail(format!("{day_name} ({expected_date}) - No data available"));
             }
 
-            // Assign data (handles missing data with "NA" defaults)
+            // Assign data (handles missing data with "N/A" defaults)
             self.assign_day_data(day_index as i32, forecast.copied());
         }
 

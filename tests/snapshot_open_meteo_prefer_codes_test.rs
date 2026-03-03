@@ -39,7 +39,10 @@ use std::path::Path;
 ///
 /// The `insta::assert_snapshot!` call is intentionally left in each test
 /// function so that insta can derive the snapshot name from the caller.
-async fn run_prefer_codes_snapshot(time_rfc3339: &str, output_path: &'static str) -> Option<String> {
+async fn run_prefer_codes_snapshot(
+    time_rfc3339: &str,
+    output_path: &'static str,
+) -> Option<String> {
     if !CONFIG.render_options.prefer_weather_codes {
         eprintln!(
             "Skipping prefer-codes tests – set APP_RENDER_OPTIONS__PREFER_WEATHER_CODES=true \
@@ -69,7 +72,10 @@ async fn run_prefer_codes_snapshot(time_rfc3339: &str, output_path: &'static str
         generate_weather_dashboard_injection(&clock, &CONFIG.misc.template_path, output_svg_name)
             .expect("dashboard generation failed");
         let svg = fs::read_to_string(output_svg_name).expect("failed to read generated SVG");
-        assert!(!svg.is_empty() && svg.contains("<svg"), "generated file is not valid SVG");
+        assert!(
+            !svg.is_empty() && svg.contains("<svg"),
+            "generated file is not valid SVG"
+        );
         svg
     })
     .await
