@@ -168,6 +168,23 @@ pub struct DashboardSettings {
     pub dev: Dev,
 }
 
+/// Validates cross-field constraints on release settings.
+///
+/// Returns `Ok(())` if valid, or `Err(message)` describing the conflict.
+fn validate_release_cross_fields(
+    update_interval_days: i32,
+    allow_pre_release_version: bool,
+) -> Result<(), String> {
+    if allow_pre_release_version && update_interval_days == 0 {
+        return Err(
+            "Configuration validation failed: `allow_pre_release_version` cannot be \
+             enabled when `update_interval_days` is 0 (auto-updating is disabled)"
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
 /// Dashboard settings.
 ///
 /// # Fields
@@ -243,6 +260,18 @@ impl DashboardSettings {
             return Err(ConfigError::Message(format!(
                 "Configuration validation failed: {error:?}"
             )));
+        }
+
+        // Cross-field validation: allow_pre_release_version has no effect when
+        // update_interval_days = 0 (auto-updating is disabled), so flag it as a
+        // misconfiguration to prevent accidental enabling.
+        if let Ok(ref s) = final_settings {
+            if let Err(msg) = validate_release_cross_fields(
+                s.release.update_interval_days.into_inner(),
+                s.release.allow_pre_release_version,
+            ) {
+                return Err(ConfigError::Message(msg));
+            }
         }
 
         final_settings
@@ -326,5 +355,43 @@ impl DashboardSettings {
         );
         logger::kvp("Disable PNG Output", self.dev.disable_png_output);
         logger::kvp("Enable Debug Logs", self.dev.enable_debug_logs);
+
+        // Cross-configuration warnings
+        if self.api.provider == Providers::Bom && self.render_options.prefer_weather_codes {
+            logger::warning(
+                "`prefer_weather_codes = true` has no effect with the BOM provider — \
+                BOM does not supply WMO weather codes, so icon selection will always \
+                use derived logic",
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_release_cross_fields;
+
+    #[test]
+    fn allow_pre_release_with_zero_interval_is_rejected() {
+        let result = validate_release_cross_fields(0, true);
+        assert!(result.is_err());
+        let msg = result.unwrap_err();
+        assert!(msg.contains("`allow_pre_release_version`"));
+        assert!(msg.contains("`update_interval_days` is 0"));
+    }
+
+    #[test]
+    fn allow_pre_release_with_nonzero_interval_is_accepted() {
+        assert!(validate_release_cross_fields(7, true).is_ok());
+    }
+
+    #[test]
+    fn disallow_pre_release_with_zero_interval_is_accepted() {
+        assert!(validate_release_cross_fields(0, false).is_ok());
+    }
+
+    #[test]
+    fn disallow_pre_release_with_nonzero_interval_is_accepted() {
+        assert!(validate_release_cross_fields(7, false).is_ok());
     }
 }
