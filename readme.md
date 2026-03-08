@@ -184,6 +184,8 @@ Enable auto-update when a new release is available. This is enabled by default.
 [release]
 # Set to 0 to disable auto-updating
 update_interval_days = 7
+# Opt in to pre-release versions (requires update_interval_days > 0)
+allow_pre_release_version = false
 ```
 
 ## Degraded Operation
