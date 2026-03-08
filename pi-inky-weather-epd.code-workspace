@@ -27,6 +27,7 @@
         "explorer.excludeGitIgnore": false,
         "search.useIgnoreFiles": false,
         "search.exclude": {
+            "tests/output/static/fill-svg-static": true,
             "**/other": true,
             "static/line-svg-static": true
         },

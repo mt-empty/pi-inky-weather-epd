@@ -35,5 +35,5 @@
   <!-- Large moon fills most of canvas, same as clear-night.svg -->
   <use xlink:href="#moon" width="270" height="270" transform="translate(121 121)" />
   <!-- Small cloud hint at bottom-right, partially overlapping moon -->
-  <use xlink:href="#cloud" width="230" height="146" transform="translate(235 320)" />
+  <use xlink:href="#cloud" width="200" height="186" transform="translate(280 300) scale(-1, 1)" />
 </svg>
