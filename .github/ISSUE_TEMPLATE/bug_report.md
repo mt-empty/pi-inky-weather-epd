@@ -21,6 +21,7 @@ What you expected to happen.
 What actually happened.
 
 ## Environment
+- **Version**: (e.g., v1.0.0)
 - **OS**: (e.g., Debian Bookworm, Raspberry Pi OS)
 - **Device**: (e.g., Raspberry Pi Zero, Pi 4)
 - **Configuration**: (e.g., relevant config settings)
