@@ -4,7 +4,47 @@
 
 use std::fmt::Display;
 use std::io::IsTerminal;
-use std::sync::OnceLock;
+use std::io::Write;
+use std::sync::{Mutex, OnceLock};
+
+// ---------------------------------------------------------------------------
+// File logging
+// ---------------------------------------------------------------------------
+
+/// Global log file handle.  Set once by [`init_file_log`] at application
+/// startup; every subsequent log call mirrors its output here as plain text
+/// (no ANSI codes).
+static LOG_FILE: OnceLock<Mutex<std::fs::File>> = OnceLock::new();
+
+/// Open (and truncate) `pi-inky-weather-epd` in the current working directory and store
+/// the handle for the lifetime of the process.
+///
+/// Must be called before the first log message.  Calling it more than once is
+/// safe – the second call is a no-op.  On failure a warning is printed to
+/// stdout and the application continues without file logging.
+pub fn init_file_log() {
+    match std::fs::File::create("pi-inky-weather-epd") {
+        Ok(file) => {
+            // OnceLock::set fails silently if already initialized (second call).
+            let _ = LOG_FILE.set(Mutex::new(file));
+        }
+        Err(e) => {
+            // Cannot use warning() here – it would recurse. Print directly.
+            println!("⚠ WARNING Could not open log file pi-inky-weather-epd: {e}");
+        }
+    }
+}
+
+/// Write a plain-text line to the log file.  Any I/O error is silently
+/// swallowed to avoid infinite recursion (we cannot call the logger from
+/// within the logger).
+fn write_to_file(text: &str) {
+    if let Some(mutex) = LOG_FILE.get() {
+        if let Ok(mut file) = mutex.lock() {
+            let _ = writeln!(file, "{text}");
+        }
+    }
+}
 
 /// Color policy: auto, always, or never
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -124,6 +164,7 @@ fn log_message(level: LogLevel, message: impl Display) {
         ansi("\x1b[0m"),
         message
     );
+    write_to_file(&format!("{} {} {}", level.symbol(), level.label(), message));
 }
 
 /// Log a section header (major step in the process)
@@ -134,11 +175,13 @@ pub fn section(title: impl Display) {
         ansi("\x1b[1m"),
         ansi("\x1b[0m")
     );
+    write_to_file(&format!("\n▶ {title}"));
 }
 
 /// Log a subsection (minor step within a major step)
 pub fn subsection(title: impl Display) {
     println!("  {}→{} {title}", ansi("\x1b[36m"), ansi("\x1b[0m"));
+    write_to_file(&format!("  → {title}"));
 }
 
 /// Log an info message
@@ -173,22 +216,26 @@ pub fn debug(message: impl Display) {
 /// Log a configuration group header
 pub fn config_group(title: impl Display) {
     println!("  {}[{}]{}", ansi("\x1b[1m"), title, ansi("\x1b[0m"));
+    write_to_file(&format!("  [{title}]"));
 }
 
 /// Log a key-value pair (useful for configuration or data display)
 pub fn kvp(key: impl Display, value: impl Display) {
     println!("  {}•{} {key}: {value}", ansi("\x1b[90m"), ansi("\x1b[0m"));
+    write_to_file(&format!("  • {key}: {value}"));
 }
 
 /// Log raw data detail (like API responses)
 pub fn detail(message: impl Display) {
     println!("    {}{}{}", ansi("\x1b[90m"), message, ansi("\x1b[0m"));
+    write_to_file(&format!("    {message}"));
 }
 
 /// Log a separator line
 #[allow(dead_code)]
 pub fn separator() {
     println!("{}{}{}", ansi("\x1b[90m"), "─".repeat(60), ansi("\x1b[0m"));
+    write_to_file(&"─".repeat(60));
 }
 
 /// Log the start of the application
@@ -201,6 +248,8 @@ pub fn app_start(app_name: &str, version: &str) {
         ansi("\x1b[0m")
     );
     println!("{}{}{}", ansi("\x1b[90m"), "=".repeat(60), ansi("\x1b[0m"));
+    write_to_file(&format!("\n{app_name} v{version}"));
+    write_to_file(&"=".repeat(60));
 }
 
 /// Log the end of the application
@@ -211,4 +260,5 @@ pub fn app_end() {
         "=".repeat(60),
         ansi("\x1b[0m")
     );
+    write_to_file(&format!("\n{}", "=".repeat(60)));
 }
