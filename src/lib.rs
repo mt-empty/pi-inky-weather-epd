@@ -40,6 +40,7 @@ pub fn generate_weather_dashboard_wrapper() -> Result<(), Error> {
 }
 
 pub fn run_weather_dashboard() -> Result<(), anyhow::Error> {
+    logger::init_file_log();
     logger::app_start("Pi Inky Weather Display", env!("CARGO_PKG_VERSION"));
 
     logger::section("Generating weather dashboard");
@@ -56,6 +57,7 @@ pub fn run_weather_dashboard() -> Result<(), anyhow::Error> {
 
 /// Run weather dashboard with a custom clock (for simulation/testing)
 pub fn run_weather_dashboard_with_clock(clock: &dyn Clock) -> Result<(), anyhow::Error> {
+    logger::init_file_log();
     logger::app_start("Pi Inky Weather Display", env!("CARGO_PKG_VERSION"));
 
     logger::section("Generating weather dashboard (simulation mode)");
