@@ -16,21 +16,21 @@ use std::sync::{Mutex, OnceLock};
 /// (no ANSI codes).
 static LOG_FILE: OnceLock<Mutex<std::fs::File>> = OnceLock::new();
 
-/// Open (and truncate) `pi-inky-weather-epd` in the current working directory and store
+/// Open (and truncate) `pi-inky-weather-epd.log` in the current working directory and store
 /// the handle for the lifetime of the process.
 ///
 /// Must be called before the first log message.  Calling it more than once is
 /// safe – the second call is a no-op.  On failure a warning is printed to
 /// stdout and the application continues without file logging.
 pub fn init_file_log() {
-    match std::fs::File::create("pi-inky-weather-epd") {
+    match std::fs::File::create("pi-inky-weather-epd.log") {
         Ok(file) => {
             // OnceLock::set fails silently if already initialized (second call).
             let _ = LOG_FILE.set(Mutex::new(file));
         }
         Err(e) => {
             // Cannot use warning() here – it would recurse. Print directly.
-            println!("⚠ WARNING Could not open log file pi-inky-weather-epd: {e}");
+            println!("⚠ WARNING Could not open log file pi-inky-weather-epd.log: {e}");
         }
     }
 }
