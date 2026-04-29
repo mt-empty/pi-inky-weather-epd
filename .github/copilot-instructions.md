@@ -11,7 +11,7 @@
 
 A Rust application that generates weather dashboards for Raspberry Pi with 7.3" e-paper displays. Supports multiple weather APIs (BOM, Open-Meteo) through a provider pattern, renders SVG templates with TinyTemplate, and converts to PNG using resvg for display on Inky Impression 7.3" hardware.
 
-**Current Version**: v0.8.1
+**Current Version**: v0.9.0
 
 **Core Flow**: Provider Factory → Fetch API data → Convert to domain models → Build context → Render SVG template → Convert to PNG → Display via Python script
 
@@ -27,7 +27,7 @@ The application uses a **domain-driven architecture** with pluggable weather pro
 Provider Factory → WeatherProvider Trait → Domain Models → Template Context
 ```
 
-- **Domain Layer** (`src/domain/`): API-agnostic models (`HourlyForecastAbs`, `DailyForecastAbs`, `Temperature`, `Wind`, `Precipitation`)
+- **Domain Layer** (`src/domain/`): API-agnostic models (`HourlyForecast`, `DailyForecast`, `Temperature`, `Wind`, `Precipitation`)
 - **Provider Layer** (`src/providers/`):
   - `WeatherProvider` trait - common interface for all APIs
   - `Fetcher` - shared HTTP client with caching/fallback
@@ -36,24 +36,56 @@ Provider Factory → WeatherProvider Trait → Domain Models → Template Contex
 - **API Layer** (`src/apis/`): Provider-specific response models with `From` traits for domain conversion
 
 ### Module Structure
-- **`src/weather_dashboard.rs`**: Main orchestrator - uses provider factory, builds context, renders
-- **`src/providers/`**: Provider pattern implementation
-  - `mod.rs` - `WeatherProvider` trait definition + `FetchResult<T>` struct (data + optional warning)
-  - `factory.rs` - `create_provider()` based on config
-  - `fetcher.rs` - Shared `Fetcher` with HTTP client, returns `FetchOutcome<T>` enum (Fresh/Stale)
-  - `bom.rs` - BOM provider (Australia only, geohash-based)
-  - `open_meteo.rs` - Open-Meteo provider (worldwide, lat/lon)
-- **`src/domain/`**: Domain models and icon logic
-  - `models.rs` - Core domain types with conversion traits
-  - `icons.rs` - `Icon` trait implementations for domain models
-- **`src/dashboard/context.rs`**: `ContextBuilder` - transforms domain models to template variables
-- **`src/dashboard/chart.rs`**: SVG path generation for temperature/rain graphs
-- **`src/apis/`**: API-specific models
-  - `bom/models.rs` + `bom/utils.rs` - BOM API structures
-  - `open_meteo/models.rs` - Open-Meteo API structures with direct domain conversions
-- **`src/configs/settings.rs`**: Layered config system with `Providers` enum
-- **`src/weather/icons.rs`**: Icon enum definitions and `Icon` trait
+**Core Application Files**:
+- **`src/main.rs`**: Entry point - calls `run_weather_dashboard()` with CLI argument parsing (when `cli` feature enabled)
+- **`src/lib.rs`**: Library root - exports public API, defines global `CONFIG` lazy static
+- **`src/weather_dashboard.rs`**: Main orchestrator - uses provider factory, builds context, renders SVG/PNG
+- **`src/errors.rs`**: `DashboardError` enum for user-facing errors with diagnostic icons and priority levels
+- **`src/constants.rs`**: Global constants including API endpoints, cache file suffixes, user agent string
+- **`src/utils.rs`**: Utility functions (geohash encoding, time conversions, font loading)
+- **`src/clock.rs`**: Clock abstraction trait (`SystemClock`, `FixedClock`, `MockClock`) for testable time injection
+- **`src/logger.rs`**: Structured logging system with colored console output (section/subsection/success/warning/error/detail)
 - **`src/update.rs`**: Self-update logic from GitHub releases
+
+**Provider Layer** (`src/providers/`):
+- `mod.rs` - `WeatherProvider` trait definition + `FetchResult<T>` struct (data + optional warning)
+- `factory.rs` - `create_provider()` based on config
+- `fetcher.rs` - Shared `Fetcher` with HTTP client, returns `FetchOutcome<T>` enum (Fresh/Stale)
+- `bom.rs` - BOM provider (Australia only, geohash-based)
+- `open_meteo.rs` - Open-Meteo provider (worldwide, lat/lon)
+
+**Domain Layer** (`src/domain/`):
+- `mod.rs` - Module re-exports
+- `models.rs` - Core domain types with conversion traits (`HourlyForecast`, `DailyForecast`, `Temperature`, `Wind`, etc.)
+- `icons.rs` - `Icon` trait implementations for domain models
+- `weather_code.rs` - WMO Weather Code enum and mapping logic
+
+**Dashboard Rendering** (`src/dashboard/`):
+- `mod.rs` - Module re-exports
+- `context.rs` - `ContextBuilder` - transforms domain models to template variables
+- `chart.rs` - SVG path generation for temperature/rain graphs
+
+**API Layer** (`src/apis/`):
+- `mod.rs` - Module re-exports
+- **`bom/`**: BOM API integration
+  - `mod.rs` - BOM module re-exports (note: `utils` is private)
+  - `models.rs` - BOM API response structures
+  - `utils.rs` - Custom deserializers for temperature conversion
+  - `samples/` - Example API responses (`daily_forecast.json`, `hourly_forecast.json`)
+- **`open_meteo/`**: Open-Meteo API integration
+  - `mod.rs` - Open-Meteo module re-exports
+  - `models.rs` - Open-Meteo API structures with direct domain conversions
+  - `samples/` - Example API response (`response.json`)
+
+**Configuration** (`src/configs/`):
+- `mod.rs` - Module re-exports
+- `settings.rs` - Layered config system with `Providers` enum and nutype wrappers
+- `validation.rs` - Config validation functions (color validation, cross-field validation)
+
+**Weather Icons & Utilities** (`src/weather/`):
+- `mod.rs` - Module re-exports
+- `icons.rs` - Icon enum definitions and `Icon` trait
+- `utils.rs` - Moon phase calculation logic
 
 ### Data Flow Pattern
 ```
@@ -69,7 +101,7 @@ FetchOutcome::Fresh(data) → FetchResult { data, warning: None }
     ↓ (failure, cached exists)
 FetchOutcome::Stale { data, error } → FetchResult { data, warning: Some(error) }
     ↓
-From trait → Domain Models (HourlyForecastAbs, DailyForecastAbs)
+From trait → Domain Models (HourlyForecast, DailyForecast)
     ↓
 ContextBuilder → Template Context (accumulates diagnostics)
     ↓
@@ -105,9 +137,13 @@ Hierarchical merge via `config` crate:
 pub struct GeoHash(String);
 ```
 
+**Note**: `GeoHash` type is defined but not used in `DashboardSettings` config. The application uses `latitude` and `longitude` fields directly, converting to geohash internally for BOM API URLs.
+
+**Cross-field validation** (`src/configs/validation.rs`): Setting `allow_pre_release_version = true` requires `update_interval_days > 0`.
+
 **From traits for conversion**: API models → domain models
 ```rust
-impl From<apis::bom::models::HourlyForecast> for domain::models::HourlyForecastAbs {
+impl From<apis::bom::models::HourlyForecast> for domain::models::HourlyForecast {
     fn from(bom: apis::bom::models::HourlyForecast) -> Self { /* ... */ }
 }
 ```
@@ -170,6 +206,8 @@ This project includes comprehensive VSCode configuration in `pi-inky-weather-epd
 - `cargo-run` - Run application locally
 - `cargo-test(open_meteo)` - Run all tests with `RUN_MODE=test`
 - `cargo-test(bom only)` - Run BOM-specific snapshot test with overrides
+- `cargo-test(open_meteo prefer_weather_codes)` - Run Open-Meteo tests with weather code preference enabled
+- `cargo-clippy` - Run clippy linter with warnings as errors
 
 **Launch Configurations**:
 - Debug/run with `lldb` debugger configured
@@ -194,7 +232,7 @@ This project includes comprehensive VSCode configuration in `pi-inky-weather-epd
 ```bash
 # Create local config (gitignored)
 cp config/development.toml config/local.toml
-# Edit config/local.toml with your geohash/coordinates
+# Edit config/local.toml with your coordinates (latitude/longitude)
 cargo run
 ```
 
@@ -243,9 +281,12 @@ RUN_MODE=test cargo test
 RUN_MODE=test cargo test --test snapshot_provider_test
 
 # BOM provider snapshot test (requires override)
-RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
+RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test
 
-# DST/timezone tests (12 comprehensive tests)
+# Open-Meteo tests with weather code preference
+RUN_MODE=test APP_RENDER_OPTIONS__PREFER_WEATHER_CODES=true cargo test --test snapshot_open_meteo_prefer_codes_test
+
+# DST/timezone tests (7 test cases across 2 test functions)
 cargo test --test daylight_saving_test
 
 # Clock abstraction tests (fixed time injection)
@@ -282,16 +323,35 @@ cargo insta review  # Interactive review of SVG snapshots
 **Test structure**:
 - `tests/fixtures/`: Pre-captured API responses for deterministic tests
   - `open_meteo_forecast.json` - Combined hourly/daily data from Open-Meteo API
+  - `open_meteo_hourly_forecast.json`, `open_meteo_daily_forecast.json` - Separate Open-Meteo data
   - `bom_hourly_forecast.json`, `bom_daily_forecast.json` - Separate BOM endpoints
-- `tests/snapshots/`: Insta snapshot files for SVG output verification
-- `cached_bom_data/`: Development cache directory (not used in tests)
+  - `ny_6pm_before_gmt/`, `ny_7pm_after_gmt/` - NY timezone boundary test fixtures
+- `tests/snapshots/`: Insta snapshot files for SVG output verification (14 total snapshots)
+- `tests/helpers/`: Test helper modules including wiremock setup
+- `cached_data/`: Development cache directory (not used in tests)
+
+**Test Files** (21 total):
+- `snapshot_provider_test.rs` - Main snapshot tests for both providers (10 snapshots)
+- `snapshot_open_meteo_prefer_codes_test.rs` - Weather code preference tests (4 snapshots)
+- `bom_provider_test.rs`, `bom_integration_test.rs` - BOM-specific tests
+- `open_meteo_provider_test.rs`, `open_meteo_integration_test.rs` - Open-Meteo-specific tests
+- `daylight_saving_test.rs` - DST transition tests (7 test cases)
+- `clock_integration_test.rs` - Clock abstraction tests
+- `fetcher_test.rs` - HTTP error handling with wiremock
+- `error_priority_test.rs` - Diagnostic priority system tests
+- `context_daily_forecast_test.rs`, `daily_forecast_test.rs`, `daily_date_test.rs` - Daily forecast tests
+- `date_format_test.rs`, `icon_name_validation_test.rs`, `snow_detection_test.rs` - Rendering tests
+- `template_test.rs`, `wind_speed_unit_test.rs`, `update_status_test.rs` - Additional unit tests
 
 **Test Configuration** (`config/test.toml`):
 ```toml
 disable_weather_api_requests = true  # Never call real APIs
-weather_data_cache_path = "tests/fixtures/"  # Load from fixtures
+weather_data_cache_path = "tests/output/cached_data/"  # Separate from read-only fixtures
 provider = "open_meteo"  # Default test provider
 ```
+
+**HTTP Mocking with Wiremock**:
+All snapshot tests use `wiremock` crate to mock HTTP responses, not direct file loading. Mock servers are set up in `tests/helpers/wiremock_setup.rs` and serve fixture data over HTTP for realistic testing.
 
 **No live API integration tests** - all tests use fixtures or cached data to ensure reproducibility.
 
@@ -328,7 +388,7 @@ pub struct YourProvider {
 }
 
 impl WeatherProvider for YourProvider {
-    fn fetch_hourly_forecast(&self) -> Result<Vec<HourlyForecastAbs>, Error> {
+    fn fetch_hourly_forecast(&self) -> Result<FetchResult<Vec<HourlyForecast>>, Error> {
         let result = self.fetcher.fetch_data::<YourApiResponse, ()>(
             endpoint, "hourly_forecast.json", None
         )?;
