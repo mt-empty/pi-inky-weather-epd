@@ -25,9 +25,7 @@ pub fn set_clock(clock: Box<dyn Clock + Send + Sync>) {
 
 /// Get the current clock (defaults to SystemClock)
 fn get_clock() -> &'static (dyn Clock + Send + Sync) {
-    CLOCK
-        .get_or_init(|| Box::new(SystemClock))
-        .as_ref()
+    CLOCK.get_or_init(|| Box::new(SystemClock)).as_ref()
 }
 
 // ---------------------------------------------------------------------------
