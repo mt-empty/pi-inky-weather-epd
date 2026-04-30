@@ -1,7 +1,8 @@
 ---
-agent: 'agent'
-tools: ['execute/runInTerminal']
-description: 'Generate a succinct commit message for staged changes and optionally commit'
+name: "Commit"
+description: "Use when preparing a commit from staged changes. Generates a succinct commit message and can optionally run git commit after confirmation."
+agent: "agent"
+tools: [execute]
 ---
 
 You are a commit message assistant. Follow these steps precisely:
