@@ -3,7 +3,7 @@
 # Pi Inky Weather Display
 
 [![Build Status](https://github.com/mt-empty/pi-inky-weather-epd/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/mt-empty/pi-inky-weather-epd/actions/workflows/test.yml)
-![Rust Version](https://img.shields.io/badge/Rust-1.83+-orange?logo=rust)
+![Rust Version](https://img.shields.io/badge/Rust-1.91+-orange?logo=rust)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
 *A beautiful weather dashboard for Raspberry Pi with 7.3" e-paper display*

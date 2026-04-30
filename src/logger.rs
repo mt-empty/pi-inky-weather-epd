@@ -2,10 +2,43 @@
 //!
 //! Provides structured logging with visual indicators and clean formatting.
 
+use crate::clock::{Clock, SystemClock};
 use std::fmt::Display;
 use std::io::IsTerminal;
 use std::io::Write;
 use std::sync::{Mutex, OnceLock};
+
+// ---------------------------------------------------------------------------
+// Clock abstraction
+// ---------------------------------------------------------------------------
+
+/// Global clock for timestamp generation. Defaults to SystemClock but can be
+/// overridden for testing with [`set_clock`].
+static CLOCK: OnceLock<Box<dyn Clock + Send + Sync>> = OnceLock::new();
+
+/// Set a custom clock for testing. Must be called before any log messages.
+/// Safe to call multiple times - only the first call takes effect.
+#[allow(dead_code)]
+pub fn set_clock(clock: Box<dyn Clock + Send + Sync>) {
+    let _ = CLOCK.set(clock);
+}
+
+/// Get the current clock (defaults to SystemClock)
+fn get_clock() -> &'static (dyn Clock + Send + Sync) {
+    CLOCK.get_or_init(|| Box::new(SystemClock)).as_ref()
+}
+
+// ---------------------------------------------------------------------------
+// Timestamp formatting
+// ---------------------------------------------------------------------------
+
+/// Get a formatted timestamp for log messages
+fn timestamp() -> String {
+    get_clock()
+        .now_local()
+        .format("%Y-%m-%d %H:%M:%S%.3f")
+        .to_string()
+}
 
 // ---------------------------------------------------------------------------
 // File logging
@@ -156,32 +189,54 @@ impl LogLevel {
 
 /// Log a message with the specified level
 fn log_message(level: LogLevel, message: impl Display) {
+    let ts = timestamp();
     println!(
-        "{}{} {}{} {}",
+        "{}[{}]{} {}{} {}{} {}",
+        ansi("\x1b[90m"),
+        ts,
+        ansi("\x1b[0m"),
         level.colour_code(),
         level.symbol(),
         level.label(),
         ansi("\x1b[0m"),
         message
     );
-    write_to_file(&format!("{} {} {}", level.symbol(), level.label(), message));
+    write_to_file(&format!(
+        "[{}] {} {} {}",
+        ts,
+        level.symbol(),
+        level.label(),
+        message
+    ));
 }
 
 /// Log a section header (major step in the process)
 pub fn section(title: impl Display) {
+    let ts = timestamp();
     println!(
-        "\n{}{}▶ {title}{}",
+        "\n{}[{}]{} {}{}▶ {title}{}",
+        ansi("\x1b[90m"),
+        ts,
+        ansi("\x1b[0m"),
         ansi("\x1b[34m"),
         ansi("\x1b[1m"),
         ansi("\x1b[0m")
     );
-    write_to_file(&format!("\n▶ {title}"));
+    write_to_file(&format!("\n[{}] ▶ {title}", ts));
 }
 
 /// Log a subsection (minor step within a major step)
 pub fn subsection(title: impl Display) {
-    println!("  {}→{} {title}", ansi("\x1b[36m"), ansi("\x1b[0m"));
-    write_to_file(&format!("  → {title}"));
+    let ts = timestamp();
+    println!(
+        "{}[{}]{}   {}→{} {title}",
+        ansi("\x1b[90m"),
+        ts,
+        ansi("\x1b[0m"),
+        ansi("\x1b[36m"),
+        ansi("\x1b[0m")
+    );
+    write_to_file(&format!("[{}]   → {title}", ts));
 }
 
 /// Log an info message
@@ -215,20 +270,46 @@ pub fn debug(message: impl Display) {
 
 /// Log a configuration group header
 pub fn config_group(title: impl Display) {
-    println!("  {}[{}]{}", ansi("\x1b[1m"), title, ansi("\x1b[0m"));
-    write_to_file(&format!("  [{title}]"));
+    let ts = timestamp();
+    println!(
+        "{}[{}]{}   {}[{}]{}",
+        ansi("\x1b[90m"),
+        ts,
+        ansi("\x1b[0m"),
+        ansi("\x1b[1m"),
+        title,
+        ansi("\x1b[0m")
+    );
+    write_to_file(&format!("[{}]   [{title}]", ts));
 }
 
 /// Log a key-value pair (useful for configuration or data display)
 pub fn kvp(key: impl Display, value: impl Display) {
-    println!("  {}•{} {key}: {value}", ansi("\x1b[90m"), ansi("\x1b[0m"));
-    write_to_file(&format!("  • {key}: {value}"));
+    let ts = timestamp();
+    println!(
+        "{}[{}]{}   {}•{} {key}: {value}",
+        ansi("\x1b[90m"),
+        ts,
+        ansi("\x1b[0m"),
+        ansi("\x1b[90m"),
+        ansi("\x1b[0m")
+    );
+    write_to_file(&format!("[{}]   • {key}: {value}", ts));
 }
 
 /// Log raw data detail (like API responses)
 pub fn detail(message: impl Display) {
-    println!("    {}{}{}", ansi("\x1b[90m"), message, ansi("\x1b[0m"));
-    write_to_file(&format!("    {message}"));
+    let ts = timestamp();
+    println!(
+        "{}[{}]{}     {}{}{}",
+        ansi("\x1b[90m"),
+        ts,
+        ansi("\x1b[0m"),
+        ansi("\x1b[90m"),
+        message,
+        ansi("\x1b[0m")
+    );
+    write_to_file(&format!("[{}]     {message}", ts));
 }
 
 /// Log a separator line
@@ -240,25 +321,33 @@ pub fn separator() {
 
 /// Log the start of the application
 pub fn app_start(app_name: &str, version: &str) {
+    let ts = timestamp();
     println!(
-        "\n{}{} v{}{}",
+        "\n{}[{}]{} {}{} v{}{}",
+        ansi("\x1b[90m"),
+        ts,
+        ansi("\x1b[0m"),
         ansi("\x1b[1m"),
         app_name,
         version,
         ansi("\x1b[0m")
     );
     println!("{}{}{}", ansi("\x1b[90m"), "=".repeat(60), ansi("\x1b[0m"));
-    write_to_file(&format!("\n{app_name} v{version}"));
+    write_to_file(&format!("\n[{}] {app_name} v{version}", ts));
     write_to_file(&"=".repeat(60));
 }
 
 /// Log the end of the application
 pub fn app_end() {
+    let ts = timestamp();
     println!(
-        "\n{}{}{}",
+        "\n{}[{}]{} {}{}{}",
+        ansi("\x1b[90m"),
+        ts,
+        ansi("\x1b[0m"),
         ansi("\x1b[90m"),
         "=".repeat(60),
         ansi("\x1b[0m")
     );
-    write_to_file(&format!("\n{}", "=".repeat(60)));
+    write_to_file(&format!("\n[{}] {}", ts, "=".repeat(60)));
 }
