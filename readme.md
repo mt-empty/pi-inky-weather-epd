@@ -104,6 +104,17 @@ You can override the default configs located at [./config/](./config/) by creati
 
 Here are example configurations.
 
+#### Language (UI Localization)
+
+The dashboard supports multiple interface languages for compact UI labels and day names.
+
+```toml
+[render_options]
+# Supported in Phase 1:
+# en, fr, de, es, ja
+language = "en"
+```
+
 #### Default Configuration
 
 <img src="./misc/dashboard-default.png" alt="Default configuration" width="600"/>
