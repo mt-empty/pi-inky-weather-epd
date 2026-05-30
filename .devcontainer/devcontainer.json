@@ -6,10 +6,12 @@
     "image": "mcr.microsoft.com/devcontainers/rust:2-1-bookworm",
     "remoteUser": "vscode",
     // Mount host timezone so container uses Melbourne time (or whatever the host uses)
-    "mounts": [
-        "source=/etc/localtime,target=/etc/localtime,type=bind,consistency=cached",
-        "source=${localEnv:HOME}/.zshrc,target=/home/vscode/.zshrc,type=bind,consistency=cached"
-    ],
+    // TZ env var is used instead of bind-mounting /etc/localtime because on macOS
+    // /etc/localtime is a symlink that Docker Desktop does not resolve — the container
+    // would get a dangling symlink and silently fall back to UTC.
+    "remoteEnv": {
+        "TZ": "Australia/Melbourne"
+    },
     "customizations": {
         "vscode": {
             "settings": {},
@@ -40,7 +42,8 @@
     // ]
     // Features to add to the dev container. More info: https://containers.dev/features.
     "features": {
-        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+        "ghcr.io/mt-empty/devcontainer-features/my-cli-tools:1": {}
     },
     // Use 'forwardPorts' to make a list of ports inside the container available locally.
     // "forwardPorts": [],
