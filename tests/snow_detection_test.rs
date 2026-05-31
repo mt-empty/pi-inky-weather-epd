@@ -54,7 +54,7 @@ fn test_is_not_primarily_snow_below_threshold() {
         Some(70),
         Some(9),
         Some(11),
-        Some(3), // 3cm snowfall
+        Some(30), // 3.0cm snowfall (stored as tenths of cm)
     );
 
     assert!(
@@ -70,7 +70,7 @@ fn test_is_primarily_snow_just_above_threshold() {
         Some(75),
         Some(9),
         Some(11),
-        Some(9), // 9cm snowfall
+        Some(90), // 9.0cm snowfall (stored as tenths of cm)
     );
 
     assert!(
@@ -86,7 +86,7 @@ fn test_is_not_primarily_snow_just_below_threshold() {
         Some(75),
         Some(9),
         Some(11),
-        Some(4), // 4cm snowfall
+        Some(40), // 4.0cm snowfall (stored as tenths of cm)
     );
 
     assert!(
@@ -140,7 +140,7 @@ fn test_light_snow_with_heavy_rain() {
         Some(85),
         Some(18),
         Some(22),
-        Some(1), // 1cm snowfall
+        Some(10), // 1.0cm snowfall (stored as tenths of cm)
     );
 
     assert!(
@@ -176,7 +176,7 @@ fn test_mixed_precipitation_scenario() {
         Some(80),
         Some(11),
         Some(13),
-        Some(3), // 3cm snowfall
+        Some(30), // 3.0cm snowfall (stored as tenths of cm)
     );
 
     assert!(
@@ -192,7 +192,7 @@ fn test_light_flurries_scenario() {
         Some(40),
         Some(0),
         Some(1),
-        Some(1), // 1cm snowfall
+        Some(10), // 1.0cm snowfall (stored as tenths of cm)
     );
 
     assert!(
@@ -207,7 +207,7 @@ fn test_light_flurries_scenario() {
 
 #[test]
 fn test_has_snow_returns_true_with_snowfall() {
-    let precip = Precipitation::new_with_snowfall(Some(50), Some(5), Some(10), Some(10));
+    let precip = Precipitation::new_with_snowfall(Some(50), Some(5), Some(10), Some(10)); // 1.0cm snowfall
 
     assert!(
         precip.has_snow(),

@@ -167,6 +167,18 @@ impl Precipitation {
         (min + max) as f32 / 2.0
     }
 
+    /// Best estimate of precipitation amount in mm.
+    ///
+    /// When only a single value is available (amount_min absent, e.g. Open-Meteo hourly),
+    /// returns amount_max directly. When both bounds are present (e.g. BOM), returns
+    /// the midpoint. This avoids the halving error that median() produces for Open-Meteo data.
+    pub fn amount(&self) -> f32 {
+        match (self.amount_min, self.amount_max) {
+            (None, Some(max)) => max as f32,
+            _ => self.median(),
+        }
+    }
+
     /// Check if this precipitation includes snowfall
     pub fn has_snow(&self) -> bool {
         self.snowfall_amount.unwrap_or(0) > 0
@@ -175,12 +187,16 @@ impl Precipitation {
     /// Determine if precipitation is primarily snow based on water equivalent ratio
     /// Using Open-Meteo's ratio: 7 cm snow ≈ 10 mm water (0.7 density)
     ///
+    /// Note: `snowfall_amount` is stored in tenths of a cm (×10) to preserve one decimal
+    /// place of precision. Plain rounding to whole cm would zero out light snow (0.1–0.49 cm).
+    ///
     /// Note: uses `amount_max` directly when `amount_min` is absent (e.g. Open-Meteo hourly,
     /// which provides a single precipitation value). Using `median()` in that case would
     /// substitute 0 for the missing min, halving the denominator and making snow detection
     /// twice as permissive as the 60% threshold intends.
     pub fn is_primarily_snow(&self) -> bool {
-        let snow_cm = self.snowfall_amount.unwrap_or(0) as f32;
+        // snowfall_amount is stored as tenths of a cm; convert to cm
+        let snow_cm = self.snowfall_amount.unwrap_or(0) as f32 / 10.0;
 
         if snow_cm == 0.0 {
             return false;
@@ -200,9 +216,10 @@ impl Precipitation {
         snow_water_equivalent > (precip_mm * 0.6)
     }
 
-    /// Get snowfall amount in cm
+    /// Get snowfall amount in cm.
+    /// `snowfall_amount` is stored as tenths of a cm (×10) for sub-cm precision.
     pub fn snowfall_cm(&self) -> f32 {
-        self.snowfall_amount.unwrap_or(0) as f32
+        self.snowfall_amount.unwrap_or(0) as f32 / 10.0
     }
 }
 

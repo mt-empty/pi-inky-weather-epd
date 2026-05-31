@@ -560,7 +560,7 @@ impl ContextBuilder {
             &hourly_forecast_data,
             &local_forecast_window_start,
             &local_forecast_window_end,
-            |item: &HourlyForecast| item.precipitation.median(),
+            |item: &HourlyForecast| item.precipitation.amount(),
             |item| item.time.with_timezone(&Local),
         ))
         .to_string();
@@ -705,7 +705,7 @@ impl ContextBuilder {
             .now_local()
             .format(&CONFIG.render_options.date_format)
             .to_string();
-        self.context.current_hour_rain_amount = current_hour.precipitation.median().to_string();
+        self.context.current_hour_rain_amount = current_hour.precipitation.amount().to_string();
 
         self
     }

@@ -196,7 +196,9 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast
                     Some(hourly_data.precipitation_probability[i]),
                     None,
                     Some(hourly_data.precipitation[i].round() as u16),
-                    Some(hourly_data.snowfall[i].round() as u16),
+                    // Store as tenths of a cm (×10) to preserve one decimal place of precision.
+                    // Plain .round() would discard 0.1–0.49 cm, silently zeroing light snow.
+                    Some((hourly_data.snowfall[i] * 10.0).round() as u16),
                 );
 
                 let uv_index = hourly_data.uv_index[i].round() as u16;
@@ -267,7 +269,8 @@ impl From<OpenMeteoDailyResponse> for Vec<crate::domain::models::DailyForecast> 
                 let precipitation = {
                     let amount_max = response.daily.precipitation_sum[i].round() as u16;
                     let chance = response.daily.precipitation_probability_max[i];
-                    let snowfall_amount = response.daily.snowfall_sum[i].round() as u16;
+                    // Store as tenths of a cm (×10) — same convention as hourly snowfall.
+                    let snowfall_amount = (response.daily.snowfall_sum[i] * 10.0).round() as u16;
 
                     if amount_max > 0 || chance > 0 || snowfall_amount > 0 {
                         Some(Precipitation::new_with_snowfall(
