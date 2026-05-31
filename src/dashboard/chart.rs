@@ -1,7 +1,12 @@
 use crate::{
-    clock::Clock, constants::DEFAULT_AXIS_LABEL_FONT_SIZE, logger, weather::icons::UVIndexIcon,
+    clock::Clock,
+    constants::DEFAULT_AXIS_LABEL_FONT_SIZE,
+    i18n::{translate, weekday_long, TranslationKey},
+    logger,
+    weather::icons::UVIndexIcon,
 };
 use anyhow::Error;
+use chrono::Datelike;
 use std::fmt;
 use strum_macros::Display;
 
@@ -120,6 +125,8 @@ pub struct HourlyForecastGraph {
     pub background_colour: String,
     /// Display timezone for time-dependent labels (e.g. the "tomorrow" day name).
     pub tz: chrono_tz::Tz,
+    /// Display language for time-dependent labels (e.g. the "tomorrow" day name).
+    pub language: String,
 }
 
 // TODO: use the builder pattern to create the graph
@@ -152,6 +159,7 @@ impl Default for HourlyForecastGraph {
             text_colour: "black".to_string(),
             background_colour: "white".to_string(),
             tz: chrono_tz::UTC,
+            language: "en".to_string(),
         }
     }
 }
@@ -648,11 +656,12 @@ impl HourlyForecastGraph {
     }
 
     fn draw_tomorrow_line(&self, x_coor: f32, clock: &dyn Clock) -> String {
+        let language = self.language.as_str();
         let tomorrow_day_name = clock
             .now_local(self.tz)
             .checked_add_days(chrono::Days::new(1))
-            .map(|d| d.format("%A").to_string())
-            .unwrap_or_else(|| "Tomorrow".to_string());
+            .map(|date| weekday_long(date.weekday(), language).to_string())
+            .unwrap_or_else(|| translate(TranslationKey::Tomorrow, language).to_string());
 
         format!(
             r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />

@@ -64,8 +64,8 @@
     </text>
 
     <text x="246" y="158" text-anchor="middle" font-size="18" fill="{text_colour}">
-        <tspan>Feels</tspan>
-        <tspan dy="15.5" dx="-46.6">Like</tspan>
+        <tspan>{label_feels}</tspan>
+        <tspan dy="15.5" dx="-46.6">{label_like}</tspan>
         <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="{feels_like_colour}"
             dx="10" dy="-7">
             {current_hour_feels_like}
@@ -120,13 +120,13 @@
 
         <!-- row header-->
         <svg x="15" y="210" label="UV-index" text-anchor="start">
-            <text x="16" y="43.5" fill="{text_colour}" font-size="20">Metric
+            <text x="16" y="43.5" fill="{text_colour}" font-size="20">{label_metric}
             </text>
 
-            <text x="85" y="43.5" fill="{text_colour}" font-size="20">Now
+            <text x="85" y="43.5" fill="{text_colour}" font-size="20">{label_now}
             </text>
-            <text x="140" y="43.5" fill="{text_colour}" font-size="20">Max
-                <tspan baseline-shift="super" font-size="17" dx="-3">24h</tspan>
+            <text x="140" y="43.5" fill="{text_colour}" font-size="20">{label_max}
+                <tspan baseline-shift="super" font-size="17" dx="-3">{label_24h}</tspan>
             </text>
         </svg>
 

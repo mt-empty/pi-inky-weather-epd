@@ -5,6 +5,7 @@ pub mod constants;
 pub mod dashboard;
 pub mod domain;
 pub mod errors;
+pub mod i18n;
 mod logger;
 pub mod providers;
 pub mod update;

@@ -5,11 +5,12 @@ use crate::{
     dashboard::chart::{GraphDataPath, HourlyForecastGraph},
     domain::models::{DailyForecast, HourlyForecast},
     errors::{DashboardError, Description},
+    i18n::{format_localized_date, translate, weekday_short, TranslationKey},
     logger,
     utils::{find_max_item_between_dates, total_between_dates},
     weather::icons::{HumidityIconName, Icon, IconContext, SunPositionIconName, UVIndexIcon},
 };
-use chrono::{DateTime, NaiveDate, Timelike, Utc};
+use chrono::{DateTime, Datelike, NaiveDate, Timelike, Utc};
 use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -48,6 +49,12 @@ pub struct Context {
     pub current_hour_relative_humidity: String,
     pub current_hour_relative_humidity_icon: String,
     pub current_day_date: String,
+    pub label_feels: String,
+    pub label_like: String,
+    pub label_metric: String,
+    pub label_now: String,
+    pub label_max: String,
+    pub label_24h: String,
     pub current_hour_rain_amount: String,
     pub sunset_time: String,
     pub sunrise_time: String,
@@ -114,6 +121,7 @@ impl Context {
             .to_string();
         let colours = settings.colours.clone();
         let render_options = settings.render_options.clone();
+        let language = render_options.language.as_str();
         let graph_height = "300".to_string();
         let graph_width = "600".to_string();
         Self {
@@ -145,6 +153,12 @@ impl Context {
             current_hour_relative_humidity: NOT_AVAILABLE.to_string(),
             current_hour_relative_humidity_icon: not_available_icon_path.clone(),
             current_day_date: NOT_AVAILABLE.to_string(),
+            label_feels: translate(TranslationKey::Feels, language).to_string(),
+            label_like: translate(TranslationKey::Like, language).to_string(),
+            label_metric: translate(TranslationKey::Metric, language).to_string(),
+            label_now: translate(TranslationKey::Now, language).to_string(),
+            label_max: translate(TranslationKey::Max, language).to_string(),
+            label_24h: translate(TranslationKey::Hours24, language).to_string(),
             current_hour_rain_amount: NOT_AVAILABLE.to_string(),
             sunrise_time: NOT_AVAILABLE.to_string(),
             sunset_time: NOT_AVAILABLE.to_string(),
@@ -472,25 +486,39 @@ impl<'a> ContextBuilder<'a> {
     }
 
     fn initialize_day_names(&mut self, local_midnight_time: DateTime<Tz>) {
+        let language = self.settings.render_options.language.as_str();
+
         // Pre-fill day names based on local calendar (independent of forecast data)
-        self.context.day2_name = (local_midnight_time + chrono::Duration::days(1))
-            .format("%a")
-            .to_string();
-        self.context.day3_name = (local_midnight_time + chrono::Duration::days(2))
-            .format("%a")
-            .to_string();
-        self.context.day4_name = (local_midnight_time + chrono::Duration::days(3))
-            .format("%a")
-            .to_string();
-        self.context.day5_name = (local_midnight_time + chrono::Duration::days(4))
-            .format("%a")
-            .to_string();
-        self.context.day6_name = (local_midnight_time + chrono::Duration::days(5))
-            .format("%a")
-            .to_string();
-        self.context.day7_name = (local_midnight_time + chrono::Duration::days(6))
-            .format("%a")
-            .to_string();
+        self.context.day2_name = weekday_short(
+            (local_midnight_time + chrono::Duration::days(1)).weekday(),
+            language,
+        )
+        .to_string();
+        self.context.day3_name = weekday_short(
+            (local_midnight_time + chrono::Duration::days(2)).weekday(),
+            language,
+        )
+        .to_string();
+        self.context.day4_name = weekday_short(
+            (local_midnight_time + chrono::Duration::days(3)).weekday(),
+            language,
+        )
+        .to_string();
+        self.context.day5_name = weekday_short(
+            (local_midnight_time + chrono::Duration::days(4)).weekday(),
+            language,
+        )
+        .to_string();
+        self.context.day6_name = weekday_short(
+            (local_midnight_time + chrono::Duration::days(5)).weekday(),
+            language,
+        )
+        .to_string();
+        self.context.day7_name = weekday_short(
+            (local_midnight_time + chrono::Duration::days(6)).weekday(),
+            language,
+        )
+        .to_string();
     }
 
     // Extrusion Pattern: force everything through one function until it resembles spaghetti
@@ -543,6 +571,7 @@ impl<'a> ContextBuilder<'a> {
             text_colour: self.settings.colours.text_colour.to_string(),
             background_colour: self.settings.colours.background_colour.to_string(),
             tz: self.settings.misc.timezone,
+            language: self.settings.render_options.language.clone(),
             ..Default::default()
         };
 
@@ -757,10 +786,11 @@ impl<'a> ContextBuilder<'a> {
         self.context.current_hour_actual_temp = current_hour.temperature.to_string();
         self.context.current_hour_weather_icon = current_hour.icon_path(&self.icon_ctx);
         self.context.current_hour_feels_like = current_hour.apparent_temperature.to_string();
-        self.context.current_day_date = clock
-            .now_local(self.settings.misc.timezone)
-            .format(self.settings.render_options.date_format.as_ref())
-            .to_string();
+        self.context.current_day_date = format_localized_date(
+            clock.now_local(self.settings.misc.timezone),
+            self.settings.render_options.date_format.as_ref(),
+            &self.settings.render_options.language,
+        );
         self.context.current_hour_rain_amount = current_hour.precipitation.amount().to_string();
 
         self
