@@ -24,25 +24,27 @@
         <!-- Rain patterns based on precipitation intensity -->
         <!-- patternTransform flips the tile back upright because blocks are drawn inside
              a scale(1,-1) group; without this the drops would appear to float upward. -->
-        <pattern id="rain" patternUnits="userSpaceOnUse" width="12" height="16" patternTransform="scale(1,-1) translate(0,-16)">
-            <rect width="12" height="16" fill="{rain_colour}" />
-            <path d="M4,0.990777969 C4,0.443586406 4.44386482,0 5,0 C5.55228475,0 6,0.45097518 6,0.990777969 L6,5.00922203 C6,5.55641359 5.55613518,6 5,6 C4.44771525,6 4,5.54902482 4,5.00922203 L4,0.990777969 Z M10,8.99077797 C10,8.44358641 10.4438648,8 11,8 C11.5522847,8 12,8.45097518 12,8.99077797 L12,13.009222 C12,13.5564136 11.5561352,14 11,14 C10.4477153,14 10,13.5490248 10,13.009222 L10,8.99077797 Z" fill="white" />
+        <pattern id="rain" patternUnits="userSpaceOnUse" width="12" height="18" patternTransform="scale(1,-1) translate(0,-18) rotate(-15, 6, 9)">
+            <rect width="12" height="18" fill="{rain_colour}" />
+            <!-- Two elongated tilted raindrops per tile -->
+            <path d="M3,1 C3,0.45 3.45,0 4,0 C4.55,0 5,0.45 5,1 L5,8 C5,8.55 4.55,9 4,9 C3.45,9 3,8.55 3,8 Z
+                     M8,10 C8,9.45 8.45,9 9,9 C9.55,9 10,9.45 10,10 L10,17 C10,17.55 9.55,18 9,18 C8.45,18 8,17.55 8,17 Z" fill="white" />
         </pattern>
-        <pattern id="heavy-rain" patternUnits="userSpaceOnUse" width="12" height="24" patternTransform="scale(1,-1) translate(0,-24)">
+        <pattern id="hail" patternUnits="userSpaceOnUse" width="12" height="24" patternTransform="scale(1,-1) translate(0,-24)">
             <rect width="12" height="24" fill="{rain_colour}" />
             <path d="M2 0h2v12H2V0zm1 20c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM9 8c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm-1 4h2v12H8V12z" fill="white" />
         </pattern>
-        <!-- Snowflake pattern: 6-spoke asterisk with centre dot, scaled to 14x14 tile -->
-        <pattern id="snow" patternUnits="userSpaceOnUse" width="14" height="14">
-            <rect width="14" height="14" fill="{snow_colour}" />
+        <!-- Snowflake pattern: 6-spoke asterisk with centre dot, scaled to 28x28 tile -->
+        <pattern id="snow" patternUnits="userSpaceOnUse" width="28" height="28">
+            <rect width="28" height="28" fill="{snow_colour}" />
             <!-- Vertical spoke -->
-            <line x1="7" y1="1" x2="7" y2="13" stroke="white" stroke-width="1.2" stroke-linecap="round" />
+            <line x1="14" y1="2" x2="14" y2="26" stroke="white" stroke-width="2" stroke-linecap="round" />
             <!-- Diagonal spoke: top-left to bottom-right -->
-            <line x1="1.8" y1="3.8" x2="12.2" y2="10.2" stroke="white" stroke-width="1.2" stroke-linecap="round" />
+            <line x1="3.6" y1="7.6" x2="24.4" y2="20.4" stroke="white" stroke-width="2" stroke-linecap="round" />
             <!-- Diagonal spoke: top-right to bottom-left -->
-            <line x1="12.2" y1="3.8" x2="1.8" y2="10.2" stroke="white" stroke-width="1.2" stroke-linecap="round" />
+            <line x1="24.4" y1="7.6" x2="3.6" y2="20.4" stroke="white" stroke-width="2" stroke-linecap="round" />
             <!-- Centre dot -->
-            <circle cx="7" cy="7" r="1.2" fill="white" />
+            <circle cx="14" cy="14" r="2.5" fill="white" />
         </pattern>
 </defs>
 

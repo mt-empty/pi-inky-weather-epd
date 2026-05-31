@@ -1,5 +1,6 @@
 ---
 source: tests/snapshot_open_meteo_prefer_codes_test.rs
+assertion_line: 134
 expression: svg
 ---
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
@@ -25,7 +26,32 @@ expression: svg
         <pattern id="crosshatch" patternUnits="userSpaceOnUse" width="10" height="10">
             <path d="M 0 0 L 10 10 M 10 0 L 0 10" stroke="blue" stroke-width="1" />
         </pattern>
-    </defs>
+        <!-- Rain patterns based on precipitation intensity -->
+        <!-- patternTransform flips the tile back upright because blocks are drawn inside
+             a scale(1,-1) group; without this the drops would appear to float upward. -->
+        <pattern id="rain" patternUnits="userSpaceOnUse" width="12" height="18" patternTransform="scale(1,-1) translate(0,-18) rotate(-15, 6, 9)">
+            <rect width="12" height="18" fill="blue" />
+            <!-- Two elongated tilted raindrops per tile -->
+            <path d="M3,1 C3,0.45 3.45,0 4,0 C4.55,0 5,0.45 5,1 L5,8 C5,8.55 4.55,9 4,9 C3.45,9 3,8.55 3,8 Z
+                     M8,10 C8,9.45 8.45,9 9,9 C9.55,9 10,9.45 10,10 L10,17 C10,17.55 9.55,18 9,18 C8.45,18 8,17.55 8,17 Z" fill="white" />
+        </pattern>
+        <pattern id="hail" patternUnits="userSpaceOnUse" width="12" height="24" patternTransform="scale(1,-1) translate(0,-24)">
+            <rect width="12" height="24" fill="blue" />
+            <path d="M2 0h2v12H2V0zm1 20c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM9 8c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm-1 4h2v12H8V12z" fill="white" />
+        </pattern>
+        <!-- Snowflake pattern: 6-spoke asterisk with centre dot, scaled to 28x28 tile -->
+        <pattern id="snow" patternUnits="userSpaceOnUse" width="28" height="28">
+            <rect width="28" height="28" fill="blue" />
+            <!-- Vertical spoke -->
+            <line x1="14" y1="2" x2="14" y2="26" stroke="white" stroke-width="2" stroke-linecap="round" />
+            <!-- Diagonal spoke: top-left to bottom-right -->
+            <line x1="3.6" y1="7.6" x2="24.4" y2="20.4" stroke="white" stroke-width="2" stroke-linecap="round" />
+            <!-- Diagonal spoke: top-right to bottom-left -->
+            <line x1="24.4" y1="7.6" x2="3.6" y2="20.4" stroke="white" stroke-width="2" stroke-linecap="round" />
+            <!-- Centre dot -->
+            <circle cx="14" cy="14" r="2.5" fill="white" />
+        </pattern>
+</defs>
 
     <rect width="100%" height="100%" fill="white" />
 
@@ -218,12 +244,39 @@ expression: svg
         <text x="-10" y="300"  fill="black" font-size="35" text-anchor="end" dx="8" dy="4">12°</text><text x="-10" y="240.00002"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">14.2°</text><text x="-10" y="179.99997"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">16.4°</text><text x="-10" y="119.999985"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">18.5°</text><text x="-10" y="59.999985"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">20.7°</text><text x="-10" y="0"  fill="black" font-size="35" text-anchor="end" dx="8" dy="4">23°</text>
         <!-- Y right Labels -->
         <text x="610" y="300" fill="black"  font-size="19" text-anchor="start" dy="4">0%</text><text x="610" y="240" fill="black"  font-size="19" text-anchor="start" dy="4">20%</text><text x="610" y="180" fill="black"  font-size="19" text-anchor="start" dy="4">40%</text><text x="610" y="120" fill="black"  font-size="19" text-anchor="start" dy="4">60%</text><text x="610" y="60" fill="black"  font-size="19" text-anchor="start" dy="4">80%</text><text x="610" y="0" fill="black"  font-size="19" text-anchor="start" dy="4">100%</text>
+        <!-- rain curve - Per-hour rain blocks with intensity-based patterns -->
+        <g transform="translate(0, 300) scale(1, -1)">
+            <path d="M 0.0000 0 L 0.0000 174.0000 L 26.0870 234.0000 L 26.0870 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 26.0870 0 L 26.0870 234.0000 L 52.1739 240.0000 L 52.1739 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 52.1739 0 L 52.1739 240.0000 L 78.2609 279.0000 L 78.2609 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 78.2609 0 L 78.2609 279.0000 L 104.3478 255.0000 L 104.3478 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 104.3478 0 L 104.3478 255.0000 L 130.4348 234.0000 L 130.4348 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 130.4348 0 L 130.4348 234.0000 L 156.5217 180.0000 L 156.5217 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 156.5217 0 L 156.5217 180.0000 L 182.6087 129.0000 L 182.6087 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 182.6087 0 L 182.6087 129.0000 L 208.6956 99.0000 L 208.6956 0 Z" fill="url(#rain)" fill-opacity="25%" />
+            <path d="M 208.6956 0 L 208.6956 99.0000 L 234.7826 120.0000 L 234.7826 0 Z" fill="url(#rain)" fill-opacity="25%" />
+            <path d="M 234.7826 0 L 234.7826 120.0000 L 260.8696 99.0000 L 260.8696 0 Z" fill="url(#rain)" fill-opacity="25%" />
+            <path d="M 260.8696 0 L 260.8696 99.0000 L 286.9565 135.0000 L 286.9565 0 Z" fill="url(#rain)" fill-opacity="25%" />
+            <path d="M 286.9565 0 L 286.9565 135.0000 L 313.0435 165.0000 L 313.0435 0 Z" fill="url(#rain)" fill-opacity="25%" />
+            <path d="M 313.0435 0 L 313.0435 165.0000 L 339.1304 144.0000 L 339.1304 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 339.1304 0 L 339.1304 144.0000 L 365.2174 144.0000 L 365.2174 0 Z" fill="url(#rain)" fill-opacity="25%" />
+            <path d="M 365.2174 0 L 365.2174 144.0000 L 391.3044 195.0000 L 391.3044 0 Z" fill="url(#rain)" fill-opacity="25%" />
+            <path d="M 391.3044 0 L 391.3044 195.0000 L 417.3913 240.0000 L 417.3913 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 417.3913 0 L 417.3913 240.0000 L 443.4782 264.0000 L 443.4782 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 443.4782 0 L 443.4782 264.0000 L 469.5652 279.0000 L 469.5652 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 469.5652 0 L 469.5652 279.0000 L 495.6522 249.0000 L 495.6522 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 495.6522 0 L 495.6522 249.0000 L 521.7391 210.0000 L 521.7391 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 521.7391 0 L 521.7391 210.0000 L 547.8260 150.0000 L 547.8260 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 547.8260 0 L 547.8260 150.0000 L 573.9130 105.0000 L 573.9130 0 Z" fill="url(#rain)" fill-opacity="35%" />
+            <path d="M 573.9130 0 L 573.9130 105.0000 L 600.0000 105.0000 L 600.0000 0 Z" fill="url(#rain)" fill-opacity="25%" />
+            <path d="M 600.0000 0 L 600.0000 105.0000 L 600.0000 105.0000 L 600.0000 0 Z" fill="url(#rain)" fill-opacity="25%" />
+        </g>
+        <!-- temp curve -->
         <path stroke="red" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
             d="M 0.0000 41.5888C 34.7826 37.8505, 43.4783 35.5140, 52.1739 33.6449C 60.8696 31.7757, 69.5652 28.9720, 78.2609 28.0374C 86.9565 27.1028, 95.6522 27.5701, 104.3478 28.0374C 113.0435 28.5047, 121.7391 29.9065, 130.4348 30.8411C 139.1304 31.7757, 147.8261 31.7757, 156.5217 33.6449C 165.2174 35.5140, 173.9130 35.0467, 182.6087 42.0561C 191.3043 49.0654, 200.0000 64.9533, 208.6956 75.7009C 217.3913 86.4486, 226.0870 99.0654, 234.7826 106.5420C 243.4783 114.0187, 252.1739 116.3551, 260.8696 120.5607C 269.5652 124.7663, 278.2609 127.5701, 286.9565 131.7757C 295.6521 135.9813, 304.3478 131.7757, 313.0435 145.7944C 321.7391 159.8131, 330.4348 194.8598, 339.1304 215.8878C 347.8261 236.9159, 356.5217 257.9439, 365.2174 271.9626C 373.9131 285.9813, 382.6087 313.0841, 391.3044 300.0000C 400.0000 286.9159, 408.6956 214.9533, 417.3913 193.4579C 426.0869 171.9626, 434.7826 175.2336, 443.4782 171.0281C 452.1739 166.8224, 460.8696 176.1683, 469.5652 168.2243C 478.2609 160.2804, 486.9565 136.4486, 495.6522 123.3645C 504.3478 110.2804, 513.0435 99.0654, 521.7391 89.7196C 530.4348 80.3738, 539.1304 73.8318, 547.8260 67.2897C 556.5217 60.7477, 565.2173 55.6075, 573.9130 50.4673C 582.6086 45.3271, 595.6522 38.7850, 600.0000 36.4486" stroke-width="3.0" fill="none" />
+        <!-- feels like temp curve -->
         <path stroke="green" stroke-linejoin="round" stroke-dasharray="5,5"
             transform="translate(0, 300) scale(1, -1)" d="M 0.0000 40.1869C 34.7826 26.6355, 43.4783 19.6262, 52.1739 16.8224C 60.8696 14.0187, 69.5652 14.9533, 78.2609 14.0187C 86.9565 13.0841, 95.6522 10.7477, 104.3478 11.2149C 113.0435 11.6822, 121.7391 15.8878, 130.4348 16.8224C 139.1304 17.7570, 147.8261 15.4205, 156.5217 16.8224C 165.2174 18.2243, 173.9130 21.4953, 182.6087 25.2336C 191.3043 28.9720, 200.0000 34.5794, 208.6956 39.2523C 217.3913 43.9252, 226.0870 47.6635, 234.7826 53.2710C 243.4783 58.8785, 252.1739 65.8878, 260.8696 72.8972C 269.5652 79.9065, 278.2609 87.8505, 286.9565 95.3271C 295.6521 102.8037, 304.3478 100.0000, 313.0435 117.7570C 321.7391 135.5140, 330.4348 177.5701, 339.1304 201.8691C 347.8261 226.1682, 356.5217 249.0654, 365.2174 263.5514C 373.9131 278.0374, 382.6087 305.6075, 391.3044 288.7851C 400.0000 271.9626, 408.6956 188.3177, 417.3913 162.6168C 426.0869 136.9159, 434.7826 136.9159, 443.4782 134.5794C 452.1739 132.2430, 460.8696 155.1402, 469.5652 148.5981C 478.2609 142.0561, 486.9565 112.6168, 495.6522 95.3271C 504.3478 78.0374, 513.0435 55.1402, 521.7391 44.8598C 530.4348 34.5794, 539.1304 38.7850, 547.8260 33.6449C 556.5217 28.5047, 565.2173 19.6262, 573.9130 14.0187C 582.6086 8.4112, 595.6522 2.3364, 600.0000 0.0000" stroke-width="3.0" fill="none" />
-        <path transform="translate(0, 300) scale(1, -1)" d="M 0.0000 174.0000L 26.086956 234L 52.173912 240L 78.260864 279L 104.347824 255L 130.43478 234L 156.52173 180L 182.60869 129L 208.69565 99L 234.78261 120L 260.86957 99L 286.9565 135L 313.04346 165L 339.13043 144L 365.21738 144L 391.30435 195L 417.3913 240L 443.47824 264L 469.56522 279L 495.65216 249L 521.73914 210L 547.82605 150L 573.913 105L 600 105 L 600 0 L 0 0Z" fill="blue"
-            fill-opacity="25%" />
         <defs>
             <linearGradient id="UVGradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0.00%" stop-color="white"/><stop offset="4.35%" stop-color="white"/><stop offset="8.70%" stop-color="white"/><stop offset="13.04%" stop-color="white"/><stop offset="17.39%" stop-color="white"/><stop offset="21.74%" stop-color="white"/><stop offset="26.09%" stop-color="white"/><stop offset="30.43%" stop-color="white"/><stop offset="34.78%" stop-color="white"/><stop offset="39.13%" stop-color="white"/><stop offset="43.48%" stop-color="white"/><stop offset="47.83%" stop-color="green"/><stop offset="52.17%" stop-color="yellow"/><stop offset="56.52%" stop-color="yellow"/><stop offset="60.87%" stop-color="white"/><stop offset="65.22%" stop-color="yellow"/><stop offset="69.57%" stop-color="green"/><stop offset="73.91%" stop-color="green"/><stop offset="78.26%" stop-color="yellow"/><stop offset="82.61%" stop-color="green"/><stop offset="86.96%" stop-color="white"/><stop offset="91.30%" stop-color="white"/><stop offset="95.65%" stop-color="white"/><stop offset="100.00%" stop-color="white"/>

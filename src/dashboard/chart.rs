@@ -36,6 +36,7 @@ impl Curve {
 pub struct RainBlock {
     pub path: String,
     pub pattern: String,
+    pub opacity: &'static str,
 }
 
 #[derive(Clone, Debug)]
@@ -521,7 +522,6 @@ impl HourlyForecastGraph {
     }
 
     pub fn draw_uv_gradient_over_time(&self) -> String {
-        logger::detail(format!("UV indices for 24h: {:?}", self.uv_data));
         let mut gradient = String::new();
 
         for (i, &uv) in self.uv_data.iter().enumerate() {
@@ -537,13 +537,19 @@ impl HourlyForecastGraph {
 
     /// Select precipitation pattern based on chance percentage and whether the hour is
     /// primarily snow (pre-computed from `Precipitation::is_primarily_snow()`).
-    fn select_precipitation_pattern(chance: f32, is_snow: bool) -> &'static str {
+    pub(crate) fn select_precipitation_pattern(_chance: f32, is_snow: bool) -> &'static str {
         if is_snow {
             "snow"
-        } else if chance >= 50.0 {
-            "heavy-rain"
         } else {
             "rain"
+        }
+    }
+
+    fn select_opacity(chance: f32, is_snow: bool) -> &'static str {
+        if chance >= 50.0 || is_snow {
+            "35%"
+        } else {
+            "25%"
         }
     }
 
@@ -553,8 +559,8 @@ impl HourlyForecastGraph {
             .iter()
             .map(|block| {
                 format!(
-                    r#"<path d="{}" fill="url(#{})" fill-opacity="25%" />"#,
-                    block.path, block.pattern
+                    r#"<path d="{}" fill="url(#{})" fill-opacity="{}" />"#,
+                    block.path, block.pattern, block.opacity
                 )
             })
             .collect::<Vec<_>>()
@@ -620,8 +626,7 @@ impl HourlyForecastGraph {
                         } else {
                             // Last point - extrapolate one step, but clamp to graph width
                             // so the final block does not overflow past the right Y-axis.
-                            let step = current.x
-                                - if i > 0 { scaled_points[i - 1].x } else { 0.0 };
+                            let step = current.x - if i > 0 { scaled_points[i - 1].x } else { 0.0 };
                             Point {
                                 x: (current.x + step).min(self.width),
                                 y: current.y,
@@ -630,7 +635,9 @@ impl HourlyForecastGraph {
 
                         // Get original rain chance percentage and snow flag for pattern selection
                         let rain_chance = curve.points()[i].y;
-                        let pattern = Self::select_precipitation_pattern(rain_chance, self.snow_data[i]);
+                        let is_snow = self.snow_data[i];
+                        let pattern = Self::select_precipitation_pattern(rain_chance, is_snow);
+                        let opacity = Self::select_opacity(rain_chance, is_snow);
 
                         // Create stepped path: bottom-left -> top-left -> top-right -> bottom-right
                         let block_path = format!(
@@ -641,6 +648,7 @@ impl HourlyForecastGraph {
                         blocks.push(RainBlock {
                             path: block_path,
                             pattern: pattern.to_string(),
+                            opacity,
                         });
                     }
 

@@ -672,6 +672,23 @@ impl ContextBuilder {
                 }
                 graph.uv_data[x] = forecast.uv_index;
                 graph.snow_data[x] = forecast.precipitation.is_primarily_snow();
+
+                let chance = forecast.precipitation.chance.unwrap_or(0);
+                let precip_mm = forecast.precipitation.amount_max.unwrap_or(0) as f32;
+                let is_snow = graph.snow_data[x];
+                let pattern = HourlyForecastGraph::select_precipitation_pattern(chance as f32, is_snow);
+                logger::debug(format!(
+                    "h{:02}: temp={:>5.1}° feels={:>5.1}° precip={:>3}% {:>5.2}mm  uv={:>2}  snow={:<5}  → {}",
+                    x,
+                    *forecast.temperature,
+                    *forecast.apparent_temperature,
+                    chance,
+                    precip_mm,
+                    forecast.uv_index,
+                    is_snow,
+                    pattern,
+                ));
+
                 x += 1;
             });
     }
