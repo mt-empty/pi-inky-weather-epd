@@ -1,7 +1,13 @@
 use crate::{
-    clock::Clock, constants::DEFAULT_AXIS_LABEL_FONT_SIZE, logger, weather::icons::UVIndexIcon,
+    clock::Clock,
+    constants::DEFAULT_AXIS_LABEL_FONT_SIZE,
+    i18n::{translate, weekday_long, TranslationKey},
+    logger,
+    weather::icons::UVIndexIcon,
+    CONFIG,
 };
 use anyhow::Error;
+use chrono::Datelike;
 use strum_macros::Display;
 
 #[derive(Clone, Debug, Copy)]
@@ -464,11 +470,12 @@ impl HourlyForecastGraph {
     }
 
     fn draw_tomorrow_line(&self, x_coor: f32, clock: &dyn Clock) -> String {
+        let language = CONFIG.render_options.language.as_str();
         let tomorrow_day_name = clock
             .now_local()
             .checked_add_days(chrono::Days::new(1))
-            .map(|d| d.format("%A").to_string())
-            .unwrap_or_else(|| "Tomorrow".to_string());
+            .map(|date| weekday_long(date.weekday(), language).to_string())
+            .unwrap_or_else(|| translate(TranslationKey::Tomorrow, language).to_string());
 
         format!(
             r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
