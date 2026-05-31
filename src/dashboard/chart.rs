@@ -75,6 +75,7 @@ impl GraphData {
 pub struct HourlyForecastGraph {
     pub curves: Vec<CurveType>,
     pub uv_data: [u16; 24],
+    pub snow_data: [bool; 24],
     pub height: f32,
     pub width: f32,
     pub starting_x: f32,
@@ -107,6 +108,7 @@ impl Default for HourlyForecastGraph {
                 }),
             ],
             uv_data: [0; 24],
+            snow_data: [false; 24],
             height: 300.0,
             width: 600.0,
             starting_x: 0.0,
@@ -533,9 +535,12 @@ impl HourlyForecastGraph {
         gradient
     }
 
-    /// Select rain pattern based on precipitation chance percentage
-    fn select_rain_pattern(chance: f32) -> &'static str {
-        if chance >= 50.0 {
+    /// Select precipitation pattern based on chance percentage and whether the hour is
+    /// primarily snow (pre-computed from `Precipitation::is_primarily_snow()`).
+    fn select_precipitation_pattern(chance: f32, is_snow: bool) -> &'static str {
+        if is_snow {
+            "snow"
+        } else if chance >= 50.0 {
             "heavy-rain"
         } else {
             "rain"
@@ -613,18 +618,19 @@ impl HourlyForecastGraph {
                         let next = if i + 1 < scaled_points.len() {
                             scaled_points[i + 1]
                         } else {
-                            // Last point - use same x as current to close the path
+                            // Last point - extrapolate one step, but clamp to graph width
+                            // so the final block does not overflow past the right Y-axis.
+                            let step = current.x
+                                - if i > 0 { scaled_points[i - 1].x } else { 0.0 };
                             Point {
-                                x: current.x
-                                    + (current.x
-                                        - if i > 0 { scaled_points[i - 1].x } else { 0.0 }),
+                                x: (current.x + step).min(self.width),
                                 y: current.y,
                             }
                         };
 
-                        // Get original rain chance percentage for pattern selection
+                        // Get original rain chance percentage and snow flag for pattern selection
                         let rain_chance = curve.points()[i].y;
-                        let pattern = Self::select_rain_pattern(rain_chance);
+                        let pattern = Self::select_precipitation_pattern(rain_chance, self.snow_data[i]);
 
                         // Create stepped path: bottom-left -> top-left -> top-right -> bottom-right
                         let block_path = format!(

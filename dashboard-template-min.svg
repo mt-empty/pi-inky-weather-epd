@@ -22,17 +22,27 @@
             <path d="M 0 0 L 10 10 M 10 0 L 0 10" stroke="{rain_colour}" stroke-width="1" />
         </pattern>
         <!-- Rain patterns based on precipitation intensity -->
-        <pattern id="rain" patternUnits="userSpaceOnUse" width="12" height="16">
+        <!-- patternTransform flips the tile back upright because blocks are drawn inside
+             a scale(1,-1) group; without this the drops would appear to float upward. -->
+        <pattern id="rain" patternUnits="userSpaceOnUse" width="12" height="16" patternTransform="scale(1,-1) translate(0,-16)">
             <rect width="12" height="16" fill="{rain_colour}" />
             <path d="M4,0.990777969 C4,0.443586406 4.44386482,0 5,0 C5.55228475,0 6,0.45097518 6,0.990777969 L6,5.00922203 C6,5.55641359 5.55613518,6 5,6 C4.44771525,6 4,5.54902482 4,5.00922203 L4,0.990777969 Z M10,8.99077797 C10,8.44358641 10.4438648,8 11,8 C11.5522847,8 12,8.45097518 12,8.99077797 L12,13.009222 C12,13.5564136 11.5561352,14 11,14 C10.4477153,14 10,13.5490248 10,13.009222 L10,8.99077797 Z" fill="white" />
         </pattern>
-        <pattern id="heavy-rain" patternUnits="userSpaceOnUse" width="12" height="24">
+        <pattern id="heavy-rain" patternUnits="userSpaceOnUse" width="12" height="24" patternTransform="scale(1,-1) translate(0,-24)">
             <rect width="12" height="24" fill="{rain_colour}" />
             <path d="M2 0h2v12H2V0zm1 20c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM9 8c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm-1 4h2v12H8V12z" fill="white" />
         </pattern>
-        <pattern id="snow" patternUnits="userSpaceOnUse" width="10" height="10">
-            <rect width="10" height="10" fill="{rain_colour}" />
-            <path d="M 0 0 L 10 10 M 10 0 L 0 10" stroke="white" stroke-width="1" />
+        <!-- Snowflake pattern: 6-spoke asterisk with centre dot, scaled to 14x14 tile -->
+        <pattern id="snow" patternUnits="userSpaceOnUse" width="14" height="14">
+            <rect width="14" height="14" fill="{snow_colour}" />
+            <!-- Vertical spoke -->
+            <line x1="7" y1="1" x2="7" y2="13" stroke="white" stroke-width="1.2" stroke-linecap="round" />
+            <!-- Diagonal spoke: top-left to bottom-right -->
+            <line x1="1.8" y1="3.8" x2="12.2" y2="10.2" stroke="white" stroke-width="1.2" stroke-linecap="round" />
+            <!-- Diagonal spoke: top-right to bottom-left -->
+            <line x1="12.2" y1="3.8" x2="1.8" y2="10.2" stroke="white" stroke-width="1.2" stroke-linecap="round" />
+            <!-- Centre dot -->
+            <circle cx="7" cy="7" r="1.2" fill="white" />
         </pattern>
 </defs>
 

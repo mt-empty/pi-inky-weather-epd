@@ -26,6 +26,7 @@ pub struct Context {
     pub actual_temp_colour: String,
     pub feels_like_colour: String,
     pub rain_colour: String,
+    pub snow_colour: String,
     // any weather element that is not graph
     pub max_uv_index: String,
     pub max_uv_index_font_style: String,
@@ -120,6 +121,7 @@ impl Default for Context {
             actual_temp_colour: colours.actual_temp_colour.to_string(),
             feels_like_colour: colours.feels_like_colour.to_string(),
             rain_colour: colours.rain_colour.to_string(),
+            snow_colour: colours.snow_colour.to_string(),
             max_uv_index: NOT_AVAILABLE.to_string(),
             max_uv_index_font_style: FontStyle::Normal.to_string(),
             max_gust_speed: NOT_AVAILABLE.to_string(),
@@ -669,6 +671,7 @@ impl ContextBuilder {
                     }
                 }
                 graph.uv_data[x] = forecast.uv_index;
+                graph.snow_data[x] = forecast.precipitation.is_primarily_snow();
                 x += 1;
             });
     }

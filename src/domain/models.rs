@@ -174,13 +174,24 @@ impl Precipitation {
 
     /// Determine if precipitation is primarily snow based on water equivalent ratio
     /// Using Open-Meteo's ratio: 7 cm snow ≈ 10 mm water (0.7 density)
+    ///
+    /// Note: uses `amount_max` directly when `amount_min` is absent (e.g. Open-Meteo hourly,
+    /// which provides a single precipitation value). Using `median()` in that case would
+    /// substitute 0 for the missing min, halving the denominator and making snow detection
+    /// twice as permissive as the 60% threshold intends.
     pub fn is_primarily_snow(&self) -> bool {
         let snow_cm = self.snowfall_amount.unwrap_or(0) as f32;
-        let precip_mm = self.median();
 
         if snow_cm == 0.0 {
             return false;
         }
+
+        // When only a single amount value is available (amount_min absent), use it directly.
+        // When both bounds are present, use the midpoint as the best estimate of total precip.
+        let precip_mm = match (self.amount_min, self.amount_max) {
+            (None, Some(max)) => max as f32,
+            _ => self.median(),
+        };
 
         // Convert snow to water equivalent (7cm snow = 10mm water, so multiply by ~1.43), from open meteo docs
         let snow_water_equivalent = snow_cm * 1.43;

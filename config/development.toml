@@ -22,6 +22,7 @@ y_right_axis_colour = "blue"  # Rain scale
 actual_temp_colour = "red"
 feels_like_colour = "green"
 rain_colour = "blue"
+snow_colour = "blue"
 
 ## Dark Mode Example
 # background_colour   = "black"    # solid black – no dithering
