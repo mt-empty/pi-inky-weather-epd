@@ -25,7 +25,7 @@ use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injectio
 use std::fs;
 use std::path::Path;
 
-/// Count occurrences of `pattern="url(#<pattern>)" fill-opacity="<opacity>%"` pairs in SVG.
+/// Count occurrences of `fill="url(#<pattern>)" fill-opacity="<opacity>"` pairs in SVG.
 /// Matches the exact attribute order produced by `generate_rain_pattern_svg`.
 fn count_pattern_opacity(svg: &str, pattern: &str, opacity: &str) -> usize {
     let needle = format!(r#"fill="url(#{})" fill-opacity="{}""#, pattern, opacity);

@@ -674,7 +674,7 @@ impl ContextBuilder {
                 graph.snow_data[x] = forecast.precipitation.is_primarily_snow();
 
                 let chance = forecast.precipitation.chance.unwrap_or(0);
-                let precip_mm = forecast.precipitation.amount_max.unwrap_or(0) as f32;
+                let precip_mm = forecast.precipitation.amount();
                 let is_snow = graph.snow_data[x];
                 let pattern = HourlyForecastGraph::select_precipitation_pattern(chance as f32, is_snow);
                 logger::debug(format!(

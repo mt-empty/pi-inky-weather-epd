@@ -31,19 +31,38 @@ fn test_is_primarily_snow_with_high_snow_ratio() {
 }
 
 #[test]
-fn test_is_primarily_snow_boundary_case_60_percent() {
-    // Exactly 60% snow (boundary case)
-    // 8.6cm snow = ~6mm water, total = 10mm -> 60% snow
+fn test_is_primarily_snow_boundary_case_just_above_60_percent() {
+    // Open-Meteo ratio: 7 cm snow = 10 mm water, so snow_water = snow_cm × 10/7
+    // Threshold: snow_water > precip_mm × 0.6
+    // With median precip = (9+11)/2 = 10 mm:
+    //   boundary snow_cm = 10 × 0.6 × 7/10 = 4.2 cm  →  4.2 × 10/7 = 6.0 mm  (not > 6.0, fails)
+    //   4.3 cm  →  4.3 × 10/7 ≈ 6.14 mm  >  6.0 mm  ✓
     let precip = Precipitation::new_with_snowfall(
         Some(75),
         Some(9),
         Some(11),
-        Some(86), // 8.6cm snowfall
+        Some(43), // 4.3 cm snowfall (stored as tenths of cm)
     );
 
     assert!(
         precip.is_primarily_snow(),
-        "8.6cm snow with 10mm total should be primarily snow (exactly 60%)"
+        "4.3 cm snow (61.4% water equivalent) with 10 mm total should be primarily snow"
+    );
+}
+
+#[test]
+fn test_is_not_primarily_snow_boundary_case_just_below_60_percent() {
+    // 4.1 cm  →  4.1 × 10/7 ≈ 5.86 mm  <  6.0 mm (= 10 mm × 0.6)  →  not snow
+    let precip = Precipitation::new_with_snowfall(
+        Some(75),
+        Some(9),
+        Some(11),
+        Some(41), // 4.1 cm snowfall (stored as tenths of cm)
+    );
+
+    assert!(
+        !precip.is_primarily_snow(),
+        "4.1 cm snow (58.6% water equivalent) with 10 mm total should NOT be primarily snow"
     );
 }
 

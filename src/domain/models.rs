@@ -134,6 +134,11 @@ pub struct Precipitation {
     pub chance: Option<u16>,
     pub amount_min: Option<u16>,
     pub amount_max: Option<u16>,
+    /// Snowfall in **tenths of a centimetre** (×10).
+    ///
+    /// Stored at sub-cm precision to avoid rounding out light snowfall (0.1–0.49 cm).
+    /// Always divide by 10 before use — prefer `snowfall_cm()` over reading this field directly.
+    /// Open-Meteo unit: cm; multiply by 10 before storing, divide by 10 when reading.
     pub snowfall_amount: Option<u16>,
 }
 
@@ -169,12 +174,16 @@ impl Precipitation {
 
     /// Best estimate of precipitation amount in mm.
     ///
-    /// When only a single value is available (amount_min absent, e.g. Open-Meteo hourly),
-    /// returns amount_max directly. When both bounds are present (e.g. BOM), returns
-    /// the midpoint. This avoids the halving error that median() produces for Open-Meteo data.
+    /// When only a single value is available, returns it directly:
+    /// - `(None, Some(max))` — Open-Meteo hourly/daily (only upper bound provided)
+    /// - `(Some(min), None)` — hypothetical lower-bound-only provider
+    ///
+    /// When both bounds are present returns the midpoint.
+    /// When neither is present returns 0.
     pub fn amount(&self) -> f32 {
         match (self.amount_min, self.amount_max) {
             (None, Some(max)) => max as f32,
+            (Some(min), None) => min as f32,
             _ => self.median(),
         }
     }

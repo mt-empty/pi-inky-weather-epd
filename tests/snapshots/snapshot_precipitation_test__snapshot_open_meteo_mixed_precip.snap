@@ -182,7 +182,7 @@ expression: svg_content
 
     <svg x="373" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Tue</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/overcast-day.svg" />
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/overcast-day-snow.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">5°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
@@ -212,7 +212,7 @@ expression: svg_content
 
     <svg x="616" y="30">
         <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Fri</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day.svg" />
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day-drizzle.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">6°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>

@@ -1,6 +1,5 @@
 ---
 source: tests/snapshot_open_meteo_prefer_codes_test.rs
-assertion_line: 134
 expression: svg
 ---
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
@@ -40,7 +39,7 @@ expression: svg
             <path d="M2 0h2v12H2V0zm1 20c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM9 8c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm-1 4h2v12H8V12z" fill="white" />
         </pattern>
         <!-- Snowflake pattern: 6-spoke asterisk with centre dot, scaled to 28x28 tile -->
-        <pattern id="snow" patternUnits="userSpaceOnUse" width="28" height="28">
+        <pattern id="snow" patternUnits="userSpaceOnUse" width="28" height="28" patternTransform="scale(1,-1) translate(0,-28)">
             <rect width="28" height="28" fill="blue" />
             <!-- Vertical spoke -->
             <line x1="14" y1="2" x2="14" y2="26" stroke="white" stroke-width="2" stroke-linecap="round" />
