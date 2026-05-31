@@ -45,7 +45,7 @@ async fn spanish_language_override_localizes_rendered_dashboard() {
     assert!(svg_content.contains("Medida"));
     assert!(svg_content.contains("Ahora"));
     // Date header: Saturday 25 October in Spanish (%A, %d %B)
-    assert!(svg_content.contains("Sabado, 25 Octubre"));
+    assert!(svg_content.contains("Sábado, 25 Octubre"));
     // Tomorrow chart marker: 2025-10-26 is Sunday = Domingo
     assert!(svg_content.contains("Domingo"));
 }

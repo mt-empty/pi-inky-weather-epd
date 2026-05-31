@@ -61,13 +61,13 @@ pub fn translate(key: TranslationKey, language_code: &str) -> &'static str {
         (Language::Es, TranslationKey::Now) => "Ahora",
         (Language::Es, TranslationKey::Max) => "Max",
         (Language::Es, TranslationKey::Hours24) => "24h",
-        (Language::Es, TranslationKey::Tomorrow) => "Manana",
+        (Language::Es, TranslationKey::Tomorrow) => "Mañana",
         (Language::Ja, TranslationKey::Feels) => "Taikan",
         (Language::Ja, TranslationKey::Like) => "ondo",
         (Language::Ja, TranslationKey::Metric) => "Shihyo",
         (Language::Ja, TranslationKey::Now) => "Ima",
         (Language::Ja, TranslationKey::Max) => "Saidai",
-        (Language::Ja, TranslationKey::Hours24) => "24j",
+        (Language::Ja, TranslationKey::Hours24) => "24h",
         (Language::Ja, TranslationKey::Tomorrow) => "Ashita",
     }
 }
@@ -154,10 +154,10 @@ pub fn weekday_long(weekday: Weekday, language_code: &str) -> &'static str {
         Language::Es => match weekday {
             Weekday::Mon => "Lunes",
             Weekday::Tue => "Martes",
-            Weekday::Wed => "Miercoles",
+            Weekday::Wed => "Miércoles",
             Weekday::Thu => "Jueves",
             Weekday::Fri => "Viernes",
-            Weekday::Sat => "Sabado",
+            Weekday::Sat => "Sábado",
             Weekday::Sun => "Domingo",
         },
         Language::Ja => match weekday {
@@ -191,13 +191,13 @@ pub fn month_short(month: u32, language_code: &str) -> &'static str {
         },
         Language::Fr => match month {
             1 => "Janv",
-            2 => "Fevr",
+            2 => "Févr",
             3 => "Mars",
             4 => "Avr",
             5 => "Mai",
             6 => "Juin",
             7 => "Juil",
-            8 => "Aout",
+            8 => "Août",
             9 => "Sept",
             10 => "Oct",
             11 => "Nov",
@@ -271,13 +271,13 @@ pub fn month_long(month: u32, language_code: &str) -> &'static str {
         },
         Language::Fr => match month {
             1 => "Janvier",
-            2 => "Fevrier",
+            2 => "Février",
             3 => "Mars",
             4 => "Avril",
             5 => "Mai",
             6 => "Juin",
             7 => "Juillet",
-            8 => "Aout",
+            8 => "Août",
             9 => "Septembre",
             10 => "Octobre",
             11 => "Novembre",
@@ -287,7 +287,7 @@ pub fn month_long(month: u32, language_code: &str) -> &'static str {
         Language::De => match month {
             1 => "Januar",
             2 => "Februar",
-            3 => "Marz",
+            3 => "März",
             4 => "April",
             5 => "Mai",
             6 => "Juni",
@@ -337,24 +337,20 @@ pub fn format_localized_date(date: DateTime<Local>, format: &str, language_code:
         return date.format(format).to_string();
     }
 
+    // Use non-printable null-byte delimiters as sentinels: they can never appear
+    // in any localized string, so each substitution is independent of the others.
     let template = format
-        .replace("%A", "__WEEKDAY_LONG__")
-        .replace("%a", "__WEEKDAY_SHORT__")
-        .replace("%B", "__MONTH_LONG__")
-        .replace("%b", "__MONTH_SHORT__");
+        .replace("%A", "\x00WL\x00")
+        .replace("%a", "\x00WS\x00")
+        .replace("%B", "\x00ML\x00")
+        .replace("%b", "\x00MS\x00");
 
     date.format(&template)
         .to_string()
-        .replace(
-            "__WEEKDAY_LONG__",
-            weekday_long(date.weekday(), language_code),
-        )
-        .replace(
-            "__WEEKDAY_SHORT__",
-            weekday_short(date.weekday(), language_code),
-        )
-        .replace("__MONTH_LONG__", month_long(date.month(), language_code))
-        .replace("__MONTH_SHORT__", month_short(date.month(), language_code))
+        .replace("\x00WL\x00", weekday_long(date.weekday(), language_code))
+        .replace("\x00WS\x00", weekday_short(date.weekday(), language_code))
+        .replace("\x00ML\x00", month_long(date.month(), language_code))
+        .replace("\x00MS\x00", month_short(date.month(), language_code))
 }
 
 #[cfg(test)]
