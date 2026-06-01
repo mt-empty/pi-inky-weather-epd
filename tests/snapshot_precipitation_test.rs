@@ -20,6 +20,7 @@
 
 mod helpers;
 
+use helpers::test_utils::EnvVarGuard;
 use helpers::wiremock_setup;
 use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injection, CONFIG};
 use std::fs;
@@ -61,29 +62,16 @@ async fn snapshot_open_meteo_alaska_snow() {
         "tests/fixtures/alaska_snow/open_meteo_daily_forecast.json",
     )
     .await;
-    std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
+    let open_meteo_base_url = mock_server.uri();
+    let _open_meteo_base_url_guard =
+        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
 
     let clock =
         FixedClock::from_rfc3339("2026-01-15T21:00:00Z").expect("Failed to create fixed clock");
     let output_svg_name = Path::new("tests/output/snapshot_open_meteo_alaska_snow.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        // RAII guard: restores TZ unconditionally, even if an assertion panics.
-        struct TzGuard(Option<String>);
-        impl Drop for TzGuard {
-            fn drop(&mut self) {
-                unsafe {
-                    match self.0.take() {
-                        Some(tz) => std::env::set_var("TZ", tz),
-                        None => std::env::remove_var("TZ"),
-                    }
-                }
-            }
-        }
-        let _tz_guard = TzGuard(std::env::var("TZ").ok());
-        unsafe {
-            std::env::set_var("TZ", "America/Anchorage");
-        }
+        let _tz_guard = EnvVarGuard::new("TZ", "America/Anchorage");
 
         let result = generate_weather_dashboard_injection(
             &clock,
@@ -132,7 +120,6 @@ async fn snapshot_open_meteo_alaska_snow() {
     .await
     .expect("Task panicked");
 
-    std::env::remove_var("OPEN_METEO_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }
 
@@ -168,7 +155,9 @@ async fn snapshot_open_meteo_mixed_precip() {
         "tests/fixtures/mixed_precip/open_meteo_daily_forecast.json",
     )
     .await;
-    std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
+    let open_meteo_base_url = mock_server.uri();
+    let _open_meteo_base_url_guard =
+        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
 
     let clock =
         FixedClock::from_rfc3339("2026-02-01T00:00:00Z").expect("Failed to create fixed clock");
@@ -248,6 +237,5 @@ async fn snapshot_open_meteo_mixed_precip() {
     .await
     .expect("Task panicked");
 
-    std::env::remove_var("OPEN_METEO_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }

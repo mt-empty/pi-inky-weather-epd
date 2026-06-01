@@ -27,6 +27,7 @@
 
 mod helpers;
 
+use helpers::test_utils::EnvVarGuard;
 use helpers::wiremock_setup;
 use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injection, CONFIG};
 use std::fs;
@@ -63,7 +64,9 @@ async fn run_prefer_codes_snapshot(
         "tests/fixtures/open_meteo_daily_forecast.json",
     )
     .await;
-    std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
+    let open_meteo_base_url = mock_server.uri();
+    let _open_meteo_base_url_guard =
+        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
 
     let clock = FixedClock::from_rfc3339(time_rfc3339).expect("invalid RFC3339 time");
     let output_svg_name = Path::new(output_path);
@@ -81,7 +84,6 @@ async fn run_prefer_codes_snapshot(
     .await
     .expect("task panicked");
 
-    std::env::remove_var("OPEN_METEO_BASE_URL");
     Some(svg)
 }
 
