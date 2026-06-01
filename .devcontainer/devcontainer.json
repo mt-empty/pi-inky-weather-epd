@@ -5,12 +5,11 @@
     // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
     "image": "mcr.microsoft.com/devcontainers/rust:2-1-bookworm",
     "remoteUser": "vscode",
-    // Mount host timezone so container uses Melbourne time (or whatever the host uses)
-    // TZ env var is used instead of bind-mounting /etc/localtime because on macOS
-    // /etc/localtime is a symlink that Docker Desktop does not resolve — the container
-    // would get a dangling symlink and silently fall back to UTC.
-    "remoteEnv": {
-        "TZ": "Australia/Melbourne"
+    "mounts": [
+        "source=${localEnv:HOME}/.zshrc,target=/home/vscode/.zshrc,type=bind,consistency=cached"
+    ],
+    "containerEnv": {
+        "TZ": "${localEnv:TZ}"
     },
     "customizations": {
         "vscode": {
