@@ -150,7 +150,6 @@ fn test_with_daily_forecast_data_new_york_est() {
     // Day 7 (Tue, Dec 23): 1.3°C → 1, -3.0°C → -3
     assert_eq!(context.day7_maxtemp, "1", "Day 7 max temp incorrect");
     assert_eq!(context.day7_mintemp, "-3", "Day 7 min temp incorrect");
-
 }
 
 /// Test that noon UTC timestamps don't cause date shifts in EST
@@ -243,7 +242,6 @@ fn test_noon_utc_prevents_date_shift_in_est() {
     assert_eq!(context.day5_maxtemp, "14"); // Dec 21 data goes to day5
     assert_eq!(context.day6_maxtemp, "15"); // Dec 22 data goes to day6
     assert_eq!(context.day7_maxtemp, "16"); // Dec 23 data goes to day7
-
 }
 
 /// Test that dates before today are correctly skipped
@@ -353,5 +351,4 @@ fn test_skips_past_dates() {
     assert_eq!(context.day5_maxtemp, "16"); // Dec 23 → day5
     assert_eq!(context.day6_maxtemp, "17"); // Dec 24 → day6
     assert_eq!(context.day7_maxtemp, "18"); // Dec 25 → day7
-
 }

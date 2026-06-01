@@ -81,7 +81,6 @@ fn test_bom_forecast_time_conversion_during_dst() {
 
     // Verify the gap: hour sequence should be 1, 3, 4 (2 is skipped)
     // This demonstrates the spring forward behavior
-
 }
 
 /// Test Open-Meteo API data during fall back DST transition
@@ -207,5 +206,4 @@ fn test_open_meteo_forecast_time_conversion_during_dst() {
         vec![1, 2, 2, 3],
         "Expected hours 1, 2, 2, 3 showing duplicate 2 AM during fall back"
     );
-
 }
