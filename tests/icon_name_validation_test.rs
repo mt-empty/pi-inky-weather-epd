@@ -399,7 +399,7 @@ fn test_boundary_case_26_percent_allows_precipitation_suffix() {
 
 #[test]
 fn test_snow_icon_selected_with_high_snowfall() {
-    // Heavy snow: 14.3cm snow = ~10mm water, total ~10mm = 100% snow
+    // Heavy snow: 14.3cm snow × 1.43 = ~20.4mm water, total ~10mm = 204% (well above threshold)
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(-2.0),
@@ -409,7 +409,7 @@ fn test_snow_icon_selected_with_high_snowfall() {
             Some(80), // Extreme range
             Some(8),
             Some(12),
-            Some(143), // 14.3cm snow = ~10mm water
+            Some(143), // 14.3cm snow × 1.43 = ~20.4mm water
         ),
         uv_index: 1,
         relative_humidity: 85,
@@ -518,7 +518,7 @@ fn test_snow_override_requires_partly_cloudy() {
 
 #[test]
 fn test_low_snowfall_shows_clear_not_snow() {
-    // Very light snowfall below 1.4mm threshold (0.2cm = ~0.14mm water)
+    // Very light snowfall below 1.4mm threshold (0.2cm × 1.43 = ~0.29mm water)
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(-1.0),
@@ -577,7 +577,7 @@ fn test_mixed_precipitation_favors_rain() {
 
 #[test]
 fn test_partly_cloudy_snow_at_night() {
-    // Light snow at night (10cm = ~7mm water, total ~8mm = 87.5% snow)
+    // Light snow at night (10cm × 1.43 = ~14.3mm water, total ~8mm = 179% — well above threshold)
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(-5.0),
@@ -605,7 +605,7 @@ fn test_partly_cloudy_snow_at_night() {
 
 #[test]
 fn test_overcast_day_snow() {
-    // Overcast day with snow (11.5cm = ~8mm water, total ~9mm = 89% snow)
+    // Overcast day with snow (11.5cm × 1.43 = ~16.4mm water, total ~9mm = 183% — well above threshold)
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(-4.0),
@@ -633,7 +633,7 @@ fn test_overcast_day_snow() {
 
 #[test]
 fn test_extreme_night_snow() {
-    // Extreme conditions with snow (20cm = ~14mm water, total ~15mm = 93% snow)
+    // Extreme conditions with snow (20cm × 1.43 = ~28.6mm water, total ~15mm = 190% — well above threshold)
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(-10.0),

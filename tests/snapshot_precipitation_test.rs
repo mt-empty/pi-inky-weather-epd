@@ -26,7 +26,7 @@ use std::fs;
 use std::path::Path;
 
 /// Count occurrences of `fill="url(#<pattern>)" fill-opacity="<opacity>"` pairs in SVG.
-/// Matches the exact attribute order produced by `generate_rain_pattern_svg`.
+/// Matches the exact attribute order produced by `generate_precipitation_pattern_svg`.
 fn count_pattern_opacity(svg: &str, pattern: &str, opacity: &str) -> usize {
     let needle = format!(r#"fill="url(#{})" fill-opacity="{}""#, pattern, opacity);
     svg.matches(&needle).count()
@@ -68,7 +68,19 @@ async fn snapshot_open_meteo_alaska_snow() {
     let output_svg_name = Path::new("tests/output/snapshot_open_meteo_alaska_snow.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        let original_tz = std::env::var("TZ").ok();
+        // RAII guard: restores TZ unconditionally, even if an assertion panics.
+        struct TzGuard(Option<String>);
+        impl Drop for TzGuard {
+            fn drop(&mut self) {
+                unsafe {
+                    match self.0.take() {
+                        Some(tz) => std::env::set_var("TZ", tz),
+                        None => std::env::remove_var("TZ"),
+                    }
+                }
+            }
+        }
+        let _tz_guard = TzGuard(std::env::var("TZ").ok());
         unsafe {
             std::env::set_var("TZ", "America/Anchorage");
         }
@@ -104,9 +116,9 @@ async fn snapshot_open_meteo_alaska_snow() {
             snow_25, 0,
             "Expected 0 snow blocks at 25% opacity (all have chance=85%), found {snow_25}"
         );
-        assert!(
-            snow_35 > 0,
-            "Expected snow blocks at 35% opacity but found none"
+        assert_eq!(
+            snow_35, 24,
+            "Expected all 24 snow blocks at 35% opacity (all hours have chance=85%), found {snow_35}"
         );
 
         // Template variable must be substituted
@@ -115,12 +127,6 @@ async fn snapshot_open_meteo_alaska_snow() {
             "Template variable {{snow_colour}} was not substituted in the SVG output."
         );
 
-        unsafe {
-            match original_tz {
-                Some(tz) => std::env::set_var("TZ", tz),
-                None => std::env::remove_var("TZ"),
-            }
-        }
         svg
     })
     .await

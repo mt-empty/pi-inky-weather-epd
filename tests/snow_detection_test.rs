@@ -16,7 +16,7 @@ use pi_inky_weather_epd::domain::models::Precipitation;
 
 #[test]
 fn test_is_primarily_snow_with_high_snow_ratio() {
-    // 10cm snow = ~7mm water, total precip = 8mm -> 87.5% snow
+    // 10cm snow × 1.43 = 14.3mm water, total precip = 8mm -> 178.75% (well above 60% threshold)
     let precip = Precipitation::new_with_snowfall(
         Some(80),
         Some(7),
@@ -26,7 +26,7 @@ fn test_is_primarily_snow_with_high_snow_ratio() {
 
     assert!(
         precip.is_primarily_snow(),
-        "10cm snow with 8mm total should be primarily snow (87.5%)"
+        "10cm snow with 8mm total should be primarily snow (178.75%)"
     );
 }
 
@@ -84,17 +84,17 @@ fn test_is_not_primarily_snow_below_threshold() {
 
 #[test]
 fn test_is_primarily_snow_just_above_threshold() {
-    // 9cm snow = ~6.45mm water, total = 10mm -> 64.5% snow
+    // 4.5cm snow → 4.5 × 1.43 = 6.435mm water, total = 10mm → 64.35% > 60% threshold
     let precip = Precipitation::new_with_snowfall(
         Some(75),
         Some(9),
         Some(11),
-        Some(90), // 9.0cm snowfall (stored as tenths of cm)
+        Some(45), // 4.5cm snowfall (stored as tenths of cm)
     );
 
     assert!(
         precip.is_primarily_snow(),
-        "9cm snow with 10mm total should be primarily snow (64.5%)"
+        "4.5cm snow with 10mm total should be primarily snow (64.35%)"
     );
 }
 
@@ -138,7 +138,7 @@ fn test_zero_snowfall_returns_false() {
 
 #[test]
 fn test_all_snow_no_rain() {
-    // 14.3cm snow = ~10mm water, total = 10mm -> 100% snow
+    // 14.3cm snow × 1.43 = 20.4mm water, total = 10mm -> 204% (all snow by water equivalent)
     let precip = Precipitation::new_with_snowfall(
         Some(90),
         Some(9),
@@ -148,7 +148,7 @@ fn test_all_snow_no_rain() {
 
     assert!(
         precip.is_primarily_snow(),
-        "Pure snow (100%) should be classified as primarily snow"
+        "Pure snow (204% water equivalent) should be classified as primarily snow"
     );
 }
 
@@ -174,7 +174,7 @@ fn test_light_snow_with_heavy_rain() {
 
 #[test]
 fn test_winter_storm_scenario() {
-    // Heavy snowstorm: 20cm snow = ~14mm water, total = 15mm -> 93% snow
+    // Heavy snowstorm: 20cm snow × 1.43 = 28.6mm water, total = 15mm -> 190% (well above 60% threshold)
     let precip = Precipitation::new_with_snowfall(
         Some(95),
         Some(14),
@@ -184,7 +184,7 @@ fn test_winter_storm_scenario() {
 
     assert!(
         precip.is_primarily_snow(),
-        "Heavy snowstorm scenario should be classified as snow"
+        "Heavy snowstorm (190% water equivalent) should be classified as snow"
     );
 }
 

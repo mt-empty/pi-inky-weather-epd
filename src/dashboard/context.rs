@@ -621,9 +621,9 @@ impl ContextBuilder {
                 match path {
                     GraphDataPath::Temp(data) => temp_acc.push_str(data),
                     GraphDataPath::TempFeelLike(data) => feel_like_acc.push_str(data),
-                    GraphDataPath::Rain(blocks) => {
+                    GraphDataPath::Precipitation(blocks) => {
                         // Convert rain blocks to SVG with per-hour patterns
-                        rain_acc.push_str(&HourlyForecastGraph::generate_rain_pattern_svg(blocks));
+                        rain_acc.push_str(&HourlyForecastGraph::generate_precipitation_pattern_svg(blocks));
                     }
                 }
                 (temp_acc, feel_like_acc, rain_acc)
@@ -666,16 +666,16 @@ impl ContextBuilder {
                         CurveType::TempFeelLike(curve) => {
                             curve.add_point(x as f32, *forecast.apparent_temperature)
                         }
-                        CurveType::RainChance(curve) => curve
+                        CurveType::PrecipitationChance(curve) => curve
                             .add_point(x as f32, forecast.precipitation.chance.unwrap_or(0) as f32),
                     }
                 }
                 graph.uv_data[x] = forecast.uv_index;
-                graph.snow_data[x] = forecast.precipitation.is_primarily_snow();
+                graph.hourly_is_primarily_snow[x] = forecast.precipitation.is_primarily_snow();
 
                 let chance = forecast.precipitation.chance.unwrap_or(0);
                 let precip_mm = forecast.precipitation.amount();
-                let is_snow = graph.snow_data[x];
+                let is_snow = graph.hourly_is_primarily_snow[x];
                 let pattern = HourlyForecastGraph::select_precipitation_pattern(chance as f32, is_snow);
                 logger::debug(format!(
                     "h{:02}: temp={:>5.1}° feels={:>5.1}° precip={:>3}% {:>5.2}mm  uv={:>2}  snow={:<5}  → {}",

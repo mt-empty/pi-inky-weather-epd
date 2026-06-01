@@ -33,7 +33,7 @@ impl Curve {
 }
 
 #[derive(Clone, Debug)]
-pub struct RainBlock {
+pub struct PrecipitationBlock {
     pub path: String,
     pub pattern: String,
     pub opacity: &'static str,
@@ -49,13 +49,13 @@ pub struct GraphData {
 pub enum CurveType {
     ActualTemp(GraphData),
     TempFeelLike(GraphData),
-    RainChance(GraphData),
+    PrecipitationChance(GraphData),
 }
 
 impl CurveType {
     fn data(&self) -> &GraphData {
         match self {
-            Self::ActualTemp(data) | Self::TempFeelLike(data) | Self::RainChance(data) => data,
+            Self::ActualTemp(data) | Self::TempFeelLike(data) | Self::PrecipitationChance(data) => data,
         }
     }
 
@@ -76,7 +76,7 @@ impl GraphData {
 pub struct HourlyForecastGraph {
     pub curves: Vec<CurveType>,
     pub uv_data: [u16; 24],
-    pub snow_data: [bool; 24],
+    pub hourly_is_primarily_snow: [bool; 24],
     pub height: f32,
     pub width: f32,
     pub starting_x: f32,
@@ -103,13 +103,13 @@ impl Default for HourlyForecastGraph {
                     points: vec![],
                     smooth: true,
                 }),
-                CurveType::RainChance(GraphData {
+                CurveType::PrecipitationChance(GraphData {
                     points: vec![],
                     smooth: false,
                 }),
             ],
             uv_data: [0; 24],
-            snow_data: [false; 24],
+            hourly_is_primarily_snow: [false; 24],
             height: 300.0,
             width: 600.0,
             starting_x: 0.0,
@@ -129,7 +129,7 @@ impl Default for HourlyForecastGraph {
 pub enum GraphDataPath {
     Temp(String),
     TempFeelLike(String),
-    Rain(Vec<RainBlock>),
+    Precipitation(Vec<PrecipitationBlock>),
 }
 
 #[derive(Debug, Display)]
@@ -501,7 +501,7 @@ impl HourlyForecastGraph {
             let ending_x_data = curve.points().last().map(|val| val.x).unwrap_or(0.0);
 
             match curve {
-                CurveType::RainChance(_) => {}
+                CurveType::PrecipitationChance(_) => {}
                 CurveType::ActualTemp(_) | CurveType::TempFeelLike(_) => {
                     self.min_y = self.min_y.min(min_y_data);
                     self.max_y = self.max_y.max(max_y_data);
@@ -553,8 +553,8 @@ impl HourlyForecastGraph {
         }
     }
 
-    /// Generate SVG for all rain blocks with per-hour patterns
-    pub fn generate_rain_pattern_svg(blocks: &[RainBlock]) -> String {
+    /// Generate SVG for all precipitation blocks with per-hour patterns
+    pub fn generate_precipitation_pattern_svg(blocks: &[PrecipitationBlock]) -> String {
         blocks
             .iter()
             .map(|block| {
@@ -577,7 +577,7 @@ impl HourlyForecastGraph {
             // Calculate scaling factors for x and y to fit the graph within the given width and height
             let xfactor = self.width / self.ending_x;
             let yfactor = match curve {
-                CurveType::RainChance(_) => self.height / 100.0, // Rain data is in percentage
+                CurveType::PrecipitationChance(_) => self.height / 100.0, // Rain data is in percentage
                 CurveType::ActualTemp(_) | CurveType::TempFeelLike(_) => {
                     if self.max_y >= 0.0 && self.min_y < 0.0 {
                         self.height / (self.max_y + self.min_y.abs())
@@ -600,7 +600,7 @@ impl HourlyForecastGraph {
                 .map(|val| Point {
                     x: (val.x * xfactor), // x always start from 0 so no need to adjust the x value
                     y: match curve {
-                        CurveType::RainChance(_) => val.y * yfactor,
+                        CurveType::PrecipitationChance(_) => val.y * yfactor,
                         CurveType::ActualTemp(_) | CurveType::TempFeelLike(_) => {
                             // If the minimum y value is negative, we need to adjust the y value
                             // to ensure it's correctly placed on the graph
@@ -615,7 +615,7 @@ impl HourlyForecastGraph {
                 .collect();
 
             match curve {
-                CurveType::RainChance(_) => {
+                CurveType::PrecipitationChance(_) => {
                     // Generate individual blocks for each hour with stepped path segments
                     let mut blocks = Vec::new();
 
@@ -633,26 +633,27 @@ impl HourlyForecastGraph {
                             }
                         };
 
-                        // Get original rain chance percentage and snow flag for pattern selection
-                        let rain_chance = curve.points()[i].y;
-                        let is_snow = self.snow_data[i];
-                        let pattern = Self::select_precipitation_pattern(rain_chance, is_snow);
-                        let opacity = Self::select_opacity(rain_chance, is_snow);
+                        // Get original precipitation chance percentage and snow flag for pattern selection
+                        let precip_chance = curve.points()[i].y;
+                        let is_snow = self.hourly_is_primarily_snow[i];
+                        let pattern = Self::select_precipitation_pattern(precip_chance, is_snow);
+                        let opacity = Self::select_opacity(precip_chance, is_snow);
 
-                        // Create stepped path: bottom-left -> top-left -> top-right -> bottom-right
+                        // Interpolated block: top-left -> bottom-left -> bottom-right -> top-right
+                        // Bottom edge tapers from current.y to next.y, smoothly blending between hours.
                         let block_path = format!(
                             "M {:.4} 0 L {:.4} {:.4} L {:.4} {:.4} L {:.4} 0 Z",
                             current.x, current.x, current.y, next.x, next.y, next.x
                         );
 
-                        blocks.push(RainBlock {
+                        blocks.push(PrecipitationBlock {
                             path: block_path,
                             pattern: pattern.to_string(),
                             opacity,
                         });
                     }
 
-                    data_path.push(GraphDataPath::Rain(blocks));
+                    data_path.push(GraphDataPath::Precipitation(blocks));
                 }
                 CurveType::ActualTemp(_) | CurveType::TempFeelLike(_) => {
                     // Generate the SVG path data for temperature curves

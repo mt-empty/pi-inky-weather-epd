@@ -190,7 +190,7 @@ impl Precipitation {
 
     /// Check if this precipitation includes snowfall
     pub fn has_snow(&self) -> bool {
-        self.snowfall_amount.unwrap_or(0) > 0
+        self.snowfall_cm() > 0.0
     }
 
     /// Determine if precipitation is primarily snow based on water equivalent ratio
@@ -204,19 +204,13 @@ impl Precipitation {
     /// substitute 0 for the missing min, halving the denominator and making snow detection
     /// twice as permissive as the 60% threshold intends.
     pub fn is_primarily_snow(&self) -> bool {
-        // snowfall_amount is stored as tenths of a cm; convert to cm
-        let snow_cm = self.snowfall_amount.unwrap_or(0) as f32 / 10.0;
+        let snow_cm = self.snowfall_cm();
 
         if snow_cm == 0.0 {
             return false;
         }
 
-        // When only a single amount value is available (amount_min absent), use it directly.
-        // When both bounds are present, use the midpoint as the best estimate of total precip.
-        let precip_mm = match (self.amount_min, self.amount_max) {
-            (None, Some(max)) => max as f32,
-            _ => self.median(),
-        };
+        let precip_mm = self.amount();
 
         // Convert snow to water equivalent (7cm snow = 10mm water, so multiply by ~1.43), from open meteo docs
         let snow_water_equivalent = snow_cm * 1.43;
