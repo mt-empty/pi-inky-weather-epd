@@ -546,8 +546,8 @@ impl HourlyForecastGraph {
         }
     }
 
-    fn select_opacity(chance: f32, is_snow: bool) -> &'static str {
-        if chance >= 50.0 || is_snow {
+    fn select_opacity(chance: f32, _is_snow: bool) -> &'static str {
+        if chance >= 50.0 {
             "35%"
         } else {
             "25%"

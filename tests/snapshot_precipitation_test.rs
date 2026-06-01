@@ -10,7 +10,8 @@
 //! |------------------------|--------------|--------------|
 //! | Rain, chance < 50%     | `url(#rain)` | 25%          |
 //! | Rain, chance ≥ 50%     | `url(#rain)` | 35%          |
-//! | Snow (any chance)      | `url(#snow)` | 35%          |
+//! | Snow, chance < 50%     | `url(#snow)` | 25%          |
+//! | Snow, chance ≥ 50%     | `url(#snow)` | 35%          |
 //!
 //! ## Running
 //!
