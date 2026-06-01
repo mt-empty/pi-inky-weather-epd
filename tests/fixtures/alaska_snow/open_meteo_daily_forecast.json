@@ -1,0 +1,112 @@
+{
+  "latitude": 63.568,
+  "longitude": -145.679,
+  "generationtime_ms": 0.85,
+  "utc_offset_seconds": -32400,
+  "timezone": "America/Anchorage",
+  "timezone_abbreviation": "AKST",
+  "elevation": 650.0,
+  "daily_units": {
+    "time": "iso8601",
+    "sunrise": "iso8601",
+    "sunset": "iso8601",
+    "temperature_2m_max": "\u00b0C",
+    "temperature_2m_min": "\u00b0C",
+    "precipitation_sum": "mm",
+    "precipitation_probability_max": "%",
+    "cloud_cover_mean": "%",
+    "snowfall_sum": "cm"
+  },
+  "daily": {
+    "time": [
+      "2026-01-15",
+      "2026-01-16",
+      "2026-01-17",
+      "2026-01-18",
+      "2026-01-19",
+      "2026-01-20",
+      "2026-01-21"
+    ],
+    "sunrise": [
+      "2026-01-15T19:30",
+      "2026-01-16T19:30",
+      "2026-01-17T19:30",
+      "2026-01-18T19:30",
+      "2026-01-19T19:30",
+      "2026-01-20T19:30",
+      "2026-01-21T19:30"
+    ],
+    "sunset": [
+      "2026-01-15T23:45",
+      "2026-01-16T23:45",
+      "2026-01-17T23:45",
+      "2026-01-18T23:45",
+      "2026-01-19T23:45",
+      "2026-01-20T23:45",
+      "2026-01-21T23:45"
+    ],
+    "temperature_2m_max": [
+      -5.0,
+      -3.0,
+      -8.0,
+      -4.0,
+      -6.0,
+      -2.0,
+      -9.0
+    ],
+    "temperature_2m_min": [
+      -14.0,
+      -12.0,
+      -16.0,
+      -13.0,
+      -15.0,
+      -11.0,
+      -17.0
+    ],
+    "precipitation_sum": [
+      12.0,
+      5.0,
+      2.0,
+      0.0,
+      8.0,
+      3.0,
+      0.0
+    ],
+    "precipitation_probability_max": [
+      85,
+      60,
+      30,
+      5,
+      70,
+      40,
+      10
+    ],
+    "cloud_cover_mean": [
+      100,
+      90,
+      70,
+      40,
+      95,
+      80,
+      30
+    ],
+    "snowfall_sum": [
+      20.0,
+      10.0,
+      5.0,
+      0.0,
+      15.0,
+      6.0,
+      0.0
+    ],
+    "weather_code": [
+      73,
+      71,
+      3,
+      1,
+      73,
+      71,
+      2
+    ]
+  }
+}

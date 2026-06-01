@@ -61,21 +61,21 @@ fn precipitation_amount_to_name(
     precip: &Precipitation,
     is_hourly: bool,
 ) -> Option<PrecipitationKind> {
-    let mut median = precip.median();
+    let mut amount = precip.amount();
 
     if is_hourly {
-        median *= 24.0;
+        amount *= 24.0;
     }
 
     // If primarily snow, return snow variant instead of rain
     if precip.is_primarily_snow() {
-        return match median {
+        return match amount {
             0.0..1.4 => None,
             _ => Some(PrecipitationKind::Snow),
         };
     }
 
-    match median {
+    match amount {
         0.0..3.0 => None,
         3.0..=20.0 => Some(PrecipitationKind::Drizzle),
         _ => Some(PrecipitationKind::Rain),

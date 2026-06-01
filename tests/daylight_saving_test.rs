@@ -6,9 +6,11 @@
 /// Australia (Melbourne/Sydney) DST:
 /// - Starts: First Sunday in October at 2:00 AM → 3:00 AM (AEST → AEDT, UTC+10 → UTC+11)
 /// - Ends: First Sunday in April at 3:00 AM → 2:00 AM (AEDT → AEST, UTC+11 → UTC+10)
+mod helpers;
+
 use chrono::{Datelike, Local, Timelike};
+use helpers::test_utils::EnvVarGuard;
 use serial_test::serial;
-use std::env;
 
 /// Test BOM API data around DST spring forward transition
 /// BOM returns UTC times - verify the 1-hour gap (2 AM doesn't exist)
@@ -20,8 +22,7 @@ fn test_bom_forecast_time_conversion_during_dst() {
     use pi_inky_weather_epd::domain::models::HourlyForecast as DomainHourlyForecast;
 
     // Set timezone to Australia/Melbourne for consistent test behavior
-    let original_tz = env::var("TZ").ok();
-    env::set_var("TZ", "Australia/Melbourne");
+    let _tz_guard = EnvVarGuard::new("TZ", "Australia/Melbourne");
 
     // Test multiple hours around the DST transition on Oct 5, 2025
     let test_cases = vec![
@@ -80,12 +81,6 @@ fn test_bom_forecast_time_conversion_during_dst() {
 
     // Verify the gap: hour sequence should be 1, 3, 4 (2 is skipped)
     // This demonstrates the spring forward behavior
-
-    // Restore original timezone
-    match original_tz {
-        Some(tz) => env::set_var("TZ", tz),
-        None => env::remove_var("TZ"),
-    }
 }
 
 /// Test Open-Meteo API data during fall back DST transition
@@ -97,8 +92,7 @@ fn test_open_meteo_forecast_time_conversion_during_dst() {
     use pi_inky_weather_epd::apis::open_meteo::models::OpenMeteoHourlyResponse;
 
     // Set timezone to Australia/Melbourne for consistent test behavior
-    let original_tz = env::var("TZ").ok();
-    env::set_var("TZ", "Australia/Melbourne");
+    let _tz_guard = EnvVarGuard::new("TZ", "Australia/Melbourne");
 
     // Test multiple hours around the DST fall back transition on April 6, 2025
     // Open-Meteo returns UTC times (timezone=UTC parameter)
@@ -212,10 +206,4 @@ fn test_open_meteo_forecast_time_conversion_during_dst() {
         vec![1, 2, 2, 3],
         "Expected hours 1, 2, 2, 3 showing duplicate 2 AM during fall back"
     );
-
-    // Restore original timezone
-    match original_tz {
-        Some(tz) => env::set_var("TZ", tz),
-        None => env::remove_var("TZ"),
-    }
 }

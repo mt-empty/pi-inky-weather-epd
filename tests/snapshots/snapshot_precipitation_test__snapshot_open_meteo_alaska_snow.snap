@@ -1,5 +1,5 @@
 ---
-source: tests/snapshot_provider_test.rs
+source: tests/snapshot_precipitation_test.rs
 expression: svg_content
 ---
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
@@ -57,13 +57,13 @@ expression: svg_content
     <!-- Current Day Information -->
     <!-- Due to resvg bug, the position is intentionally off to compensate for the bug -->
     <!-- Do not modify the x position of current_hour_temp and current_hour_feels_like, see above issue at the start of the file -->
-    <text x="400" y="50" font-size="35" fill="black" text-anchor="middle">Saturday, 25 October</text>
-    <image x="0" y="0" width="200" height="180" href="static/fill-svg-static/partly-cloudy-night.svg" />
+    <text x="400" y="50" font-size="35" fill="black" text-anchor="middle">Thursday, 15 January</text>
+    <image x="0" y="0" width="200" height="180" href="static/fill-svg-static/extreme-day-snow.svg" />
 
 
     <!-- Current temperature and Feels Like temperature -->
     <text x="266" y="128" font-size="70" fill="red" text-anchor="middle">
-        16
+        -7
         <tspan baseline-shift="27" dx="-20" font-size="33">°C</tspan>
     </text>
 
@@ -72,7 +72,7 @@ expression: svg_content
         <tspan dy="15.5" dx="-46.6">Like</tspan>
         <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="green"
             dx="10" dy="-7">
-            15
+            -11
             <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan>
         </tspan>
     </text>
@@ -103,10 +103,10 @@ expression: svg_content
     <!-- Sunset/Sunrise Information -->
     <svg x="30" y="150">
         <image x="0" y="0" width="75" height="75" href="static/fill-svg-static/sunrise.svg" />
-        <text x="12" y="70" text-anchor="start" font-size="20" fill="black">06:21</text>
+        <text x="12" y="70" text-anchor="start" font-size="20" fill="black">19:30</text>
 
         <image x="70" y="0" width="75" height="75" href="static/fill-svg-static/sunset.svg" />
-        <text x="83" y="70" text-anchor="start" font-size="20" fill="black">19:47</text>
+        <text x="83" y="70" text-anchor="start" font-size="20" fill="black">23:45</text>
     </svg>
 
     <g transform="translate(-15, 0)">
@@ -136,11 +136,11 @@ expression: svg_content
 
         <!-- UV Index -->
         <svg x="20" y="260" label="UV-index" text-anchor="middle">
-            <image width="75" height="75" href="static/fill-svg-static/uv-index-high.svg" />
-            <text x="100" y="45.5" font-size="30" fill="black">6
+            <image width="75" height="75" href="static/fill-svg-static/uv-index-none.svg" />
+            <text x="100" y="45.5" font-size="30" fill="black">0
             </text>
             <text x="155" y="45.5" font-size="30" fill="black"
-                font-style="normal">7
+                font-style="italic">1
             </text>
         </svg>
 
@@ -149,21 +149,21 @@ expression: svg_content
             <text x="42.2" y="66.2" fill="black" font-size="15.1" text-anchor="middle">
                 km/h
             </text>
-            <image width="75" height="75" href="static/fill-svg-static/wind.svg" />
-            <text x="100" y="45.5" font-size="30" fill="black">6
+            <image width="75" height="75" href="static/fill-svg-static/umbrella-wind.svg" />
+            <text x="100" y="45.5" font-size="30" fill="black">23
             </text>
             <text x="155" y="45.5" font-size="30" fill="black"
-                font-style="italic">16
+                font-style="italic">29
             </text>
         </svg>
 
         <!-- Relative Humidity -->
         <svg x="20" y="400" label="relative_humidity" text-anchor="middle">
-            <image width="75" height="75" href="static/fill-svg-static/humidity-plus.svg" />
-            <text x="100" y="45.5" font-size="30" fill="black">60
+            <image width="75" height="75" href="static/fill-svg-static/humidity-plus-plus.svg" />
+            <text x="100" y="45.5" font-size="30" fill="black">91
             </text>
             <text x="155" y="45.5" font-size="30" fill="black"
-                font-style="italic">91
+                font-style="italic">94
             </text>
         </svg>
     </g>
@@ -171,62 +171,62 @@ expression: svg_content
 
     <!-- Forecast for the next 6 days -->
     <svg x="292" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Sun</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day-drizzle.svg" />
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Fri</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day-snow.svg" />
         <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">23°</tspan>
+            <tspan x="52" text-anchor="end">-3°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">10°</tspan>
+            <tspan x="52" text-anchor="start">-12°</tspan>
         </text>
     </svg>
 
     <svg x="373" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Mon</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Sat</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/overcast-day-snow.svg" />
         <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">13°</tspan>
+            <tspan x="52" text-anchor="end">-8°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">6°</tspan>
+            <tspan x="52" text-anchor="start">-16°</tspan>
         </text>
     </svg>
 
     <svg x="454" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Tue</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Sun</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/partly-cloudy-day.svg" />
         <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">17°</tspan>
+            <tspan x="52" text-anchor="end">-4°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">8°</tspan>
+            <tspan x="52" text-anchor="start">-13°</tspan>
         </text>
     </svg>
 
     <svg x="535" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Wed</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Mon</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day-snow.svg" />
         <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">18°</tspan>
+            <tspan x="52" text-anchor="end">-6°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">10°</tspan>
+            <tspan x="52" text-anchor="start">-15°</tspan>
         </text>
     </svg>
 
     <svg x="616" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Thu</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Tue</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day-snow.svg" />
         <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">19°</tspan>
+            <tspan x="52" text-anchor="end">-2°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">8°</tspan>
+            <tspan x="52" text-anchor="start">-11°</tspan>
         </text>
     </svg>
 
     <svg x="697" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Fri</text>
-        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/partly-cloudy-day-drizzle.svg" />
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Wed</text>
+        <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/partly-cloudy-day.svg" />
         <text y="155" font-size="20" fill="black">
-            <tspan x="52" text-anchor="end">25°</tspan>
+            <tspan x="52" text-anchor="end">-9°</tspan>
             <tspan x="52" text-anchor="middle">|</tspan>
-            <tspan x="52" text-anchor="start">13°</tspan>
+            <tspan x="52" text-anchor="start">-17°</tspan>
         </text>
     </svg>
 
@@ -239,52 +239,52 @@ expression: svg_content
             stroke-dasharray="5,10" />
         <!-- X Labels -->
         <text x="0" y="320" fill="black" font-size="19" text-anchor="middle">12pm</text><text x="100" y="320" fill="black" font-size="19" text-anchor="middle">4pm</text><text x="200" y="320" fill="black" font-size="19" text-anchor="middle">8pm</text><text x="300" y="320" fill="black" font-size="19" text-anchor="middle">12am</text><text x="400" y="320" fill="black" font-size="19" text-anchor="middle">4am</text><text x="500" y="320" fill="black" font-size="19" text-anchor="middle">8am</text><text x="600" y="320" fill="black" font-size="19" text-anchor="middle">12pm</text><line x1="300" y1="0" x2="300" y2="300" stroke="black" stroke-width="2" stroke-dasharray="3,3" />
-                   <text x="310" y="170" fill="black" font-size="19" font-style="italic"  transform="rotate(-90, 280, 135)" text-anchor="start">Sunday</text>
+                   <text x="310" y="170" fill="black" font-size="19" font-style="italic"  transform="rotate(-90, 280, 135)" text-anchor="start">Friday</text>
         <!-- Y Labels -->
-        <text x="-10" y="300"  fill="black" font-size="35" text-anchor="end" dx="8" dy="4">12°</text><text x="-10" y="240"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">13.7°</text><text x="-10" y="180.00002"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">14.9°</text><text x="-10" y="119.999985"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">16.1°</text><text x="-10" y="60.00003"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">17.3°</text><text x="-10" y="0"  fill="black" font-size="35" text-anchor="end" dx="8" dy="4">18°</text>
+        <text x="-10" y="300"  fill="black" font-size="35" text-anchor="end" dx="8" dy="4">-20°</text><text x="-10" y="240.00002"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">-17.2°</text><text x="-10" y="180"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">-14.4°</text><text x="-10" y="120"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">-11.6°</text><text x="-10" y="60"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">-8.8°</text><text x="-10" y="0"  fill="black" font-size="35" text-anchor="end" dx="8" dy="4">-6°</text>
         <!-- Y right Labels -->
         <text x="610" y="300" fill="black"  font-size="19" text-anchor="start" dy="4">0%</text><text x="610" y="240" fill="black"  font-size="19" text-anchor="start" dy="4">20%</text><text x="610" y="180" fill="black"  font-size="19" text-anchor="start" dy="4">40%</text><text x="610" y="120" fill="black"  font-size="19" text-anchor="start" dy="4">60%</text><text x="610" y="60" fill="black"  font-size="19" text-anchor="start" dy="4">80%</text><text x="610" y="0" fill="black"  font-size="19" text-anchor="start" dy="4">100%</text>
         <!-- rain curve - Per-hour rain blocks with intensity-based patterns -->
         <g transform="translate(0, 300) scale(1, -1)">
-            <path d="M 0.0000 0 L 0.0000 15.0000 L 26.0870 54.0000 L 26.0870 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 26.0870 0 L 26.0870 54.0000 L 52.1739 90.0000 L 52.1739 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 52.1739 0 L 52.1739 90.0000 L 78.2609 84.0000 L 78.2609 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 78.2609 0 L 78.2609 84.0000 L 104.3478 45.0000 L 104.3478 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 104.3478 0 L 104.3478 45.0000 L 130.4348 90.0000 L 130.4348 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 130.4348 0 L 130.4348 90.0000 L 156.5217 99.0000 L 156.5217 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 156.5217 0 L 156.5217 99.0000 L 182.6087 90.0000 L 182.6087 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 182.6087 0 L 182.6087 90.0000 L 208.6956 54.0000 L 208.6956 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 208.6956 0 L 208.6956 54.0000 L 234.7826 30.0000 L 234.7826 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 234.7826 0 L 234.7826 30.0000 L 260.8696 54.0000 L 260.8696 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 260.8696 0 L 260.8696 54.0000 L 286.9565 69.0000 L 286.9565 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 286.9565 0 L 286.9565 69.0000 L 313.0435 174.0000 L 313.0435 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 313.0435 0 L 313.0435 174.0000 L 339.1304 234.0000 L 339.1304 0 Z" fill="url(#rain)" fill-opacity="35%" />
-            <path d="M 339.1304 0 L 339.1304 234.0000 L 365.2174 240.0000 L 365.2174 0 Z" fill="url(#rain)" fill-opacity="35%" />
-            <path d="M 365.2174 0 L 365.2174 240.0000 L 391.3044 279.0000 L 391.3044 0 Z" fill="url(#rain)" fill-opacity="35%" />
-            <path d="M 391.3044 0 L 391.3044 279.0000 L 417.3913 255.0000 L 417.3913 0 Z" fill="url(#rain)" fill-opacity="35%" />
-            <path d="M 417.3913 0 L 417.3913 255.0000 L 443.4782 234.0000 L 443.4782 0 Z" fill="url(#rain)" fill-opacity="35%" />
-            <path d="M 443.4782 0 L 443.4782 234.0000 L 469.5652 180.0000 L 469.5652 0 Z" fill="url(#rain)" fill-opacity="35%" />
-            <path d="M 469.5652 0 L 469.5652 180.0000 L 495.6522 129.0000 L 495.6522 0 Z" fill="url(#rain)" fill-opacity="35%" />
-            <path d="M 495.6522 0 L 495.6522 129.0000 L 521.7391 99.0000 L 521.7391 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 521.7391 0 L 521.7391 99.0000 L 547.8260 120.0000 L 547.8260 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 547.8260 0 L 547.8260 120.0000 L 573.9130 99.0000 L 573.9130 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 573.9130 0 L 573.9130 99.0000 L 600.0000 135.0000 L 600.0000 0 Z" fill="url(#rain)" fill-opacity="25%" />
-            <path d="M 600.0000 0 L 600.0000 135.0000 L 600.0000 135.0000 L 600.0000 0 Z" fill="url(#rain)" fill-opacity="25%" />
+            <path d="M 0.0000 0 L 0.0000 255.0000 L 26.0870 255.0000 L 26.0870 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 26.0870 0 L 26.0870 255.0000 L 52.1739 255.0000 L 52.1739 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 52.1739 0 L 52.1739 255.0000 L 78.2609 255.0000 L 78.2609 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 78.2609 0 L 78.2609 255.0000 L 104.3478 255.0000 L 104.3478 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 104.3478 0 L 104.3478 255.0000 L 130.4348 255.0000 L 130.4348 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 130.4348 0 L 130.4348 255.0000 L 156.5217 255.0000 L 156.5217 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 156.5217 0 L 156.5217 255.0000 L 182.6087 255.0000 L 182.6087 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 182.6087 0 L 182.6087 255.0000 L 208.6956 255.0000 L 208.6956 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 208.6956 0 L 208.6956 255.0000 L 234.7826 255.0000 L 234.7826 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 234.7826 0 L 234.7826 255.0000 L 260.8696 255.0000 L 260.8696 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 260.8696 0 L 260.8696 255.0000 L 286.9565 255.0000 L 286.9565 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 286.9565 0 L 286.9565 255.0000 L 313.0435 255.0000 L 313.0435 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 313.0435 0 L 313.0435 255.0000 L 339.1304 255.0000 L 339.1304 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 339.1304 0 L 339.1304 255.0000 L 365.2174 255.0000 L 365.2174 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 365.2174 0 L 365.2174 255.0000 L 391.3044 210.0000 L 391.3044 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 391.3044 0 L 391.3044 210.0000 L 417.3913 210.0000 L 417.3913 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 417.3913 0 L 417.3913 210.0000 L 443.4782 210.0000 L 443.4782 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 443.4782 0 L 443.4782 210.0000 L 469.5652 210.0000 L 469.5652 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 469.5652 0 L 469.5652 210.0000 L 495.6522 210.0000 L 495.6522 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 495.6522 0 L 495.6522 210.0000 L 521.7391 210.0000 L 521.7391 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 521.7391 0 L 521.7391 210.0000 L 547.8260 210.0000 L 547.8260 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 547.8260 0 L 547.8260 210.0000 L 573.9130 210.0000 L 573.9130 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 573.9130 0 L 573.9130 210.0000 L 600.0000 210.0000 L 600.0000 0 Z" fill="url(#snow)" fill-opacity="35%" />
+            <path d="M 600.0000 0 L 600.0000 210.0000 L 600.0000 210.0000 L 600.0000 0 Z" fill="url(#snow)" fill-opacity="35%" />
         </g>
         <!-- temp curve -->
         <path stroke="red" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
-            d="M 0.0000 190.8334C 34.7826 233.3333, 43.4783 251.6666, 52.1739 265.0000C 60.8696 278.3333, 69.5652 297.5000, 78.2609 300.0000C 86.9565 302.5000, 95.6522 308.3334, 104.3478 280.0000C 113.0435 251.6667, 121.7391 159.1667, 130.4348 130.0000C 139.1304 100.8334, 147.8261 113.3334, 156.5217 105.0000C 165.2174 96.6667, 173.9130 87.5000, 182.6087 80.0000C 191.3043 72.5000, 200.0000 65.8333, 208.6956 60.0000C 217.3913 54.1667, 226.0870 46.6666, 234.7826 45.0000C 243.4783 43.3333, 252.1739 48.3333, 260.8696 50.0000C 269.5652 51.6667, 278.2609 54.1667, 286.9565 55.0000C 295.6521 55.8334, 304.3478 55.8334, 313.0435 55.0000C 321.7391 54.1667, 330.4348 52.5000, 339.1304 50.0000C 347.8261 47.5000, 356.5217 43.3333, 365.2174 40.0000C 373.9131 36.6667, 382.6087 31.6667, 391.3044 30.0000C 400.0000 28.3334, 408.6956 29.1667, 417.3913 30.0000C 426.0869 30.8333, 434.7826 33.3333, 443.4782 35.0000C 452.1739 36.6667, 460.8696 36.6667, 469.5652 40.0000C 478.2609 43.3333, 486.9565 42.5000, 495.6522 55.0000C 504.3478 67.5000, 513.0435 95.8333, 521.7391 115.0000C 530.4348 134.1667, 539.1304 156.6666, 547.8260 170.0000C 556.5217 183.3333, 565.2173 187.5000, 573.9130 195.0000C 582.6086 202.5000, 595.6522 211.6666, 600.0000 215.0000" stroke-width="3.0" fill="none" />
+            d="M 0.0000 274.2857C 34.7826 273.2143, 43.4783 276.0714, 52.1739 267.8571C 60.8696 259.6429, 69.5652 234.6429, 78.2609 225.0000C 86.9565 215.3571, 95.6522 215.3571, 104.3478 210.0000C 113.0435 204.6429, 121.7391 203.9286, 130.4348 192.8571C 139.1304 181.7857, 147.8261 154.2857, 156.5217 143.5714C 165.2174 132.8571, 173.9130 132.8571, 182.6087 128.5714C 191.3043 124.2857, 200.0000 121.4286, 208.6956 117.8571C 217.3913 114.2857, 226.0870 108.9286, 234.7826 107.1429C 243.4783 105.3571, 252.1739 107.1429, 260.8696 107.1429C 269.5652 107.1429, 278.2609 107.1429, 286.9565 107.1429C 295.6521 107.1429, 304.3478 107.1429, 313.0435 107.1429C 321.7391 107.1429, 330.4348 105.3572, 339.1304 107.1429C 347.8261 108.9286, 356.5217 116.0714, 365.2174 117.8571C 373.9131 119.6429, 382.6087 111.7857, 391.3044 117.8571C 400.0000 123.9286, 408.6956 141.7857, 417.3913 154.2857C 426.0869 166.7857, 434.7826 185.3571, 443.4782 192.8571C 452.1739 200.3571, 460.8696 192.1429, 469.5652 199.2857C 478.2609 206.4286, 486.9565 224.2857, 495.6522 235.7143C 504.3478 247.1429, 513.0435 263.2143, 521.7391 267.8571C 530.4348 272.5000, 539.1304 260.7143, 547.8260 263.5714C 556.5217 266.4286, 565.2173 278.9286, 573.9130 285.0000C 582.6086 291.0714, 595.6522 297.5000, 600.0000 300.0000" stroke-width="3.0" fill="none" />
         <!-- feels like temp curve -->
         <path stroke="green" stroke-linejoin="round" stroke-dasharray="5,5"
-            transform="translate(0, 300) scale(1, -1)" d="M 0.0000 120.0000C 34.7826 161.6666, 43.4783 196.6666, 52.1739 215.0000C 60.8696 233.3333, 69.5652 252.5000, 78.2609 255.0000C 86.9565 257.5000, 95.6522 258.3333, 104.3478 230.0000C 113.0435 201.6667, 121.7391 113.3333, 130.4348 85.0000C 139.1304 56.6667, 147.8261 67.5000, 156.5217 60.0000C 165.2174 52.5000, 173.9130 44.1667, 182.6087 40.0000C 191.3043 35.8333, 200.0000 36.6667, 208.6956 35.0000C 217.3913 33.3333, 226.0870 27.5000, 234.7826 30.0000C 243.4783 32.5000, 252.1739 45.0000, 260.8696 50.0000C 269.5652 55.0000, 278.2609 59.1667, 286.9565 60.0000C 295.6521 60.8333, 304.3478 59.1667, 313.0435 55.0000C 321.7391 50.8334, 330.4348 42.5000, 339.1304 35.0000C 347.8261 27.5000, 356.5217 15.0000, 365.2174 10.0000C 373.9131 5.0000, 382.6087 6.6667, 391.3044 5.0000C 400.0000 3.3334, 408.6956 -0.8333, 417.3913 0.0000C 426.0869 0.8333, 434.7826 8.3333, 443.4782 10.0000C 452.1739 11.6667, 460.8696 7.5000, 469.5652 10.0000C 478.2609 12.5000, 486.9565 18.3333, 495.6522 25.0000C 504.3478 31.6667, 513.0435 41.6667, 521.7391 50.0000C 530.4348 58.3333, 539.1304 65.0000, 547.8260 75.0000C 556.5217 85.0000, 565.2173 97.5000, 573.9130 110.0000C 582.6086 122.5000, 595.6522 143.3333, 600.0000 150.0000" stroke-width="3.0" fill="none" />
+            transform="translate(0, 300) scale(1, -1)" d="M 0.0000 185.0000C 34.7826 166.0714, 43.4783 190.3571, 52.1739 182.1429C 60.8696 173.9286, 69.5652 127.5000, 78.2609 117.8571C 86.9565 108.2143, 95.6522 129.6429, 104.3478 124.2857C 113.0435 118.9286, 121.7391 96.7857, 130.4348 85.7143C 139.1304 74.6429, 147.8261 68.5714, 156.5217 57.8572C 165.2174 47.1429, 173.9130 25.7143, 182.6087 21.4286C 191.3043 17.1429, 200.0000 35.7143, 208.6956 32.1429C 217.3913 28.5714, 226.0870 1.7857, 234.7826 0.0000C 243.4783 -1.7857, 252.1739 21.4286, 260.8696 21.4286C 269.5652 21.4286, 278.2609 0.0000, 286.9565 0.0000C 295.6521 0.0000, 304.3478 21.4286, 313.0435 21.4286C 321.7391 21.4286, 330.4348 -1.7857, 339.1304 0.0000C 347.8261 1.7857, 356.5217 30.3571, 365.2174 32.1429C 373.9131 33.9286, 382.6087 4.6429, 391.3044 10.7143C 400.0000 16.7857, 408.6956 56.0715, 417.3913 68.5714C 426.0869 81.0714, 434.7826 78.2143, 443.4782 85.7143C 452.1739 93.2143, 460.8696 106.4286, 469.5652 113.5714C 478.2609 120.7143, 486.9565 117.1429, 495.6522 128.5714C 504.3478 140.0000, 513.0435 177.5000, 521.7391 182.1429C 530.4348 186.7857, 539.1304 153.5714, 547.8260 156.4286C 556.5217 159.2857, 565.2173 193.2143, 573.9130 199.2857C 582.6086 205.3572, 595.6522 193.9286, 600.0000 192.8571" stroke-width="3.0" fill="none" />
         <defs>
             <linearGradient id="UVGradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0.00%" stop-color="orange"/><stop offset="4.35%" stop-color="orange"/><stop offset="8.70%" stop-color="orange"/><stop offset="13.04%" stop-color="yellow"/><stop offset="17.39%" stop-color="green"/><stop offset="21.74%" stop-color="green"/><stop offset="26.09%" stop-color="green"/><stop offset="30.43%" stop-color="white"/><stop offset="34.78%" stop-color="white"/><stop offset="39.13%" stop-color="white"/><stop offset="43.48%" stop-color="white"/><stop offset="47.83%" stop-color="white"/><stop offset="52.17%" stop-color="white"/><stop offset="56.52%" stop-color="white"/><stop offset="60.87%" stop-color="white"/><stop offset="65.22%" stop-color="white"/><stop offset="69.57%" stop-color="white"/><stop offset="73.91%" stop-color="white"/><stop offset="78.26%" stop-color="white"/><stop offset="82.61%" stop-color="white"/><stop offset="86.96%" stop-color="white"/><stop offset="91.30%" stop-color="white"/><stop offset="95.65%" stop-color="white"/><stop offset="100.00%" stop-color="green"/>
+                <stop offset="0.00%" stop-color="white"/><stop offset="4.35%" stop-color="white"/><stop offset="8.70%" stop-color="white"/><stop offset="13.04%" stop-color="white"/><stop offset="17.39%" stop-color="white"/><stop offset="21.74%" stop-color="white"/><stop offset="26.09%" stop-color="white"/><stop offset="30.43%" stop-color="white"/><stop offset="34.78%" stop-color="white"/><stop offset="39.13%" stop-color="white"/><stop offset="43.48%" stop-color="white"/><stop offset="47.83%" stop-color="white"/><stop offset="52.17%" stop-color="white"/><stop offset="56.52%" stop-color="green"/><stop offset="60.87%" stop-color="green"/><stop offset="65.22%" stop-color="green"/><stop offset="69.57%" stop-color="green"/><stop offset="73.91%" stop-color="green"/><stop offset="78.26%" stop-color="green"/><stop offset="82.61%" stop-color="green"/><stop offset="86.96%" stop-color="white"/><stop offset="91.30%" stop-color="white"/><stop offset="95.65%" stop-color="white"/><stop offset="100.00%" stop-color="white"/>
             </linearGradient>
         </defs>
         <rect x="0" y="-14" width="600" height="8" fill="url(#UVGradient)" />
         <path stroke="black" stroke-linejoin="round" stroke-width="2" d="M 0 300 L 600 300 M 0 295 L 0 305 M 100 295 L 100 305 M 200 295 L 200 305 M 300 295 L 300 305 M 400 295 L 400 305 M 500 295 L 500 305 M 600 295 L 600 305" fill="none" />
-        <path stroke="red" stroke-linejoin="round" stroke-width="2" d="M 0 0 L 0 300 M -5 300 L 5 300 M -5 240 L 5 240 M -5 180.00002 L 5 180.00002 M -5 119.999985 L 5 119.999985 M -5 60.00003 L 5 60.00003 M -5 0 L 5 0" />
+        <path stroke="red" stroke-linejoin="round" stroke-width="2" d="M 0 0 L 0 300 M -5 300 L 5 300 M -5 240.00002 L 5 240.00002 M -5 180 L 5 180 M -5 120 L 5 120 M -5 60 L 5 60 M -5 0 L 5 0" />
         <path stroke="blue" stroke-linejoin="round" stroke-width="3" d="M 600 0 L 600 300 M 595 300 L 605 300 M 595 240 L 605 240 M 595 180 L 605 180 M 595 120 L 605 120 M 595 60 L 605 60 M 595 0 L 605 0"
             fill="none" />
     </svg>

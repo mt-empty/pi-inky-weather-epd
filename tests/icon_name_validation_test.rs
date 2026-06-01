@@ -399,7 +399,7 @@ fn test_boundary_case_26_percent_allows_precipitation_suffix() {
 
 #[test]
 fn test_snow_icon_selected_with_high_snowfall() {
-    // Heavy snow: 14.3cm snow = ~10mm water, total ~10mm = 100% snow
+    // Heavy snow: 14.3cm snow × 1.43 = ~20.4mm water, total ~10mm = 204% (well above threshold)
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(-2.0),
@@ -409,7 +409,7 @@ fn test_snow_icon_selected_with_high_snowfall() {
             Some(80), // Extreme range
             Some(8),
             Some(12),
-            Some(143), // 14.3cm snow = ~10mm water
+            Some(143), // 14.3cm snow × 1.43 = ~20.4mm water
         ),
         uv_index: 1,
         relative_humidity: 85,
@@ -427,7 +427,11 @@ fn test_snow_icon_selected_with_high_snowfall() {
 
 #[test]
 fn test_snow_icon_at_60_percent_threshold() {
-    // Boundary: exactly 60% snow (8.6cm = ~6mm water, total 10mm)
+    // Just above the 60% snow threshold.
+    // Open-Meteo ratio: 7 cm snow = 10 mm water, so snow_water = snow_cm × 10/7
+    // With median precip = (9+11)/2 = 10 mm:
+    //   boundary snow_cm = 10 × 0.6 × 7/10 = 4.2 cm  (not strictly > 60%)
+    //   4.3 cm  →  4.3 × 10/7 ≈ 6.14 mm  >  6.0 mm  →  61.4% snow  ✓
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(0.0),
@@ -437,7 +441,7 @@ fn test_snow_icon_at_60_percent_threshold() {
             Some(65),
             Some(9),
             Some(11),
-            Some(86), // 8.6cm = ~6mm water, total 10mm = 60% snow
+            Some(43), // 4.3 cm snowfall (stored as tenths of cm), ~61.4% snow
         ),
         uv_index: 2,
         relative_humidity: 80,
@@ -455,7 +459,8 @@ fn test_snow_icon_at_60_percent_threshold() {
 
 #[test]
 fn test_rain_icon_below_snow_threshold() {
-    // ~43% snow -> should show rain (3cm = ~4.3mm water, total 10mm)
+    // ~43% snow -> should show rain (3.0 cm = ~4.3 mm water, total 10 mm)
+    // 3.0 cm × 10/7 = 4.29 mm water; 4.29 / 10 = 42.9% (below 60%)
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(2.0),
@@ -465,7 +470,7 @@ fn test_rain_icon_below_snow_threshold() {
             Some(70),
             Some(9),
             Some(11),
-            Some(3), // 3cm × 1.43 = 4.29mm water, total 10mm = 42.9% snow (below 60%)
+            Some(30), // 3.0 cm snowfall (stored as tenths of cm), ~42.9% snow
         ),
         uv_index: 1,
         relative_humidity: 85,
@@ -494,7 +499,7 @@ fn test_snow_override_requires_partly_cloudy() {
             Some(30),
             Some(0),
             Some(2),
-            Some(15), // 1.5cm = ~1.05mm water, total ~1mm = 100% snow
+            Some(15), // 1.5 cm snowfall (stored as tenths of cm); 1.5 × 10/7 ≈ 2.14 mm water, total ~1 mm = 100% snow
         ),
         uv_index: 2,
         relative_humidity: 70,
@@ -513,7 +518,7 @@ fn test_snow_override_requires_partly_cloudy() {
 
 #[test]
 fn test_low_snowfall_shows_clear_not_snow() {
-    // Very light snowfall below 1.4mm threshold (0.2cm = ~0.14mm water)
+    // Very light snowfall below 1.4mm threshold (0.2cm × 1.43 = ~0.29mm water)
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(-1.0),
@@ -523,7 +528,7 @@ fn test_low_snowfall_shows_clear_not_snow() {
             Some(15),
             Some(0),
             Some(0),
-            Some(2), // 0.2cm = ~0.14mm water (very light)
+            Some(2), // 0.2 cm snowfall (stored as tenths of cm); 0.2 × 10/7 ≈ 0.29 mm water — below 1.4 mm threshold
         ),
         uv_index: 3,
         relative_humidity: 60,
@@ -542,7 +547,8 @@ fn test_low_snowfall_shows_clear_not_snow() {
 
 #[test]
 fn test_mixed_precipitation_favors_rain() {
-    // Mixed: ~29% snow, 71% rain (2cm = ~2.9mm water, total ~10mm)
+    // Mixed: ~29% snow, 71% rain (2.0 cm = ~2.86 mm water, total ~10 mm)
+    // 2.0 cm × 10/7 = 2.86 mm water; 2.86 / 10 = 28.6% (below 60%)
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(3.0),
@@ -552,7 +558,7 @@ fn test_mixed_precipitation_favors_rain() {
             Some(60),
             Some(8),
             Some(12),
-            Some(2), // 2cm × 1.43 = 2.86mm water, total 10mm = 28.6% snow (below 60%)
+            Some(20), // 2.0 cm snowfall (stored as tenths of cm), ~28.6% snow
         ),
         uv_index: 1,
         relative_humidity: 90,
@@ -571,7 +577,7 @@ fn test_mixed_precipitation_favors_rain() {
 
 #[test]
 fn test_partly_cloudy_snow_at_night() {
-    // Light snow at night (10cm = ~7mm water, total ~8mm = 87.5% snow)
+    // Light snow at night (10cm × 1.43 = ~14.3mm water, total ~8mm = 179% — well above threshold)
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(-5.0),
@@ -599,7 +605,7 @@ fn test_partly_cloudy_snow_at_night() {
 
 #[test]
 fn test_overcast_day_snow() {
-    // Overcast day with snow (11.5cm = ~8mm water, total ~9mm = 89% snow)
+    // Overcast day with snow (11.5cm × 1.43 = ~16.4mm water, total ~9mm = 183% — well above threshold)
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(-4.0),
@@ -627,7 +633,7 @@ fn test_overcast_day_snow() {
 
 #[test]
 fn test_extreme_night_snow() {
-    // Extreme conditions with snow (20cm = ~14mm water, total ~15mm = 93% snow)
+    // Extreme conditions with snow (20cm × 1.43 = ~28.6mm water, total ~15mm = 190% — well above threshold)
     let forecast = HourlyForecast {
         time: Utc::now(),
         temperature: Temperature::celsius(-10.0),

@@ -16,7 +16,7 @@ use pi_inky_weather_epd::domain::models::Precipitation;
 
 #[test]
 fn test_is_primarily_snow_with_high_snow_ratio() {
-    // 10cm snow = ~7mm water, total precip = 8mm -> 87.5% snow
+    // 10cm snow × 1.43 = 14.3mm water, total precip = 8mm -> 178.75% (well above 60% threshold)
     let precip = Precipitation::new_with_snowfall(
         Some(80),
         Some(7),
@@ -26,24 +26,43 @@ fn test_is_primarily_snow_with_high_snow_ratio() {
 
     assert!(
         precip.is_primarily_snow(),
-        "10cm snow with 8mm total should be primarily snow (87.5%)"
+        "10cm snow with 8mm total should be primarily snow (178.75%)"
     );
 }
 
 #[test]
-fn test_is_primarily_snow_boundary_case_60_percent() {
-    // Exactly 60% snow (boundary case)
-    // 8.6cm snow = ~6mm water, total = 10mm -> 60% snow
+fn test_is_primarily_snow_boundary_case_just_above_60_percent() {
+    // Open-Meteo ratio: 7 cm snow = 10 mm water, so snow_water = snow_cm × 10/7
+    // Threshold: snow_water > precip_mm × 0.6
+    // With median precip = (9+11)/2 = 10 mm:
+    //   boundary snow_cm = 10 × 0.6 × 7/10 = 4.2 cm  →  4.2 × 10/7 = 6.0 mm  (not > 6.0, fails)
+    //   4.3 cm  →  4.3 × 10/7 ≈ 6.14 mm  >  6.0 mm  ✓
     let precip = Precipitation::new_with_snowfall(
         Some(75),
         Some(9),
         Some(11),
-        Some(86), // 8.6cm snowfall
+        Some(43), // 4.3 cm snowfall (stored as tenths of cm)
     );
 
     assert!(
         precip.is_primarily_snow(),
-        "8.6cm snow with 10mm total should be primarily snow (exactly 60%)"
+        "4.3 cm snow (61.4% water equivalent) with 10 mm total should be primarily snow"
+    );
+}
+
+#[test]
+fn test_is_not_primarily_snow_boundary_case_just_below_60_percent() {
+    // 4.1 cm  →  4.1 × 10/7 ≈ 5.86 mm  <  6.0 mm (= 10 mm × 0.6)  →  not snow
+    let precip = Precipitation::new_with_snowfall(
+        Some(75),
+        Some(9),
+        Some(11),
+        Some(41), // 4.1 cm snowfall (stored as tenths of cm)
+    );
+
+    assert!(
+        !precip.is_primarily_snow(),
+        "4.1 cm snow (58.6% water equivalent) with 10 mm total should NOT be primarily snow"
     );
 }
 
@@ -54,7 +73,7 @@ fn test_is_not_primarily_snow_below_threshold() {
         Some(70),
         Some(9),
         Some(11),
-        Some(3), // 3cm snowfall
+        Some(30), // 3.0cm snowfall (stored as tenths of cm)
     );
 
     assert!(
@@ -65,17 +84,17 @@ fn test_is_not_primarily_snow_below_threshold() {
 
 #[test]
 fn test_is_primarily_snow_just_above_threshold() {
-    // 9cm snow = ~6.45mm water, total = 10mm -> 64.5% snow
+    // 4.5cm snow → 4.5 × 1.43 = 6.435mm water, total = 10mm → 64.35% > 60% threshold
     let precip = Precipitation::new_with_snowfall(
         Some(75),
         Some(9),
         Some(11),
-        Some(9), // 9cm snowfall
+        Some(45), // 4.5cm snowfall (stored as tenths of cm)
     );
 
     assert!(
         precip.is_primarily_snow(),
-        "9cm snow with 10mm total should be primarily snow (64.5%)"
+        "4.5cm snow with 10mm total should be primarily snow (64.35%)"
     );
 }
 
@@ -86,7 +105,7 @@ fn test_is_not_primarily_snow_just_below_threshold() {
         Some(75),
         Some(9),
         Some(11),
-        Some(4), // 4cm snowfall
+        Some(40), // 4.0cm snowfall (stored as tenths of cm)
     );
 
     assert!(
@@ -119,7 +138,7 @@ fn test_zero_snowfall_returns_false() {
 
 #[test]
 fn test_all_snow_no_rain() {
-    // 14.3cm snow = ~10mm water, total = 10mm -> 100% snow
+    // 14.3cm snow × 1.43 = 20.4mm water, total = 10mm -> 204% (all snow by water equivalent)
     let precip = Precipitation::new_with_snowfall(
         Some(90),
         Some(9),
@@ -129,7 +148,7 @@ fn test_all_snow_no_rain() {
 
     assert!(
         precip.is_primarily_snow(),
-        "Pure snow (100%) should be classified as primarily snow"
+        "Pure snow (204% water equivalent) should be classified as primarily snow"
     );
 }
 
@@ -140,7 +159,7 @@ fn test_light_snow_with_heavy_rain() {
         Some(85),
         Some(18),
         Some(22),
-        Some(1), // 1cm snowfall
+        Some(10), // 1.0cm snowfall (stored as tenths of cm)
     );
 
     assert!(
@@ -155,7 +174,7 @@ fn test_light_snow_with_heavy_rain() {
 
 #[test]
 fn test_winter_storm_scenario() {
-    // Heavy snowstorm: 20cm snow = ~14mm water, total = 15mm -> 93% snow
+    // Heavy snowstorm: 20cm snow × 1.43 = 28.6mm water, total = 15mm -> 190% (well above 60% threshold)
     let precip = Precipitation::new_with_snowfall(
         Some(95),
         Some(14),
@@ -165,7 +184,7 @@ fn test_winter_storm_scenario() {
 
     assert!(
         precip.is_primarily_snow(),
-        "Heavy snowstorm scenario should be classified as snow"
+        "Heavy snowstorm (190% water equivalent) should be classified as snow"
     );
 }
 
@@ -176,7 +195,7 @@ fn test_mixed_precipitation_scenario() {
         Some(80),
         Some(11),
         Some(13),
-        Some(3), // 3cm snowfall
+        Some(30), // 3.0cm snowfall (stored as tenths of cm)
     );
 
     assert!(
@@ -192,7 +211,7 @@ fn test_light_flurries_scenario() {
         Some(40),
         Some(0),
         Some(1),
-        Some(1), // 1cm snowfall
+        Some(10), // 1.0cm snowfall (stored as tenths of cm)
     );
 
     assert!(
@@ -207,7 +226,7 @@ fn test_light_flurries_scenario() {
 
 #[test]
 fn test_has_snow_returns_true_with_snowfall() {
-    let precip = Precipitation::new_with_snowfall(Some(50), Some(5), Some(10), Some(10));
+    let precip = Precipitation::new_with_snowfall(Some(50), Some(5), Some(10), Some(10)); // 1.0cm snowfall
 
     assert!(
         precip.has_snow(),

@@ -26,6 +26,7 @@ pub struct Context {
     pub actual_temp_colour: String,
     pub feels_like_colour: String,
     pub rain_colour: String,
+    pub snow_colour: String,
     // any weather element that is not graph
     pub max_uv_index: String,
     pub max_uv_index_font_style: String,
@@ -120,6 +121,7 @@ impl Default for Context {
             actual_temp_colour: colours.actual_temp_colour.to_string(),
             feels_like_colour: colours.feels_like_colour.to_string(),
             rain_colour: colours.rain_colour.to_string(),
+            snow_colour: colours.snow_colour.to_string(),
             max_uv_index: NOT_AVAILABLE.to_string(),
             max_uv_index_font_style: FontStyle::Normal.to_string(),
             max_gust_speed: NOT_AVAILABLE.to_string(),
@@ -558,7 +560,7 @@ impl ContextBuilder {
             &hourly_forecast_data,
             &local_forecast_window_start,
             &local_forecast_window_end,
-            |item: &HourlyForecast| item.precipitation.median(),
+            |item: &HourlyForecast| item.precipitation.amount(),
             |item| item.time.with_timezone(&Local),
         ))
         .to_string();
@@ -619,7 +621,12 @@ impl ContextBuilder {
                 match path {
                     GraphDataPath::Temp(data) => temp_acc.push_str(data),
                     GraphDataPath::TempFeelLike(data) => feel_like_acc.push_str(data),
-                    GraphDataPath::Rain(data) => rain_acc.push_str(data),
+                    GraphDataPath::Precipitation(blocks) => {
+                        // Convert rain blocks to SVG with per-hour patterns
+                        rain_acc.push_str(
+                            &HourlyForecastGraph::generate_precipitation_pattern_svg(blocks),
+                        );
+                    }
                 }
                 (temp_acc, feel_like_acc, rain_acc)
             },
@@ -661,11 +668,31 @@ impl ContextBuilder {
                         CurveType::TempFeelLike(curve) => {
                             curve.add_point(x as f32, *forecast.apparent_temperature)
                         }
-                        CurveType::RainChance(curve) => curve
-                            .add_point(x as f32, forecast.precipitation.chance.unwrap_or(0) as f32),
+                        CurveType::PrecipitationChance(curve) => curve.add_point(
+                            x as f32,
+                            forecast.precipitation.chance.unwrap_or(0) as f32,
+                            forecast.precipitation.is_primarily_snow(),
+                        ),
                     }
                 }
                 graph.uv_data[x] = forecast.uv_index;
+
+                let chance = forecast.precipitation.chance.unwrap_or(0);
+                let precip_mm = forecast.precipitation.amount();
+                let is_snow = forecast.precipitation.is_primarily_snow();
+                let pattern = HourlyForecastGraph::select_precipitation_pattern(chance as f32, is_snow);
+                logger::debug(format!(
+                    "h{:02}: temp={:>5.1}° feels={:>5.1}° precip={:>3}% {:>5.2}mm  uv={:>2}  snow={:<5}  → {}",
+                    x,
+                    *forecast.temperature,
+                    *forecast.apparent_temperature,
+                    chance,
+                    precip_mm,
+                    forecast.uv_index,
+                    is_snow,
+                    pattern,
+                ));
+
                 x += 1;
             });
     }
@@ -682,7 +709,7 @@ impl ContextBuilder {
             .now_local()
             .format(&CONFIG.render_options.date_format)
             .to_string();
-        self.context.current_hour_rain_amount = current_hour.precipitation.median().to_string();
+        self.context.current_hour_rain_amount = current_hour.precipitation.amount().to_string();
 
         self
     }

@@ -128,6 +128,7 @@ pub struct Colours {
     pub actual_temp_colour: Colour,
     pub feels_like_colour: Colour,
     pub rain_colour: Colour,
+    pub snow_colour: Colour,
 }
 
 // TODO: rename the fields to indicate if it's a path or a name
@@ -333,6 +334,7 @@ impl DashboardSettings {
         logger::kvp("Actual Temp", &self.colours.actual_temp_colour);
         logger::kvp("Feels Like", &self.colours.feels_like_colour);
         logger::kvp("Rain", &self.colours.rain_colour);
+        logger::kvp("Snow", &self.colours.snow_colour);
 
         // File Paths
         logger::config_group("File Paths");

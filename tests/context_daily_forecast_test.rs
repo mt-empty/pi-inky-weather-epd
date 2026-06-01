@@ -2,7 +2,10 @@
 ///
 /// Verifies that daily forecast data with noon UTC timestamps correctly maps
 /// to local dates without shifting to the previous day in EST (UTC-5)
+mod helpers;
+
 use chrono::{NaiveDate, NaiveDateTime, TimeZone, Utc};
+use helpers::test_utils::EnvVarGuard;
 use pi_inky_weather_epd::{
     clock::FixedClock,
     configs::settings::TemperatureUnit,
@@ -22,8 +25,7 @@ fn temp_c(value: f32) -> Temperature {
 #[serial]
 fn test_with_daily_forecast_data_new_york_est() {
     // Set timezone to New York
-    let original_tz = std::env::var("TZ").ok();
-    unsafe { std::env::set_var("TZ", "America/New_York") };
+    let _tz_guard = EnvVarGuard::new("TZ", "America/New_York");
 
     // Fixed clock: Dec 17, 2025 at 10:00 AM EST (15:00 UTC)
     let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 12, 17, 15, 0, 0).unwrap());
@@ -148,22 +150,13 @@ fn test_with_daily_forecast_data_new_york_est() {
     // Day 7 (Tue, Dec 23): 1.3°C → 1, -3.0°C → -3
     assert_eq!(context.day7_maxtemp, "1", "Day 7 max temp incorrect");
     assert_eq!(context.day7_mintemp, "-3", "Day 7 min temp incorrect");
-
-    // Restore original TZ
-    unsafe {
-        match original_tz {
-            Some(tz) => std::env::set_var("TZ", tz),
-            None => std::env::remove_var("TZ"),
-        }
-    }
 }
 
 /// Test that noon UTC timestamps don't cause date shifts in EST
 #[test]
 #[serial]
 fn test_noon_utc_prevents_date_shift_in_est() {
-    let original_tz = std::env::var("TZ").ok();
-    unsafe { std::env::set_var("TZ", "America/New_York") };
+    let _tz_guard = EnvVarGuard::new("TZ", "America/New_York");
 
     // Fixed clock: Dec 17, 2025 at 2:00 AM EST (early morning)
     let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 12, 17, 7, 0, 0).unwrap());
@@ -249,22 +242,13 @@ fn test_noon_utc_prevents_date_shift_in_est() {
     assert_eq!(context.day5_maxtemp, "14"); // Dec 21 data goes to day5
     assert_eq!(context.day6_maxtemp, "15"); // Dec 22 data goes to day6
     assert_eq!(context.day7_maxtemp, "16"); // Dec 23 data goes to day7
-
-    // Restore original TZ
-    unsafe {
-        match original_tz {
-            Some(tz) => std::env::set_var("TZ", tz),
-            None => std::env::remove_var("TZ"),
-        }
-    }
 }
 
 /// Test that dates before today are correctly skipped
 #[test]
 #[serial]
 fn test_skips_past_dates() {
-    let original_tz = std::env::var("TZ").ok();
-    unsafe { std::env::set_var("TZ", "America/New_York") };
+    let _tz_guard = EnvVarGuard::new("TZ", "America/New_York");
 
     // Fixed clock: Dec 19, 2025 at 10:00 AM EST
     let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 12, 19, 15, 0, 0).unwrap());
@@ -367,12 +351,4 @@ fn test_skips_past_dates() {
     assert_eq!(context.day5_maxtemp, "16"); // Dec 23 → day5
     assert_eq!(context.day6_maxtemp, "17"); // Dec 24 → day6
     assert_eq!(context.day7_maxtemp, "18"); // Dec 25 → day7
-
-    // Restore original TZ
-    unsafe {
-        match original_tz {
-            Some(tz) => std::env::set_var("TZ", tz),
-            None => std::env::remove_var("TZ"),
-        }
-    }
 }

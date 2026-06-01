@@ -33,37 +33,50 @@ impl Curve {
 }
 
 #[derive(Clone, Debug)]
+pub struct PrecipitationBlock {
+    pub path: String,
+    pub pattern: String,
+    pub opacity: &'static str,
+}
+
+#[derive(Clone, Debug)]
 pub struct GraphData {
     pub points: Vec<Point>,
     pub smooth: bool,
+}
+
+#[derive(Clone, Debug, Copy)]
+pub struct PrecipitationPoint {
+    pub x: f32,
+    pub chance: f32,
+    pub is_primarily_snow: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct PrecipitationData {
+    pub points: Vec<PrecipitationPoint>,
 }
 
 #[derive(Clone, Debug)]
 pub enum CurveType {
     ActualTemp(GraphData),
     TempFeelLike(GraphData),
-    RainChance(GraphData),
-}
-
-impl CurveType {
-    fn data(&self) -> &GraphData {
-        match self {
-            Self::ActualTemp(data) | Self::TempFeelLike(data) | Self::RainChance(data) => data,
-        }
-    }
-
-    pub fn points(&self) -> &Vec<Point> {
-        &self.data().points
-    }
-
-    pub fn is_smooth(&self) -> bool {
-        self.data().smooth
-    }
+    PrecipitationChance(PrecipitationData),
 }
 
 impl GraphData {
     pub fn add_point(&mut self, x: f32, y: f32) {
         self.points.push(Point { x, y })
+    }
+}
+
+impl PrecipitationData {
+    pub fn add_point(&mut self, x: f32, chance: f32, is_primarily_snow: bool) {
+        self.points.push(PrecipitationPoint {
+            x,
+            chance,
+            is_primarily_snow,
+        })
     }
 }
 pub struct HourlyForecastGraph {
@@ -95,10 +108,7 @@ impl Default for HourlyForecastGraph {
                     points: vec![],
                     smooth: true,
                 }),
-                CurveType::RainChance(GraphData {
-                    points: vec![],
-                    smooth: false,
-                }),
+                CurveType::PrecipitationChance(PrecipitationData { points: vec![] }),
             ],
             uv_data: [0; 24],
             height: 300.0,
@@ -120,7 +130,7 @@ impl Default for HourlyForecastGraph {
 pub enum GraphDataPath {
     Temp(String),
     TempFeelLike(String),
-    Rain(String),
+    Precipitation(Vec<PrecipitationBlock>),
 }
 
 #[derive(Debug, Display)]
@@ -477,29 +487,29 @@ impl HourlyForecastGraph {
 
     fn initialize_x_y_bounds(&mut self) {
         for curve in &self.curves {
-            let min_y_data = curve
-                .points()
-                .iter()
-                .map(|val| val.y)
-                .fold(f32::NAN, f32::min);
-            let max_y_data = curve
-                .points()
-                .iter()
-                .map(|val| val.y)
-                .fold(f32::NAN, f32::max);
-
-            let starting_x_data = curve.points().first().map(|val| val.x).unwrap_or(0.0);
-            let ending_x_data = curve.points().last().map(|val| val.x).unwrap_or(0.0);
-
             match curve {
-                CurveType::RainChance(_) => {}
-                CurveType::ActualTemp(_) | CurveType::TempFeelLike(_) => {
+                CurveType::ActualTemp(data) | CurveType::TempFeelLike(data) => {
+                    let min_y_data = data.points.iter().map(|val| val.y).fold(f32::NAN, f32::min);
+                    let max_y_data = data.points.iter().map(|val| val.y).fold(f32::NAN, f32::max);
+                    let starting_x_data = data.points.first().map(|val| val.x).unwrap_or(0.0);
+                    let ending_x_data = data.points.last().map(|val| val.x).unwrap_or(0.0);
+
                     self.min_y = self.min_y.min(min_y_data);
                     self.max_y = self.max_y.max(max_y_data);
+                    self.starting_x = starting_x_data;
+                    self.ending_x = ending_x_data;
+                }
+                CurveType::PrecipitationChance(data) => {
+                    let starting_x_data = data
+                        .points
+                        .first()
+                        .map(|val: &PrecipitationPoint| val.x)
+                        .unwrap_or(0.0);
+                    let ending_x_data = data.points.last().map(|val| val.x).unwrap_or(0.0);
+                    self.starting_x = starting_x_data;
+                    self.ending_x = ending_x_data;
                 }
             }
-            self.starting_x = starting_x_data;
-            self.ending_x = ending_x_data;
         }
 
         // println!(
@@ -513,7 +523,6 @@ impl HourlyForecastGraph {
     }
 
     pub fn draw_uv_gradient_over_time(&self) -> String {
-        logger::detail(format!("UV indices for 24h: {:?}", self.uv_data));
         let mut gradient = String::new();
 
         for (i, &uv) in self.uv_data.iter().enumerate() {
@@ -527,6 +536,38 @@ impl HourlyForecastGraph {
         gradient
     }
 
+    /// Select precipitation pattern based on chance percentage and whether the hour is
+    /// primarily snow (pre-computed from `Precipitation::is_primarily_snow()`).
+    pub(crate) fn select_precipitation_pattern(_chance: f32, is_snow: bool) -> &'static str {
+        if is_snow {
+            "snow"
+        } else {
+            "rain"
+        }
+    }
+
+    fn select_opacity(chance: f32, _is_snow: bool) -> &'static str {
+        if chance >= 50.0 {
+            "35%"
+        } else {
+            "25%"
+        }
+    }
+
+    /// Generate SVG for all precipitation blocks with per-hour patterns
+    pub fn generate_precipitation_pattern_svg(blocks: &[PrecipitationBlock]) -> String {
+        blocks
+            .iter()
+            .map(|block| {
+                format!(
+                    r#"<path d="{}" fill="url(#{})" fill-opacity="{}" />"#,
+                    block.path, block.pattern, block.opacity
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n            ")
+    }
+
     pub fn draw_graph(&mut self) -> Result<Vec<GraphDataPath>, Error> {
         // Calculate the minimum and maximum x values from the points
         let mut data_path = vec![];
@@ -537,7 +578,7 @@ impl HourlyForecastGraph {
             // Calculate scaling factors for x and y to fit the graph within the given width and height
             let xfactor = self.width / self.ending_x;
             let yfactor = match curve {
-                CurveType::RainChance(_) => self.height / 100.0, // Rain data is in percentage
+                CurveType::PrecipitationChance(_) => self.height / 100.0, // Rain data is in percentage
                 CurveType::ActualTemp(_) | CurveType::TempFeelLike(_) => {
                     if self.max_y >= 0.0 && self.min_y < 0.0 {
                         self.height / (self.max_y + self.min_y.abs())
@@ -553,66 +594,110 @@ impl HourlyForecastGraph {
 
             // println!("X factor: {}, Y factor: {}", xfactor, yfactor);
 
-            // Scale the points according to the calculated factors
-            let scaled_points: Vec<Point> = curve
-                .points()
-                .iter()
-                .map(|val| Point {
-                    x: (val.x * xfactor), // x always start from 0 so no need to adjust the x value
-                    y: match curve {
-                        CurveType::RainChance(_) => val.y * yfactor,
-                        CurveType::ActualTemp(_) | CurveType::TempFeelLike(_) => {
-                            // If the minimum y value is negative, we need to adjust the y value
-                            // to ensure it's correctly placed on the graph
-                            if self.min_y < 0.0 {
+            match curve {
+                CurveType::PrecipitationChance(precipitation_data) => {
+                    // Scale precipitation points according to the calculated factors.
+                    let scaled_points: Vec<Point> = precipitation_data
+                        .points
+                        .iter()
+                        .map(|val| Point {
+                            x: val.x * xfactor,
+                            y: val.chance * yfactor,
+                        })
+                        .collect();
+
+                    // Generate individual blocks for each hour with stepped path segments
+                    let mut blocks = Vec::new();
+
+                    for i in 0..scaled_points.len() {
+                        let current = scaled_points[i];
+                        let next = if i + 1 < scaled_points.len() {
+                            scaled_points[i + 1]
+                        } else {
+                            // Last point - extrapolate one step, but clamp to graph width
+                            // so the final block does not overflow past the right Y-axis.
+                            let step = current.x - if i > 0 { scaled_points[i - 1].x } else { 0.0 };
+                            Point {
+                                x: (current.x + step).min(self.width),
+                                y: current.y,
+                            }
+                        };
+
+                        // Get original precipitation chance percentage and snow flag for pattern selection
+                        let precip_chance = precipitation_data.points[i].chance;
+                        let is_snow = precipitation_data.points[i].is_primarily_snow;
+                        let pattern = Self::select_precipitation_pattern(precip_chance, is_snow);
+                        let opacity = Self::select_opacity(precip_chance, is_snow);
+
+                        // Interpolated block: top-left -> bottom-left -> bottom-right -> top-right
+                        // Bottom edge tapers from current.y to next.y, smoothly blending between hours.
+                        let block_path = format!(
+                            "M {:.4} 0 L {:.4} {:.4} L {:.4} {:.4} L {:.4} 0 Z",
+                            current.x, current.x, current.y, next.x, next.y, next.x
+                        );
+
+                        blocks.push(PrecipitationBlock {
+                            path: block_path,
+                            pattern: pattern.to_string(),
+                            opacity,
+                        });
+                    }
+
+                    data_path.push(GraphDataPath::Precipitation(blocks));
+                }
+                CurveType::ActualTemp(data) | CurveType::TempFeelLike(data) => {
+                    // Scale the points according to the calculated factors.
+                    let scaled_points: Vec<Point> = data
+                        .points
+                        .iter()
+                        .map(|val| Point {
+                            x: (val.x * xfactor),
+                            y: if self.min_y < 0.0 {
                                 (val.y + self.min_y.abs()) * yfactor
                             } else {
                                 (val.y - self.min_y) * yfactor
-                            }
-                        }
-                    },
-                })
-                .collect();
+                            },
+                        })
+                        .collect();
 
-            // Generate the SVG path data
-            let path = if curve.is_smooth() {
-                catmull_rom_to_bezier(scaled_points)
-                    .iter()
-                    .enumerate()
-                    .map(|(i, val)| {
-                        if i == 0 {
-                            format!("M {:.4} {:.4}", val.c1.x, val.c1.y)
-                        } else {
-                            val.to_svg()
-                        }
-                    })
-                    .collect::<Vec<String>>()
-                    .join("")
-            } else {
-                scaled_points
-                    .iter()
-                    .enumerate()
-                    .map(|(i, val)| {
-                        if i == 0 {
-                            format!("M {:.4} {:.4}", val.x, val.y)
-                        } else {
-                            val.to_svg()
-                        }
-                    })
-                    .collect::<Vec<String>>()
-                    .join("")
-            };
+                    // Generate the SVG path data for temperature curves
+                    let path = if data.smooth {
+                        catmull_rom_to_bezier(scaled_points)
+                            .iter()
+                            .enumerate()
+                            .map(|(i, val)| {
+                                if i == 0 {
+                                    format!("M {:.4} {:.4}", val.c1.x, val.c1.y)
+                                } else {
+                                    val.to_svg()
+                                }
+                            })
+                            .collect::<Vec<String>>()
+                            .join("")
+                    } else {
+                        scaled_points
+                            .iter()
+                            .enumerate()
+                            .map(|(i, val)| {
+                                if i == 0 {
+                                    format!("M {:.4} {:.4}", val.x, val.y)
+                                } else {
+                                    val.to_svg()
+                                }
+                            })
+                            .collect::<Vec<String>>()
+                            .join("")
+                    };
 
-            match curve {
-                CurveType::ActualTemp(_) => {
-                    data_path.push(GraphDataPath::Temp(path));
-                }
-                CurveType::TempFeelLike(_) => {
-                    data_path.push(GraphDataPath::TempFeelLike(path));
-                }
-                CurveType::RainChance(_) => {
-                    let bounding_area_path = format!("{} L {} 0 L 0 0Z", path, self.width);
-                    data_path.push(GraphDataPath::Rain(bounding_area_path));
+                    match curve {
+                        CurveType::ActualTemp(_) => {
+                            data_path.push(GraphDataPath::Temp(path));
+                        }
+                        CurveType::TempFeelLike(_) => {
+                            data_path.push(GraphDataPath::TempFeelLike(path));
+                        }
+                        _ => unreachable!(),
+                    }
                 }
             }
         }

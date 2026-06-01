@@ -134,6 +134,11 @@ pub struct Precipitation {
     pub chance: Option<u16>,
     pub amount_min: Option<u16>,
     pub amount_max: Option<u16>,
+    /// Snowfall in **tenths of a centimetre** (×10).
+    ///
+    /// Stored at sub-cm precision to avoid rounding out light snowfall (0.1–0.49 cm).
+    /// Always divide by 10 before use — prefer `snowfall_cm()` over reading this field directly.
+    /// Open-Meteo unit: cm; multiply by 10 before storing, divide by 10 when reading.
     pub snowfall_amount: Option<u16>,
 }
 
@@ -146,7 +151,7 @@ impl Precipitation {
             snowfall_amount: None,
         }
     }
-
+    // TODO: should use a single new with optional snowfall
     pub fn new_with_snowfall(
         chance: Option<u16>,
         amount_min: Option<u16>,
@@ -167,20 +172,45 @@ impl Precipitation {
         (min + max) as f32 / 2.0
     }
 
+    /// Best estimate of precipitation amount in mm.
+    ///
+    /// When only a single value is available, returns it directly:
+    /// - `(None, Some(max))` — Open-Meteo hourly/daily (only upper bound provided)
+    /// - `(Some(min), None)` — hypothetical lower-bound-only provider
+    ///
+    /// When both bounds are present returns the midpoint.
+    /// When neither is present returns 0.
+    pub fn amount(&self) -> f32 {
+        match (self.amount_min, self.amount_max) {
+            (None, Some(max)) => max as f32,
+            (Some(min), None) => min as f32,
+            _ => self.median(),
+        }
+    }
+
     /// Check if this precipitation includes snowfall
     pub fn has_snow(&self) -> bool {
-        self.snowfall_amount.unwrap_or(0) > 0
+        self.snowfall_cm() > 0.0
     }
 
     /// Determine if precipitation is primarily snow based on water equivalent ratio
     /// Using Open-Meteo's ratio: 7 cm snow ≈ 10 mm water (0.7 density)
+    ///
+    /// Note: `snowfall_amount` is stored in tenths of a cm (×10) to preserve one decimal
+    /// place of precision. Plain rounding to whole cm would zero out light snow (0.1–0.49 cm).
+    ///
+    /// Note: uses `amount_max` directly when `amount_min` is absent (e.g. Open-Meteo hourly,
+    /// which provides a single precipitation value). Using `median()` in that case would
+    /// substitute 0 for the missing min, halving the denominator and making snow detection
+    /// twice as permissive as the 60% threshold intends.
     pub fn is_primarily_snow(&self) -> bool {
-        let snow_cm = self.snowfall_amount.unwrap_or(0) as f32;
-        let precip_mm = self.median();
+        let snow_cm = self.snowfall_cm();
 
         if snow_cm == 0.0 {
             return false;
         }
+
+        let precip_mm = self.amount();
 
         // Convert snow to water equivalent (7cm snow = 10mm water, so multiply by ~1.43), from open meteo docs
         let snow_water_equivalent = snow_cm * 1.43;
@@ -189,9 +219,10 @@ impl Precipitation {
         snow_water_equivalent > (precip_mm * 0.6)
     }
 
-    /// Get snowfall amount in cm
+    /// Get snowfall amount in cm.
+    /// `snowfall_amount` is stored as tenths of a cm (×10) for sub-cm precision.
     pub fn snowfall_cm(&self) -> f32 {
-        self.snowfall_amount.unwrap_or(0) as f32
+        self.snowfall_amount.unwrap_or(0) as f32 / 10.0
     }
 }
 

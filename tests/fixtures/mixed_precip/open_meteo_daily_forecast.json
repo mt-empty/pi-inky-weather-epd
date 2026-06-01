@@ -1,0 +1,103 @@
+{
+  "latitude": 47.6062,
+  "longitude": -122.3321,
+  "generationtime_ms": 1.0,
+  "utc_offset_seconds": 0,
+  "timezone": "GMT",
+  "timezone_abbreviation": "GMT",
+  "elevation": 56.0,
+  "daily_units": {
+    "time": "iso8601",
+    "sunrise": "iso8601",
+    "sunset": "iso8601",
+    "temperature_2m_max": "\u00b0C",
+    "temperature_2m_min": "\u00b0C",
+    "precipitation_sum": "mm",
+    "precipitation_probability_max": "%",
+    "cloud_cover_mean": "%",
+    "snowfall_sum": "cm"
+  },
+  "daily": {
+    "time": [
+      "2026-02-01",
+      "2026-02-02",
+      "2026-02-03",
+      "2026-02-04",
+      "2026-02-05",
+      "2026-02-06",
+      "2026-02-07"
+    ],
+    "sunrise": [
+      "2026-02-01T07:30",
+      "2026-02-02T07:28",
+      "2026-02-03T07:26",
+      "2026-02-04T07:24",
+      "2026-02-05T07:22",
+      "2026-02-06T07:20",
+      "2026-02-07T07:18"
+    ],
+    "sunset": [
+      "2026-02-01T17:30",
+      "2026-02-02T17:32",
+      "2026-02-03T17:34",
+      "2026-02-04T17:36",
+      "2026-02-05T17:38",
+      "2026-02-06T17:40",
+      "2026-02-07T17:42"
+    ],
+    "temperature_2m_max": [
+      9.0,
+      7.0,
+      5.0,
+      3.0,
+      4.0,
+      6.0,
+      8.0
+    ],
+    "temperature_2m_min": [
+      3.0,
+      1.0,
+      -1.0,
+      -3.0,
+      -2.0,
+      0.0,
+      2.0
+    ],
+    "precipitation_sum": [
+      4.0,
+      6.0,
+      2.0,
+      0.5,
+      1.0,
+      3.0,
+      2.0
+    ],
+    "precipitation_probability_max": [
+      85,
+      90,
+      70,
+      30,
+      50,
+      75,
+      60
+    ],
+    "cloud_cover_mean": [
+      85,
+      90,
+      75,
+      40,
+      60,
+      80,
+      70
+    ],
+    "snowfall_sum": [
+      0.0,
+      0.0,
+      3.0,
+      5.0,
+      2.0,
+      0.0,
+      0.0
+    ]
+  }
+}

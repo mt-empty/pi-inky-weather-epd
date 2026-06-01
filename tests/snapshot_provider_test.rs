@@ -51,6 +51,7 @@
 
 mod helpers;
 
+use helpers::test_utils::EnvVarGuard;
 use helpers::wiremock_setup;
 use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injection, CONFIG};
 use std::fs;
@@ -105,7 +106,9 @@ async fn snapshot_open_meteo_dashboard() {
     .await;
 
     // Override Open-Meteo base URL to point to mock server
-    std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
+    let open_meteo_base_url = mock_server.uri();
+    let _open_meteo_base_url_guard =
+        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
 
     // Fixed time: Oct 25, 2025, 1:00 AM UTC
     // In Melbourne AEDT (UTC+11): Oct 25, 2025, 12:00 PM (noon)
@@ -134,9 +137,6 @@ async fn snapshot_open_meteo_dashboard() {
     })
     .await
     .expect("Task panicked");
-
-    // Cleanup
-    std::env::remove_var("OPEN_METEO_BASE_URL");
 
     // Snapshot the SVG structure
     insta::assert_snapshot!(svg_content);
@@ -168,7 +168,9 @@ async fn snapshot_open_meteo_midnight_boundary() {
         "tests/fixtures/open_meteo_daily_forecast.json",
     )
     .await;
-    std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
+    let open_meteo_base_url = mock_server.uri();
+    let _open_meteo_base_url_guard =
+        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
 
     let clock =
         FixedClock::from_rfc3339("2025-10-26T00:00:00Z").expect("Failed to create fixed clock");
@@ -192,7 +194,6 @@ async fn snapshot_open_meteo_midnight_boundary() {
     .await
     .expect("Task panicked");
 
-    std::env::remove_var("OPEN_METEO_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }
 
@@ -221,7 +222,9 @@ async fn snapshot_open_meteo_end_of_day() {
         "tests/fixtures/open_meteo_daily_forecast.json",
     )
     .await;
-    std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
+    let open_meteo_base_url = mock_server.uri();
+    let _open_meteo_base_url_guard =
+        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
 
     let clock =
         FixedClock::from_rfc3339("2025-10-25T13:00:00Z").expect("Failed to create fixed clock");
@@ -245,7 +248,6 @@ async fn snapshot_open_meteo_end_of_day() {
     .await
     .expect("Task panicked");
 
-    std::env::remove_var("OPEN_METEO_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }
 
@@ -274,7 +276,9 @@ async fn snapshot_open_meteo_early_morning() {
         "tests/fixtures/open_meteo_daily_forecast.json",
     )
     .await;
-    std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
+    let open_meteo_base_url = mock_server.uri();
+    let _open_meteo_base_url_guard =
+        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
 
     let clock =
         FixedClock::from_rfc3339("2025-10-25T16:00:00Z").expect("Failed to create fixed clock");
@@ -298,7 +302,6 @@ async fn snapshot_open_meteo_early_morning() {
     .await
     .expect("Task panicked");
 
-    std::env::remove_var("OPEN_METEO_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }
 
@@ -351,10 +354,8 @@ async fn snapshot_bom_dashboard() {
 
     // Override BOM base URL to point to mock server
     // Note: BOM URLs are constructed as {base_url}/{geohash}/forecasts/{frequency}
-    std::env::set_var(
-        "BOM_BASE_URL",
-        format!("{}/v1/locations", mock_server.uri()),
-    );
+    let bom_base_url = format!("{}/v1/locations", mock_server.uri());
+    let _bom_base_url_guard = EnvVarGuard::new("BOM_BASE_URL", bom_base_url.as_str());
 
     // Fixed time: Oct 25, 2025, 10:00 AM UTC
     // In Melbourne AEDT (UTC+11): Oct 25, 2025, 9:00 PM
@@ -385,9 +386,6 @@ async fn snapshot_bom_dashboard() {
     .await
     .expect("Task panicked");
 
-    // Cleanup
-    std::env::remove_var("BOM_BASE_URL");
-
     // Snapshot the SVG structure
     insta::assert_snapshot!(svg_content);
 }
@@ -414,10 +412,8 @@ async fn snapshot_bom_midnight_boundary() {
         "tests/fixtures/bom_hourly_forecast.json",
     )
     .await;
-    std::env::set_var(
-        "BOM_BASE_URL",
-        format!("{}/v1/locations", mock_server.uri()),
-    );
+    let bom_base_url = format!("{}/v1/locations", mock_server.uri());
+    let _bom_base_url_guard = EnvVarGuard::new("BOM_BASE_URL", bom_base_url.as_str());
 
     // Midnight UTC on Oct 26 = 11:00 AM Melbourne
     let clock =
@@ -443,7 +439,6 @@ async fn snapshot_bom_midnight_boundary() {
     .await
     .expect("Task panicked");
 
-    std::env::remove_var("BOM_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }
 
@@ -469,10 +464,8 @@ async fn snapshot_bom_local_midnight() {
         "tests/fixtures/bom_hourly_forecast.json",
     )
     .await;
-    std::env::set_var(
-        "BOM_BASE_URL",
-        format!("{}/v1/locations", mock_server.uri()),
-    );
+    let bom_base_url = format!("{}/v1/locations", mock_server.uri());
+    let _bom_base_url_guard = EnvVarGuard::new("BOM_BASE_URL", bom_base_url.as_str());
 
     // 13:00 UTC = Midnight Melbourne (Oct 26)
     let clock =
@@ -498,7 +491,6 @@ async fn snapshot_bom_local_midnight() {
     .await
     .expect("Task panicked");
 
-    std::env::remove_var("BOM_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }
 
@@ -527,10 +519,8 @@ async fn snapshot_bom_early_morning() {
         "tests/fixtures/bom_hourly_forecast.json",
     )
     .await;
-    std::env::set_var(
-        "BOM_BASE_URL",
-        format!("{}/v1/locations", mock_server.uri()),
-    );
+    let bom_base_url = format!("{}/v1/locations", mock_server.uri());
+    let _bom_base_url_guard = EnvVarGuard::new("BOM_BASE_URL", bom_base_url.as_str());
 
     // 19:00 UTC = 6:00 AM Melbourne
     let clock =
@@ -556,7 +546,6 @@ async fn snapshot_bom_early_morning() {
     .await
     .expect("Task panicked");
 
-    std::env::remove_var("BOM_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }
 
@@ -585,7 +574,9 @@ async fn snapshot_open_meteo_ny_6pm_before_gmt_boundary() {
         "tests/fixtures/ny_6pm_before_gmt/open_meteo_daily_forecast.json",
     )
     .await;
-    std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
+    let open_meteo_base_url = mock_server.uri();
+    let _open_meteo_base_url_guard =
+        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
 
     let clock =
         FixedClock::from_rfc3339("2025-12-28T23:00:00Z").expect("Failed to create fixed clock");
@@ -594,10 +585,7 @@ async fn snapshot_open_meteo_ny_6pm_before_gmt_boundary() {
 
     let svg_content = tokio::task::spawn_blocking(move || {
         // Set timezone
-        let original_tz = std::env::var("TZ").ok();
-        unsafe {
-            std::env::set_var("TZ", "America/New_York");
-        }
+        let _tz_guard = EnvVarGuard::new("TZ", "America/New_York");
 
         let result = generate_weather_dashboard_injection(
             &clock,
@@ -612,19 +600,11 @@ async fn snapshot_open_meteo_ny_6pm_before_gmt_boundary() {
         let svg = fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
         assert!(!svg.is_empty() && svg.contains("<svg"));
 
-        // Restore timezone
-        unsafe {
-            match original_tz {
-                Some(tz) => std::env::set_var("TZ", tz),
-                None => std::env::remove_var("TZ"),
-            }
-        }
         svg
     })
     .await
     .expect("Task panicked");
 
-    std::env::remove_var("OPEN_METEO_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }
 
@@ -663,7 +643,9 @@ async fn snapshot_open_meteo_ny_7pm_after_gmt_boundary() {
         "tests/fixtures/ny_7pm_after_gmt/open_meteo_daily_forecast.json",
     )
     .await;
-    std::env::set_var("OPEN_METEO_BASE_URL", mock_server.uri());
+    let open_meteo_base_url = mock_server.uri();
+    let _open_meteo_base_url_guard =
+        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
 
     let clock =
         FixedClock::from_rfc3339("2025-12-29T00:00:00Z").expect("Failed to create fixed clock");
@@ -672,10 +654,7 @@ async fn snapshot_open_meteo_ny_7pm_after_gmt_boundary() {
 
     let svg_content = tokio::task::spawn_blocking(move || {
         // Set timezone
-        let original_tz = std::env::var("TZ").ok();
-        unsafe {
-            std::env::set_var("TZ", "America/New_York");
-        }
+        let _tz_guard = EnvVarGuard::new("TZ", "America/New_York");
 
         let result = generate_weather_dashboard_injection(
             &clock,
@@ -690,18 +669,10 @@ async fn snapshot_open_meteo_ny_7pm_after_gmt_boundary() {
         let svg = fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
         assert!(!svg.is_empty() && svg.contains("<svg"));
 
-        // Restore timezone
-        unsafe {
-            match original_tz {
-                Some(tz) => std::env::set_var("TZ", tz),
-                None => std::env::remove_var("TZ"),
-            }
-        }
         svg
     })
     .await
     .expect("Task panicked");
 
-    std::env::remove_var("OPEN_METEO_BASE_URL");
     insta::assert_snapshot!(svg_content);
 }
