@@ -40,6 +40,7 @@ snow_colour = "blue"
 [render_options]
 temp_unit = "C"                                 # Options: C, F
 wind_speed_unit = "km/h"                        # Options: km/h, mph, knots
+language = "en"                                # Options: en, fr, de, es, ja
 # Date format using strftime specifiers. Examples:
 #   "%A, %d %B"      -> Saturday, 06 December (default)
 #   "%B %-d, %Y"     -> December 6, 2025 (US style)

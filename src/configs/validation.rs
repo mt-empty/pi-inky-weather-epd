@@ -385,3 +385,12 @@ pub fn is_valid_date_format(format: &str) -> Result<(), ValidationError> {
 
     Ok(())
 }
+
+pub fn is_valid_language_code(language: &str) -> Result<(), ValidationError> {
+    match language.trim().to_ascii_lowercase().as_str() {
+        "en" | "fr" | "de" | "es" | "ja" => Ok(()),
+        _ => Err(ValidationError::new(
+            "Language must be one of: en, fr, de, es, ja",
+        )),
+    }
+}

@@ -105,6 +105,17 @@ You can override the default configs located at [./config/](./config/) by creati
 
 Here are example configurations. Note: some of these images are slightly outdated.
 
+#### Language (UI Localization)
+
+The dashboard supports multiple interface languages for compact UI labels and day names.
+
+```toml
+[render_options]
+# Supported in Phase 1:
+# en, fr, de, es, ja
+language = "en"
+```
+
 #### Default Configuration
 
 <img src="./misc/dashboard-default.png" alt="Default configuration" width="600"/>
@@ -254,8 +265,6 @@ Before submitting, please make sure the following is done:
    # Edit config/local.toml with your location settings
    cargo run
    ```
-
-   Use [zoom.earth](https://zoom.earth/maps/radar/#view=40.7128,-74.0060,5z) to simulate different weather conditions by finding a location with the desired weather and using its latitude and longitude in your config.
 
 ### Running Tests
 
