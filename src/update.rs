@@ -193,8 +193,8 @@ impl UpdateService {
             ));
         }
 
-        let mut temp_zip =
-            NamedTempFile::new().context("Failed to create a temporary file for the ZIP archive")?;
+        let mut temp_zip = NamedTempFile::new()
+            .context("Failed to create a temporary file for the ZIP archive")?;
         response
             .copy_to(&mut temp_zip)
             .context("Failed to write ZIP archive into temporary file")?;
@@ -217,8 +217,8 @@ impl UpdateService {
         };
 
         let temp_zip = self.download_zip_archive(download_url)?;
-        let temp_dir = tempfile::tempdir_in(&self.base_dir)
-            .context("Failed to create temporary directory")?;
+        let temp_dir =
+            tempfile::tempdir_in(&self.base_dir).context("Failed to create temporary directory")?;
 
         let bin_path = self.base_dir.join(PACKAGE_NAME);
         let backup_link = self.base_dir.join(format!("{PACKAGE_NAME}.old"));

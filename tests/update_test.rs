@@ -114,7 +114,11 @@ async fn test_first_run_checks_for_update_and_writes_last_checked() {
     );
 
     let requests = mock_server.received_requests().await.unwrap();
-    assert_eq!(requests.len(), 1, "Should make exactly one HTTP request on first run");
+    assert_eq!(
+        requests.len(),
+        1,
+        "Should make exactly one HTTP request on first run"
+    );
 }
 
 /// When the interval has not yet elapsed, no HTTP request should be made.
@@ -228,7 +232,10 @@ async fn test_deletes_stale_backup_when_check_is_skipped() {
         .path()
         .join(format!("{}.old", env!("CARGO_PKG_NAME")));
     fs::write(&backup_path, "old binary bytes").unwrap();
-    assert!(backup_path.exists(), "Precondition: backup file should exist");
+    assert!(
+        backup_path.exists(),
+        "Precondition: backup file should exist"
+    );
 
     let base_dir = temp_dir.path().to_path_buf();
     let server_uri = mock_server.uri();
