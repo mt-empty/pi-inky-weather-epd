@@ -1,11 +1,56 @@
+use anyhow::Error;
 use chrono::{Duration, TimeZone, Utc};
-use pi_inky_weather_epd::{update::UpdateService, FixedClock};
+use pi_inky_weather_epd::{
+    update::{read_update_status_from_dir, write_update_status, UpdateService},
+    FixedClock,
+};
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
 use url::Url;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
+
+// ── Status file helpers ────────────────────────────────────────────────────
+
+#[test]
+fn test_write_and_read_update_status_success() {
+    let temp_dir = TempDir::new().unwrap();
+
+    let result: Result<(), Error> = Ok(());
+    write_update_status(temp_dir.path(), &result);
+
+    let status = read_update_status_from_dir(temp_dir.path());
+    assert_eq!(status, None);
+
+    let content = fs::read_to_string(temp_dir.path().join("update_status.txt")).unwrap();
+    assert_eq!(content, "success");
+}
+
+#[test]
+fn test_write_and_read_update_status_failure() {
+    let temp_dir = TempDir::new().unwrap();
+
+    let error_msg = "Network timeout after 30 seconds";
+    let result: Result<(), Error> = Err(anyhow::anyhow!("{}", error_msg));
+    write_update_status(temp_dir.path(), &result);
+
+    let status = read_update_status_from_dir(temp_dir.path());
+    assert_eq!(status, Some(error_msg.to_string()));
+
+    let content = fs::read_to_string(temp_dir.path().join("update_status.txt")).unwrap();
+    assert!(content.starts_with("failed: "));
+    assert!(content.contains(error_msg));
+}
+
+#[test]
+fn test_read_update_status_from_nonexistent_file() {
+    let temp_dir = TempDir::new().unwrap();
+    let status = read_update_status_from_dir(temp_dir.path());
+    assert_eq!(status, None);
+}
+
+// ── UpdateService scheduling helpers ──────────────────────────────────────
 
 const INTERVAL_DAYS: i64 = 7;
 
@@ -38,6 +83,8 @@ async fn mount_current_version_mock(server: &MockServer) {
         .mount(server)
         .await;
 }
+
+// ── UpdateService scheduling tests ────────────────────────────────────────
 
 /// On the very first run (no `last_checked` file), the service should check for
 /// updates immediately and write the current time to `last_checked`.
@@ -216,9 +263,11 @@ async fn test_skips_pre_release_version_when_not_allowed() {
         .mount(&mock_server)
         .await;
 
+    let now = Utc.with_ymd_and_hms(2025, 6, 1, 12, 0, 0).unwrap();
+    write_last_checked(&temp_dir, 10, now); // triggers an interval-elapsed check
+
     let base_dir = temp_dir.path().to_path_buf();
     let server_uri = mock_server.uri();
-    let now = Utc.with_ymd_and_hms(2025, 6, 1, 12, 0, 0).unwrap();
 
     let result = tokio::task::spawn_blocking(move || {
         let service = build_service(base_dir, server_uri, false); // allow_pre_release = false
@@ -233,7 +282,6 @@ async fn test_skips_pre_release_version_when_not_allowed() {
         "Should return Ok when skipping a pre-release: {result:?}"
     );
 
-    // Only the version-check request should have been made — no download
     let requests = mock_server.received_requests().await.unwrap();
     assert_eq!(
         requests.len(),
