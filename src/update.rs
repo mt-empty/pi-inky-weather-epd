@@ -5,7 +5,6 @@ use anyhow::{Context, Error, Result};
 use chrono::{DateTime, Duration, Utc};
 use semver::Version;
 use serde::Deserialize;
-use std::env;
 use std::io::{ErrorKind, Seek, SeekFrom};
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
@@ -46,6 +45,7 @@ pub struct UpdateService {
     download_base_url: Url,
     update_interval_days: i64,
     allow_pre_release: bool,
+    current_version: Version,
 }
 
 impl UpdateService {
@@ -59,6 +59,7 @@ impl UpdateService {
             download_base_url: CONFIG.release.download_base_url.clone(),
             update_interval_days: CONFIG.release.update_interval_days.into_inner().into(),
             allow_pre_release: CONFIG.release.allow_pre_release_version,
+            current_version,
         })
     }
 
@@ -78,74 +79,75 @@ impl UpdateService {
             download_base_url,
             update_interval_days,
             allow_pre_release,
+            current_version,
         })
     }
 
     pub fn check_and_update(&self, clock: &dyn Clock) -> Result<()> {
         let last_checked_path = self.base_dir.join(LAST_CHECKED_FILE_NAME);
 
-        let update_result = if !Path::new(&last_checked_path).exists() {
-            let now_str = clock.now_utc().to_rfc3339();
-            fs::write(&last_checked_path, now_str)?;
-            self.fetch_latest_release()
-        } else {
-            let contents = fs::read_to_string(&last_checked_path)?;
-            let last_check_utc = DateTime::parse_from_rfc3339(contents.trim())
-                .map_err(Error::msg)?
-                .with_timezone(&Utc);
-
-            let now_utc = clock.now_utc();
-            let elapsed = now_utc.signed_duration_since(last_check_utc);
-            if elapsed > Duration::days(self.update_interval_days) {
-                logger::info(format!(
-                    "It's been more than {} days ({:.1} days elapsed), Checking for latest version...",
-                    self.update_interval_days,
-                    elapsed.num_days()
-                ));
-                let result = self.fetch_latest_release();
-
-                if result.is_ok() {
-                    fs::write(&last_checked_path, now_utc.to_rfc3339())?;
-                }
-
-                result
-            } else {
-                logger::info(format!(
-                    "Update check skipped: {:.1} days since last check (threshold: {} days)",
-                    elapsed.num_days(),
-                    self.update_interval_days
-                ));
-                logger::debug(format!(
-                    "Last checked: {}, Next check after: {}",
-                    last_check_utc.format("%Y-%m-%d %H:%M UTC"),
-                    (last_check_utc + Duration::days(self.update_interval_days))
-                        .format("%Y-%m-%d %H:%M UTC")
-                ));
-                let backup_link = self.base_dir.join(format!("{PACKAGE_NAME}.old"));
-                if backup_link.exists() {
-                    logger::debug(format!(
-                        "Deleting old backup link: {}",
-                        backup_link.display()
-                    ));
-                    fs::remove_file(&backup_link)?
-                }
-                Ok(())
+        if !last_checked_path.exists() {
+            let result = self.fetch_latest_release();
+            if result.is_ok() {
+                fs::write(&last_checked_path, clock.now_utc().to_rfc3339())?;
             }
-        };
+            write_update_status(&self.base_dir, &result);
+            return result;
+        }
 
-        write_update_status(&self.base_dir, &update_result);
+        let contents = fs::read_to_string(&last_checked_path)?;
+        let last_check_utc = DateTime::parse_from_rfc3339(contents.trim())
+            .map_err(Error::msg)?
+            .with_timezone(&Utc);
 
-        update_result
+        let now_utc = clock.now_utc();
+        let elapsed = now_utc.signed_duration_since(last_check_utc);
+        if elapsed > Duration::days(self.update_interval_days) {
+            logger::info(format!(
+                "It's been more than {} days ({} days elapsed), Checking for latest version...",
+                self.update_interval_days,
+                elapsed.num_days()
+            ));
+            let result = self.fetch_latest_release();
+
+            if result.is_ok() {
+                fs::write(&last_checked_path, now_utc.to_rfc3339())?;
+            }
+
+            write_update_status(&self.base_dir, &result);
+
+            result
+        } else {
+            logger::info(format!(
+                "Update check skipped: {} days since last check (threshold: {} days)",
+                elapsed.num_days(),
+                self.update_interval_days
+            ));
+            logger::debug(format!(
+                "Last checked: {}, Next check after: {}",
+                last_check_utc.format("%Y-%m-%d %H:%M UTC"),
+                (last_check_utc + Duration::days(self.update_interval_days))
+                    .format("%Y-%m-%d %H:%M UTC")
+            ));
+            let backup_link = self.base_dir.join(format!("{PACKAGE_NAME}.old"));
+            if backup_link.exists() {
+                logger::debug(format!(
+                    "Deleting old backup link: {}",
+                    backup_link.display()
+                ));
+                fs::remove_file(&backup_link)?
+            }
+            Ok(())
+        }
     }
 
     fn fetch_latest_release(&self) -> Result<()> {
-        let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
-        logger::debug(format!("Current version: {}", current_version));
+        logger::debug(format!("Current version: {}", self.current_version));
 
         let release_info = self.fetch_release_info()?;
         let latest_version = parse_latest_version(&release_info)?;
 
-        if latest_version > current_version {
+        if latest_version > self.current_version {
             logger::debug(format!("Newer version available: {}", latest_version));
 
             if !latest_version.pre.is_empty() && !self.allow_pre_release {
