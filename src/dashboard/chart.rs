@@ -53,6 +53,12 @@ pub struct PrecipitationBlock {
     pub path: String,
     pub pattern: PrecipitationPattern,
     pub opacity: &'static str,
+    pub x_start: f32,
+    pub x_end: f32,
+    pub height_left: f32,
+    pub height_right: f32,
+    pub max_height: f32,
+    pub chance: f32,
 }
 
 #[derive(Clone, Debug)]
@@ -166,6 +172,156 @@ pub enum ElementVisibility {
     Visible,
     #[strum(to_string = "hidden")]
     Hidden,
+}
+
+fn lcg_next(seed: u64) -> u64 {
+    seed.wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407)
+}
+
+/// Builds one unified SVG fragment for all precipitation blocks (rain and snow mixed):
+/// - one `<clipPath>` covering every block regardless of type
+/// - one `<linearGradient>` whose stop-colour and stop-opacity vary per hour
+///   (rain_colour for rain hours, snow_colour for snow hours; opacity = chance/100 * 0.35)
+/// - a single LCG placement pass with a shared `placed` list so the seed never
+///   resets at block boundaries; glyph type is chosen per block from `pattern`
+///
+/// Separation uses the larger snowflake threshold whenever either the new or an
+/// existing glyph is a snowflake, keeping glyphs of different types from colliding.
+fn generate_unified_precipitation_svg(
+    blocks: &[PrecipitationBlock],
+    rain_colour: &str,
+    snow_colour: &str,
+    graph_height: f32,
+) -> String {
+    let x_start = blocks.first().map(|b| b.x_start).unwrap_or(0.0);
+    let x_end = blocks.last().map(|b| b.x_end).unwrap_or(0.0);
+    let x_range = (x_end - x_start).max(1.0);
+
+    // --- clip path: union of all blocks ---
+    let clip_paths: String = blocks
+        .iter()
+        .map(|b| format!(r#"<path d="{}"/>"#, b.path))
+        .collect();
+
+    // --- gradient: one stop per hour, colour and opacity vary by type ---
+    let mut gradient_stops = String::new();
+    for block in blocks.iter() {
+        let offset = (block.x_start - x_start) / x_range * 100.0;
+        let colour = if block.pattern == "snow" {
+            snow_colour
+        } else {
+            rain_colour
+        };
+        let stop_opacity = 0.25 + (block.chance / 100.0) * 0.20;
+        gradient_stops.push_str(&format!(
+            r#"<stop offset="{offset:.2}%" stop-color="{colour}" stop-opacity="{stop_opacity:.3}"/>"#
+        ));
+    }
+    if let Some(last) = blocks.last() {
+        let colour = if last.pattern == "snow" {
+            snow_colour
+        } else {
+            rain_colour
+        };
+        let stop_opacity = 0.25 + (last.chance / 100.0) * 0.20;
+        gradient_stops.push_str(&format!(
+            r#"<stop offset="100%" stop-color="{colour}" stop-opacity="{stop_opacity:.3}"/>"#
+        ));
+    }
+
+    // --- single placement pass across all blocks ---
+    // placed: (x, y, is_snow) — type tracked so we can use the right separation threshold.
+    let mut seed: u64 = 2654435761;
+    let mut placed: Vec<(f32, f32, bool)> = Vec::new();
+    let mut glyphs = String::new();
+
+    for (idx, block) in blocks.iter().enumerate() {
+        if block.chance == 0.0 || block.max_height == 0.0 {
+            continue;
+        }
+        let is_snow = block.pattern == "snow";
+        let width = block.x_end - block.x_start;
+
+        // Per-type density: snowflakes are larger so they fill at a lower count.
+        let (density_div, max_count) = if is_snow { (600.0, 8) } else { (80.0, 30) };
+        let count =
+            ((width * block.max_height / density_div * block.chance / 100.0) as u32).min(max_count);
+
+        let r_x: f32 = if is_snow { 18.0 } else { 4.0 };
+        let r_y: f32 = if is_snow { 18.0 } else { 9.0 };
+
+        // Only pad x where there is no adjacent non-zero block to extend the clip region.
+        let left_open = idx == 0
+            || blocks[idx - 1].chance == 0.0
+            || blocks[idx - 1].max_height == 0.0;
+        let right_open = idx + 1 >= blocks.len()
+            || blocks[idx + 1].chance == 0.0
+            || blocks[idx + 1].max_height == 0.0;
+        let x_lo = block.x_start + if left_open { r_x } else { 0.0 };
+        let x_hi = (block.x_end - if right_open { r_x } else { 0.0 }).max(x_lo);
+        let y_lo = r_y;
+        // y_hi is loose; the slope test below rejects candidates above the sloped edge.
+        let y_hi = block.max_height;
+        let block_width = (block.x_end - block.x_start).max(1.0);
+
+        'outer: for _ in 0..count {
+            for _ in 0..20 {
+                seed = lcg_next(seed);
+                let rx = x_lo + (seed as f32 / u64::MAX as f32) * (x_hi - x_lo);
+                seed = lcg_next(seed);
+                let ry = y_lo + (seed as f32 / u64::MAX as f32) * (y_hi - y_lo);
+
+                // Reject if glyph top would exceed the trapezoid's sloped ceiling at this x.
+                let t = (rx - block.x_start) / block_width;
+                let local_ceil =
+                    block.height_left + (block.height_right - block.height_left) * t;
+                if ry + r_y > local_ceil {
+                    seed = lcg_next(seed); // consume extra entropy to avoid degenerate retry patterns
+                    continue;
+                }
+
+                // Use the larger snowflake separation whenever either glyph is a snowflake.
+                let overlaps = placed.iter().any(|&(px, py, placed_snow)| {
+                    let (sx, sy) = if is_snow || placed_snow {
+                        (40.0_f32, 40.0_f32)
+                    } else {
+                        (7.0_f32, 14.0_f32)
+                    };
+                    (rx - px).abs() < sx && (ry - py).abs() < sy
+                });
+
+                if !overlaps {
+                    placed.push((rx, ry, is_snow));
+                    glyphs.push_str(&if is_snow {
+                        format!(
+                            r#"<g transform="translate({rx:.2},{ry:.2})" stroke="white" stroke-width="1.8" stroke-linecap="round" fill="none">     <line x1="0" y1="-18" x2="0" y2="18"/>     <line x1="-15.59" y1="-9" x2="15.59" y2="9"/>     <line x1="15.59" y1="-9" x2="-15.59" y2="9"/>     <line x1="0" y1="-12" x2="4.33" y2="-14.5"/>     <line x1="0" y1="-12" x2="-4.33" y2="-14.5"/>     <line x1="0" y1="12" x2="4.33" y2="14.5"/>     <line x1="0" y1="12" x2="-4.33" y2="14.5"/>     <line x1="-10.39" y1="-6" x2="-10.39" y2="-11"/>     <line x1="-10.39" y1="-6" x2="-14.73" y2="-3.5"/>     <line x1="10.39" y1="6" x2="10.39" y2="11"/>     <line x1="10.39" y1="6" x2="14.73" y2="3.5"/>     <line x1="10.39" y1="-6" x2="10.39" y2="-11"/>     <line x1="10.39" y1="-6" x2="14.73" y2="-3.5"/>     <line x1="-10.39" y1="6" x2="-10.39" y2="11"/>     <line x1="-10.39" y1="6" x2="-14.73" y2="3.5"/>     <circle cx="0" cy="0" r="2.5" fill="white"/>   </g>"#
+                        )
+                    } else {
+                        format!(
+                            r#"<path d="M-1,1 C-1,0.45 -0.55,0 0,0 C0.55,0 1,0.45 1,1 L1,8 C1,8.55 0.55,9 0,9 C-0.55,9 -1,8.55 -1,8 Z" fill="white" fill-opacity="0.8" transform="translate({rx:.2},{ry:.2}) rotate(-15)"/>"#
+                        )
+                    });
+                    continue 'outer;
+                }
+            }
+        }
+    }
+
+    format!(
+        r#"<defs>
+            <linearGradient id="precipBg" gradientUnits="userSpaceOnUse" x1="{x_start}" y1="0" x2="{x_end}" y2="0">
+                {gradient_stops}
+            </linearGradient>
+            <clipPath id="precipClip">
+                {clip_paths}
+            </clipPath>
+        </defs>
+        <g clip-path="url(#precipClip)">
+            <rect x="{x_start}" y="0" width="{x_range}" height="{graph_height}" fill="url(#precipBg)"/>
+            {glyphs}
+        </g>"#
+    )
 }
 
 /// Convert a list of points to a list of Bézier curves
@@ -576,18 +732,17 @@ impl HourlyForecastGraph {
         }
     }
 
-    /// Generate SVG for all precipitation blocks with per-hour patterns
-    pub fn generate_precipitation_pattern_svg(blocks: &[PrecipitationBlock]) -> String {
-        blocks
-            .iter()
-            .map(|block| {
-                format!(
-                    r#"<path d="{}" fill="url(#{})" fill-opacity="{}" />"#,
-                    block.path, block.pattern, block.opacity
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n            ")
+    /// Generate SVG for all precipitation blocks in one unified layer.
+    pub fn generate_precipitation_pattern_svg(
+        blocks: &[PrecipitationBlock],
+        rain_colour: &str,
+        snow_colour: &str,
+        graph_height: f32,
+    ) -> String {
+        if blocks.is_empty() {
+            return String::new();
+        }
+        generate_unified_precipitation_svg(blocks, rain_colour, snow_colour, graph_height)
     }
 
     pub fn draw_graph(&mut self) -> Result<Vec<GraphDataPath>, Error> {
@@ -662,6 +817,12 @@ impl HourlyForecastGraph {
                             path: block_path,
                             pattern,
                             opacity,
+                            x_start: current.x,
+                            x_end: next.x,
+                            height_left: current.y,
+                            height_right: next.y,
+                            max_height: current.y.max(next.y),
+                            chance: precip_chance,
                         });
                     }
 
