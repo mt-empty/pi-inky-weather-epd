@@ -251,9 +251,8 @@ fn generate_unified_precipitation_svg(
         let r_y: f32 = if is_snow { 4.0 } else { 9.0 };
 
         // Only pad x where there is no adjacent non-zero block to extend the clip region.
-        let left_open = idx == 0
-            || blocks[idx - 1].chance == 0.0
-            || blocks[idx - 1].max_height == 0.0;
+        let left_open =
+            idx == 0 || blocks[idx - 1].chance == 0.0 || blocks[idx - 1].max_height == 0.0;
         let right_open = idx + 1 >= blocks.len()
             || blocks[idx + 1].chance == 0.0
             || blocks[idx + 1].max_height == 0.0;
@@ -273,8 +272,7 @@ fn generate_unified_precipitation_svg(
 
                 // Reject if glyph top would exceed the trapezoid's sloped ceiling at this x.
                 let t = (rx - block.x_start) / block_width;
-                let local_ceil =
-                    block.height_left + (block.height_right - block.height_left) * t;
+                let local_ceil = block.height_left + (block.height_right - block.height_left) * t;
                 if ry + r_y > local_ceil {
                     seed = lcg_next(seed); // consume extra entropy to avoid degenerate retry patterns
                     continue;
