@@ -243,13 +243,12 @@ fn generate_unified_precipitation_svg(
         let is_snow = block.pattern == "snow";
         let width = block.x_end - block.x_start;
 
-        // Per-type density: snowflakes are larger so they fill at a lower count.
-        let (density_div, max_count) = if is_snow { (600.0, 8) } else { (80.0, 30) };
+        let (density_div, max_count) = if is_snow { (150.0, 25) } else { (80.0, 30) };
         let count =
             ((width * block.max_height / density_div * block.chance / 100.0) as u32).min(max_count);
 
-        let r_x: f32 = if is_snow { 18.0 } else { 4.0 };
-        let r_y: f32 = if is_snow { 18.0 } else { 9.0 };
+        let r_x: f32 = 4.0;
+        let r_y: f32 = if is_snow { 4.0 } else { 9.0 };
 
         // Only pad x where there is no adjacent non-zero block to extend the clip region.
         let left_open = idx == 0
@@ -284,7 +283,7 @@ fn generate_unified_precipitation_svg(
                 // Use the larger snowflake separation whenever either glyph is a snowflake.
                 let overlaps = placed.iter().any(|&(px, py, placed_snow)| {
                     let (sx, sy) = if is_snow || placed_snow {
-                        (40.0_f32, 40.0_f32)
+                        (8.0_f32, 8.0_f32)
                     } else {
                         (7.0_f32, 14.0_f32)
                     };
@@ -294,8 +293,10 @@ fn generate_unified_precipitation_svg(
                 if !overlaps {
                     placed.push((rx, ry, is_snow));
                     glyphs.push_str(&if is_snow {
+                        seed = lcg_next(seed);
+                        let radius = 2.0 + (seed as f32 / u64::MAX as f32) * 1.5;
                         format!(
-                            r#"<g transform="translate({rx:.2},{ry:.2})" stroke="white" stroke-width="1.8" stroke-linecap="round" fill="none">     <line x1="0" y1="-18" x2="0" y2="18"/>     <line x1="-15.59" y1="-9" x2="15.59" y2="9"/>     <line x1="15.59" y1="-9" x2="-15.59" y2="9"/>     <line x1="0" y1="-12" x2="4.33" y2="-14.5"/>     <line x1="0" y1="-12" x2="-4.33" y2="-14.5"/>     <line x1="0" y1="12" x2="4.33" y2="14.5"/>     <line x1="0" y1="12" x2="-4.33" y2="14.5"/>     <line x1="-10.39" y1="-6" x2="-10.39" y2="-11"/>     <line x1="-10.39" y1="-6" x2="-14.73" y2="-3.5"/>     <line x1="10.39" y1="6" x2="10.39" y2="11"/>     <line x1="10.39" y1="6" x2="14.73" y2="3.5"/>     <line x1="10.39" y1="-6" x2="10.39" y2="-11"/>     <line x1="10.39" y1="-6" x2="14.73" y2="-3.5"/>     <line x1="-10.39" y1="6" x2="-10.39" y2="11"/>     <line x1="-10.39" y1="6" x2="-14.73" y2="3.5"/>     <circle cx="0" cy="0" r="2.5" fill="white"/>   </g>"#
+                            r#"<circle cx="{rx:.2}" cy="{ry:.2}" r="{radius:.1}" fill="white" fill-opacity="0.85"/>"#
                         )
                     } else {
                         format!(
