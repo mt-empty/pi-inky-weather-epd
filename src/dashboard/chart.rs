@@ -2,6 +2,7 @@ use crate::{
     clock::Clock, constants::DEFAULT_AXIS_LABEL_FONT_SIZE, logger, weather::icons::UVIndexIcon,
 };
 use anyhow::Error;
+use std::fmt;
 use strum_macros::Display;
 
 #[derive(Clone, Debug, Copy)]
@@ -33,9 +34,24 @@ impl Curve {
 }
 
 #[derive(Clone, Debug)]
+pub enum PrecipitationPattern {
+    Snow,
+    Rain,
+}
+
+impl fmt::Display for PrecipitationPattern {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PrecipitationPattern::Snow => write!(f, "snow"),
+            PrecipitationPattern::Rain => write!(f, "rain"),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct PrecipitationBlock {
     pub path: String,
-    pub pattern: String,
+    pub pattern: PrecipitationPattern,
     pub opacity: &'static str,
 }
 
@@ -538,11 +554,14 @@ impl HourlyForecastGraph {
 
     /// Select precipitation pattern based on chance percentage and whether the hour is
     /// primarily snow (pre-computed from `Precipitation::is_primarily_snow()`).
-    pub(crate) fn select_precipitation_pattern(_chance: f32, is_snow: bool) -> &'static str {
+    pub(crate) fn select_precipitation_pattern(
+        _chance: f32,
+        is_snow: bool,
+    ) -> PrecipitationPattern {
         if is_snow {
-            "snow"
+            PrecipitationPattern::Snow
         } else {
-            "rain"
+            PrecipitationPattern::Rain
         }
     }
 
@@ -638,7 +657,7 @@ impl HourlyForecastGraph {
 
                         blocks.push(PrecipitationBlock {
                             path: block_path,
-                            pattern: pattern.to_string(),
+                            pattern,
                             opacity,
                         });
                     }

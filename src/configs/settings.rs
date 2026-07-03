@@ -103,6 +103,19 @@ impl fmt::Display for Latitude {
     }
 }
 
+#[nutype(
+    sanitize(trim),
+    validate(with = is_valid_date_format, error = ValidationError),
+    derive(Debug, Deserialize, PartialEq, Clone, AsRef)
+)]
+pub struct DateFormat(String);
+
+impl fmt::Display for DateFormat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.clone().into_inner())
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Release {
     pub release_info_url: Url,
@@ -145,7 +158,7 @@ pub struct Misc {
 pub struct RenderOptions {
     pub temp_unit: TemperatureUnit,
     pub wind_speed_unit: WindSpeedUnit,
-    pub date_format: String,
+    pub date_format: DateFormat,
     pub use_moon_phase_instead_of_clear_night: bool,
     pub x_axis_always_at_min: bool,
     pub use_gust_instead_of_wind: bool,
@@ -173,10 +186,10 @@ pub struct DashboardSettings {
 ///
 /// Returns `Ok(())` if valid, or `Err(message)` describing the conflict.
 fn validate_release_cross_fields(
-    update_interval_days: i32,
+    update_interval_days: UpdateIntervalDays,
     allow_pre_release_version: bool,
 ) -> Result<(), String> {
-    if allow_pre_release_version && update_interval_days == 0 {
+    if allow_pre_release_version && update_interval_days.into_inner() == 0 {
         return Err(
             "Configuration validation failed: `allow_pre_release_version` cannot be \
              enabled when `update_interval_days` is 0 (auto-updating is disabled)"
@@ -268,7 +281,7 @@ impl DashboardSettings {
         // misconfiguration to prevent accidental enabling.
         if let Ok(ref s) = final_settings {
             if let Err(msg) = validate_release_cross_fields(
-                s.release.update_interval_days.into_inner(),
+                s.release.update_interval_days,
                 s.release.allow_pre_release_version,
             ) {
                 return Err(ConfigError::Message(msg));
@@ -371,11 +384,11 @@ impl DashboardSettings {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_release_cross_fields;
+    use super::{validate_release_cross_fields, UpdateIntervalDays};
 
     #[test]
     fn allow_pre_release_with_zero_interval_is_rejected() {
-        let result = validate_release_cross_fields(0, true);
+        let result = validate_release_cross_fields(UpdateIntervalDays::try_new(0).unwrap(), true);
         assert!(result.is_err());
         let msg = result.unwrap_err();
         assert!(msg.contains("`allow_pre_release_version`"));
@@ -384,16 +397,22 @@ mod tests {
 
     #[test]
     fn allow_pre_release_with_nonzero_interval_is_accepted() {
-        assert!(validate_release_cross_fields(7, true).is_ok());
+        assert!(
+            validate_release_cross_fields(UpdateIntervalDays::try_new(7).unwrap(), true).is_ok()
+        );
     }
 
     #[test]
     fn disallow_pre_release_with_zero_interval_is_accepted() {
-        assert!(validate_release_cross_fields(0, false).is_ok());
+        assert!(
+            validate_release_cross_fields(UpdateIntervalDays::try_new(0).unwrap(), false).is_ok()
+        );
     }
 
     #[test]
     fn disallow_pre_release_with_nonzero_interval_is_accepted() {
-        assert!(validate_release_cross_fields(7, false).is_ok());
+        assert!(
+            validate_release_cross_fields(UpdateIntervalDays::try_new(7).unwrap(), false).is_ok()
+        );
     }
 }

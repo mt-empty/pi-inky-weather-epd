@@ -209,7 +209,10 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast
                 let weather_code = hourly_data
                     .weather_code
                     .as_ref()
-                    .and_then(|codes| codes.get(i).copied());
+                    .and_then(|codes| codes.get(i).copied())
+                    .map(|c| {
+                        crate::domain::weather_code::WmoWeatherCode::try_from(c).map_err(|_| c)
+                    });
 
                 crate::domain::models::HourlyForecast {
                     time,
@@ -305,7 +308,10 @@ impl From<OpenMeteoDailyResponse> for Vec<crate::domain::models::DailyForecast> 
                     .daily
                     .weather_code
                     .as_ref()
-                    .and_then(|codes| codes.get(i).copied());
+                    .and_then(|codes| codes.get(i).copied())
+                    .map(|c| {
+                        crate::domain::weather_code::WmoWeatherCode::try_from(c).map_err(|_| c)
+                    });
 
                 crate::domain::models::DailyForecast {
                     // Use NaiveDate directly - API returns dates in user's local timezone

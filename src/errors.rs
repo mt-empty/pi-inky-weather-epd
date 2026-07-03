@@ -96,16 +96,12 @@ impl Description for DashboardError {
 
 #[derive(Debug, Error)]
 pub enum GeohashError {
-    InvalidCoordinateRange(f64, f64),
     InvalidLength(usize),
 }
 
 impl fmt::Display for GeohashError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            GeohashError::InvalidCoordinateRange(x, y) => {
-                write!(f, "invalid coordinate range: lat={x}, lon={y}")
-            }
             GeohashError::InvalidLength(len) => write!(
                 f,
                 "Invalid length specified: {len}. Accepted values are between 1 and 12, inclusive"

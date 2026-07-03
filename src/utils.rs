@@ -1,3 +1,4 @@
+use crate::configs::settings::{Latitude, Longitude};
 use crate::errors::GeohashError;
 use crate::logger;
 use anyhow::Error;
@@ -238,42 +239,20 @@ fn interleave(x: u32, y: u32) -> u64 {
     spread(x) | (spread(y) << 1)
 }
 
-/// Encode a coordinate to a geohash with length `len`.
+/// Encode a validated coordinate to a geohash with length `len`.
 ///
 /// # Arguments
 ///
-/// * `lon_x` - The longitude (x coordinate) in degrees, must be in range [-180, 180]
-/// * `lat_y` - The latitude (y coordinate) in degrees, must be in range [-90, 90]
+/// * `lon_x` - The longitude, guaranteed in [-180, 180] by the `Longitude` type
+/// * `lat_y` - The latitude, guaranteed in [-90, 90] by the `Latitude` type
 /// * `len` - The desired length of the geohash string (1-12)
-///
-/// # Examples
-///
-/// Encoding a coordinate to a length five geohash:
-///
-/// ```ignore
-/// let geohash_string = encode(-120.6623, 35.3003, 5).expect("Invalid coordinate");
-/// assert_eq!(geohash_string, "9q60y");
-/// ```
-///
-/// Encoding a coordinate to a length ten geohash:
-///
-/// ```ignore
-/// let geohash_string = encode(-120.6623, 35.3003, 10).expect("Invalid coordinate");
-/// assert_eq!(geohash_string, "9q60y60rhs");
-/// ```
-pub fn encode(lon_x: f64, lat_y: f64, len: usize) -> Result<String, GeohashError> {
-    let max_lat = 90f64;
-    let min_lat = -90f64;
-    let max_lon = 180f64;
-    let min_lon = -180f64;
-
-    if !(min_lon..=max_lon).contains(&lon_x) || !(min_lat..=max_lat).contains(&lat_y) {
-        return Err(GeohashError::InvalidCoordinateRange(lon_x, lat_y));
-    }
-
+pub fn encode(lon_x: Longitude, lat_y: Latitude, len: usize) -> Result<String, GeohashError> {
     if !(1..=12).contains(&len) {
         return Err(GeohashError::InvalidLength(len));
     }
+
+    let lon_x = lon_x.into_inner();
+    let lat_y = lat_y.into_inner();
 
     // divides the latitude by 180, then adds 1.5 to give a value between 1 and 2
     // then we take the first 32 bits of the significand as a u32

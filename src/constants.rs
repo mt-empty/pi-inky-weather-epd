@@ -18,12 +18,8 @@ fn build_forecast_url(frequency: &str) -> Url {
 
     let mut u = Url::parse(&base_url).expect("Failed to construct forecast endpoint URL");
 
-    let geohash = encode(
-        CONFIG.api.longitude.into_inner(),
-        CONFIG.api.latitude.into_inner(),
-        6,
-    )
-    .expect("Failed to encode latitude and longitude to geohash");
+    let geohash = encode(CONFIG.api.longitude, CONFIG.api.latitude, 6)
+        .expect("Failed to encode latitude and longitude to geohash");
 
     u.path_segments_mut()
         .unwrap()

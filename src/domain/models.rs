@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::configs::settings::TemperatureUnit;
+use crate::domain::weather_code::WmoWeatherCode;
 
 /// Domain-specific Temperature type, independent of any API
 #[derive(Debug, Copy, PartialOrd, PartialEq, Clone)]
@@ -248,9 +249,8 @@ pub struct HourlyForecast {
     pub relative_humidity: u16,
     pub is_night: bool,
     pub cloud_cover: Option<u16>,
-    /// WMO Weather Interpretation Code (0-99)
-    /// Provides more precise weather classification than derived conditions
-    pub weather_code: Option<u8>,
+    /// Parsed WMO Weather Interpretation Code — `Ok` if recognised, `Err(raw)` if not, `None` if absent
+    pub weather_code: Option<Result<WmoWeatherCode, u8>>,
 }
 
 /// Domain model for daily weather forecast
@@ -264,39 +264,8 @@ pub struct DailyForecast {
     pub precipitation: Option<Precipitation>,
     pub astronomical: Option<Astronomical>,
     pub cloud_cover: Option<u16>,
-    /// WMO Weather Interpretation Code (0-99) for the day
-    /// Represents the dominant weather condition for the entire day
-    pub weather_code: Option<u8>,
-}
-
-// ============================================================================
-// WMO weather code accessors
-// ============================================================================
-
-impl HourlyForecast {
-    /// Returns the WMO weather code as a typed enum, if present and recognised.
-    ///
-    /// The raw `weather_code: Option<u8>` field is retained for diagnosability
-    /// (unknown codes can still be logged). This method provides the typed view
-    /// for callers that only need to act on known codes.
-    #[must_use]
-    pub fn wmo_code(&self) -> Option<crate::domain::weather_code::WmoWeatherCode> {
-        self.weather_code
-            .and_then(|c| crate::domain::weather_code::WmoWeatherCode::try_from(c).ok())
-    }
-}
-
-impl DailyForecast {
-    /// Returns the WMO weather code as a typed enum, if present and recognised.
-    ///
-    /// The raw `weather_code: Option<u8>` field is retained for diagnosability
-    /// (unknown codes can still be logged). This method provides the typed view
-    /// for callers that only need to act on known codes.
-    #[must_use]
-    pub fn wmo_code(&self) -> Option<crate::domain::weather_code::WmoWeatherCode> {
-        self.weather_code
-            .and_then(|c| crate::domain::weather_code::WmoWeatherCode::try_from(c).ok())
-    }
+    /// Parsed WMO Weather Interpretation Code — `Ok` if recognised, `Err(raw)` if not, `None` if absent
+    pub weather_code: Option<Result<WmoWeatherCode, u8>>,
 }
 
 // ============================================================================

@@ -148,15 +148,13 @@ impl Icon for DailyForecast {
     fn icon_name(&self) -> String {
         // Priority 1: Use WMO weather code if available (most accurate)
         let fallback_reason = if CONFIG.render_options.prefer_weather_codes {
-            if let Some(code) = self.weather_code {
-                logger::debug("DailyForecast: Using WMO weather code for icon selection");
-                if let Some(wmo_code) = self.wmo_code() {
-                    // Daily forecasts always use day icons
+            match self.weather_code {
+                Some(Ok(wmo_code)) => {
+                    logger::debug("DailyForecast: Using WMO weather code for icon selection");
                     return wmo_code.icon_name(false);
                 }
-                format!("unknown WMO code ({code})")
-            } else {
-                "no WMO code available".to_string()
+                Some(Err(code)) => format!("unknown WMO code ({code})"),
+                None => "no WMO code available".to_string(),
             }
         } else {
             "prefer_weather_codes disabled".to_string()
@@ -193,15 +191,14 @@ impl Icon for HourlyForecast {
     fn icon_name(&self) -> String {
         // Priority 1: Use WMO weather code if available (most accurate)
         let fallback_reason = if CONFIG.render_options.prefer_weather_codes {
-            if let Some(code) = self.weather_code {
-                logger::debug("HourlyForecast: Using WMO weather code for icon selection");
-                if let Some(wmo_code) = self.wmo_code() {
+            match self.weather_code {
+                Some(Ok(wmo_code)) => {
+                    logger::debug("HourlyForecast: Using WMO weather code for icon selection");
                     let icon = wmo_code.icon_name(self.is_night);
                     return apply_moon_phase_override(icon, self.is_night);
                 }
-                format!("unknown WMO code ({code})")
-            } else {
-                "no WMO code available".to_string()
+                Some(Err(code)) => format!("unknown WMO code ({code})"),
+                None => "no WMO code available".to_string(),
             }
         } else {
             "prefer_weather_codes disabled".to_string()

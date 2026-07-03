@@ -707,7 +707,7 @@ impl ContextBuilder {
         self.context.current_hour_feels_like = current_hour.apparent_temperature.to_string();
         self.context.current_day_date = clock
             .now_local()
-            .format(&CONFIG.render_options.date_format)
+            .format(CONFIG.render_options.date_format.as_ref())
             .to_string();
         self.context.current_hour_rain_amount = current_hour.precipitation.amount().to_string();
 
