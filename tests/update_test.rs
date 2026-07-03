@@ -8,7 +8,7 @@ use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
 use url::Url;
-use wiremock::matchers::{method, path};
+use wiremock::matchers::{method, path, path_regex};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 // ── Status file helpers ────────────────────────────────────────────────────
@@ -72,6 +72,18 @@ fn build_service(base_dir: PathBuf, server_uri: String, allow_pre_release: bool)
         allow_pre_release,
     )
     .unwrap()
+}
+
+fn build_release_zip(binary_name: &str, contents: &[u8]) -> Vec<u8> {
+    use std::io::Write;
+    let mut buf = std::io::Cursor::new(Vec::new());
+    let mut writer = zip::ZipWriter::new(&mut buf);
+    writer
+        .start_file(binary_name, zip::write::SimpleFileOptions::default())
+        .unwrap();
+    writer.write_all(contents).unwrap();
+    writer.finish().unwrap();
+    buf.into_inner()
 }
 
 async fn mount_current_version_mock(server: &MockServer) {
@@ -253,6 +265,78 @@ async fn test_deletes_stale_backup_when_check_is_skipped() {
         !backup_path.exists(),
         ".old backup should be cleaned up when the update check is skipped"
     );
+}
+
+/// When a newer stable version is available, the service should download the
+/// release archive, back up the old binary as `.old`, swap in the new binary
+/// with executable permissions, and record a successful status.
+#[tokio::test]
+async fn test_downloads_and_installs_newer_stable_version() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let temp_dir = TempDir::new().unwrap();
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/releases/latest"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "tag_name": "v99.0.0"
+        })))
+        .mount(&mock_server)
+        .await;
+
+    let zip_bytes = build_release_zip(env!("CARGO_PKG_NAME"), b"new binary bytes");
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/releases/download/v99\.0\.0/.+\.zip$"))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(zip_bytes))
+        .mount(&mock_server)
+        .await;
+
+    let bin_path = temp_dir.path().join(env!("CARGO_PKG_NAME"));
+    fs::write(&bin_path, "old binary bytes").unwrap();
+
+    let now = Utc.with_ymd_and_hms(2025, 6, 10, 12, 0, 0).unwrap();
+    write_last_checked(&temp_dir, 10, now); // triggers an interval-elapsed check
+
+    let base_dir = temp_dir.path().to_path_buf();
+    let server_uri = mock_server.uri();
+
+    tokio::task::spawn_blocking(move || {
+        let service = build_service(base_dir, server_uri, false);
+        let clock = FixedClock::new(now);
+        service.check_and_update(&clock)
+    })
+    .await
+    .unwrap()
+    .unwrap();
+
+    let requests = mock_server.received_requests().await.unwrap();
+    assert_eq!(
+        requests.len(),
+        2,
+        "Should make a version-check request and a download request"
+    );
+
+    assert_eq!(
+        fs::read_to_string(&bin_path).unwrap(),
+        "new binary bytes",
+        "New binary should replace the old one"
+    );
+
+    let mode = fs::metadata(&bin_path).unwrap().permissions().mode();
+    assert_eq!(mode & 0o777, 0o755, "New binary should be executable");
+
+    let backup_path = temp_dir
+        .path()
+        .join(format!("{}.old", env!("CARGO_PKG_NAME")));
+    assert_eq!(
+        fs::read_to_string(&backup_path).unwrap(),
+        "old binary bytes",
+        "Old binary should be preserved as a .old backup"
+    );
+
+    let status = fs::read_to_string(temp_dir.path().join("update_status.txt")).unwrap();
+    assert_eq!(status, "success");
 }
 
 /// When a newer pre-release version is available but `allow_pre_release` is false,
