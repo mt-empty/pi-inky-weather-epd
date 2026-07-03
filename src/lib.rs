@@ -48,7 +48,7 @@ pub fn run_weather_dashboard() -> Result<(), anyhow::Error> {
 
     if CONFIG.release.update_interval_days.into_inner() > 0 {
         logger::section("Checking for updates");
-        update_app()?;
+        update_app(&SystemClock)?;
     };
 
     logger::app_end();
