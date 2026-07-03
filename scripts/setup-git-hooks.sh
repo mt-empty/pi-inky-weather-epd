@@ -16,6 +16,36 @@ fi
 # Create hooks directory if it doesn't exist
 mkdir -p .git/hooks
 
+# Install pre-commit hook
+echo "📝 Installing pre-commit hook..."
+cat > .git/hooks/pre-commit << 'EOF'
+#!/bin/bash
+
+staged_rs_files=$(git diff --cached --name-only --diff-filter=ACM | grep '\.rs$')
+
+if [ -z "$staged_rs_files" ]; then
+    exit 0
+fi
+
+echo "Running cargo fmt on staged Rust files..."
+
+while IFS= read -r file; do
+    if [ -f "$file" ]; then
+        rustfmt "$file"
+    fi
+done <<< "$staged_rs_files"
+
+while IFS= read -r file; do
+    if [ -f "$file" ]; then
+        git add "$file"
+    fi
+done <<< "$staged_rs_files"
+
+echo "✅ cargo fmt applied to staged files."
+EOF
+
+chmod +x .git/hooks/pre-commit
+
 # Install pre-push hook
 echo "📝 Installing pre-push hook..."
 cat > .git/hooks/pre-push << 'EOF'
@@ -79,9 +109,11 @@ EOF
 # Make the hook executable
 chmod +x .git/hooks/pre-push
 
-echo "✅ Pre-push hook installed successfully!"
+echo "✅ Git hooks installed successfully!"
 echo ""
-echo "The hook will run the following checks before each push:"
+echo "pre-commit: auto-formats staged .rs files with rustfmt"
+echo ""
+echo "pre-push:"
 echo "  1. Code formatting (cargo fmt)"
 echo "  2. Clippy linting (cargo clippy -- -D warnings)"
 echo "  3. All tests (RUN_MODE=test cargo test)"
