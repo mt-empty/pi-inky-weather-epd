@@ -85,81 +85,82 @@ impl UpdateService {
 
     pub fn check_and_update(&self, clock: &dyn Clock) -> Result<()> {
         let last_checked_path = self.base_dir.join(LAST_CHECKED_FILE_NAME);
-
-        if !last_checked_path.exists() {
-            let result = self.fetch_latest_release();
-            if result.is_ok() {
-                fs::write(&last_checked_path, clock.now_utc().to_rfc3339())?;
-            }
-            write_update_status(&self.base_dir, &result);
-            return result;
-        }
-
-        let contents = fs::read_to_string(&last_checked_path)?;
-        let last_check_utc = DateTime::parse_from_rfc3339(contents.trim())
-            .map_err(Error::msg)?
-            .with_timezone(&Utc);
-
         let now_utc = clock.now_utc();
-        let elapsed = now_utc.signed_duration_since(last_check_utc);
-        if elapsed > Duration::days(self.update_interval_days) {
+
+        if last_checked_path.exists() {
+            let contents = fs::read_to_string(&last_checked_path)?;
+            let last_check_utc = DateTime::parse_from_rfc3339(contents.trim())
+                .map_err(Error::msg)?
+                .with_timezone(&Utc);
+
+            let elapsed = now_utc.signed_duration_since(last_check_utc);
+            if elapsed <= Duration::days(self.update_interval_days) {
+                logger::info(format!(
+                    "Update check skipped: {} days since last check (threshold: {} days)",
+                    elapsed.num_days(),
+                    self.update_interval_days
+                ));
+                logger::debug(format!(
+                    "Last checked: {}, Next check after: {}",
+                    last_check_utc.format("%Y-%m-%d %H:%M UTC"),
+                    (last_check_utc + Duration::days(self.update_interval_days))
+                        .format("%Y-%m-%d %H:%M UTC")
+                ));
+                return self.remove_stale_backup();
+            }
+
             logger::info(format!(
                 "It's been more than {} days ({} days elapsed), Checking for latest version...",
                 self.update_interval_days,
                 elapsed.num_days()
             ));
-            let result = self.fetch_latest_release();
-
-            if result.is_ok() {
-                fs::write(&last_checked_path, now_utc.to_rfc3339())?;
-            }
-
-            write_update_status(&self.base_dir, &result);
-
-            result
-        } else {
-            logger::info(format!(
-                "Update check skipped: {} days since last check (threshold: {} days)",
-                elapsed.num_days(),
-                self.update_interval_days
-            ));
-            logger::debug(format!(
-                "Last checked: {}, Next check after: {}",
-                last_check_utc.format("%Y-%m-%d %H:%M UTC"),
-                (last_check_utc + Duration::days(self.update_interval_days))
-                    .format("%Y-%m-%d %H:%M UTC")
-            ));
-            let backup_link = self.base_dir.join(format!("{PACKAGE_NAME}.old"));
-            if backup_link.exists() {
-                logger::debug(format!(
-                    "Deleting old backup link: {}",
-                    backup_link.display()
-                ));
-                fs::remove_file(&backup_link)?
-            }
-            Ok(())
         }
+
+        let result = match self.check_for_newer_version() {
+            Ok(Some(latest_version)) => self.download_and_extract_release(&latest_version),
+            Ok(None) => Ok(()),
+            Err(e) => Err(e),
+        };
+
+        if result.is_ok() {
+            fs::write(&last_checked_path, now_utc.to_rfc3339())?;
+        }
+        write_update_status(&self.base_dir, &result);
+
+        result
     }
 
-    fn fetch_latest_release(&self) -> Result<()> {
+    fn remove_stale_backup(&self) -> Result<()> {
+        let backup_link = self.base_dir.join(format!("{PACKAGE_NAME}.old"));
+        if backup_link.exists() {
+            logger::debug(format!(
+                "Deleting old backup link: {}",
+                backup_link.display()
+            ));
+            fs::remove_file(&backup_link)?
+        }
+        Ok(())
+    }
+
+    fn check_for_newer_version(&self) -> Result<Option<Version>> {
         logger::debug(format!("Current version: {}", self.current_version));
 
         let release_info = self.fetch_release_info()?;
         let latest_version = parse_latest_version(&release_info)?;
 
-        if latest_version > self.current_version {
-            logger::debug(format!("Newer version available: {}", latest_version));
-
-            if !latest_version.pre.is_empty() && !self.allow_pre_release {
-                logger::debug(format!("Skipping pre-release version: {}", latest_version));
-                return Ok(());
-            }
-            self.download_and_extract_release(&latest_version)?;
-        } else {
+        if latest_version <= self.current_version {
             logger::debug("You're already using the latest version.");
+            return Ok(None);
         }
 
-        Ok(())
+        logger::debug(format!("Newer version available: {}", latest_version));
+
+        if !latest_version.pre.is_empty() && !self.allow_pre_release {
+            logger::debug(format!("Skipping pre-release version: {}", latest_version));
+            return Ok(None);
+        }
+
+        Ok(Some(latest_version))
     }
 
     fn fetch_release_info(&self) -> Result<GithubRelease> {
