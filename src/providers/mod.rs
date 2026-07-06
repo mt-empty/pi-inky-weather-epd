@@ -5,6 +5,7 @@ pub mod factory;
 pub mod fetcher;
 pub mod open_meteo;
 
+use crate::configs::settings::DashboardSettings;
 use crate::domain::models::{DailyForecast, HourlyForecast};
 use crate::errors::DashboardError;
 
@@ -43,8 +44,14 @@ impl<T> FetchResult<T> {
 }
 
 pub trait WeatherProvider {
-    fn fetch_hourly_forecast(&self) -> Result<FetchResult<Vec<HourlyForecast>>, Error>;
-    fn fetch_daily_forecast(&self) -> Result<FetchResult<Vec<DailyForecast>>, Error>;
+    fn fetch_hourly_forecast(
+        &self,
+        settings: &DashboardSettings,
+    ) -> Result<FetchResult<Vec<HourlyForecast>>, Error>;
+    fn fetch_daily_forecast(
+        &self,
+        settings: &DashboardSettings,
+    ) -> Result<FetchResult<Vec<DailyForecast>>, Error>;
     fn provider_name(&self) -> &str;
     fn provider_filename_prefix(&self) -> &str;
 

@@ -8,21 +8,17 @@
 /// - Ends: First Sunday in April at 3:00 AM → 2:00 AM (AEDT → AEST, UTC+11 → UTC+10)
 mod helpers;
 
-use chrono::{Datelike, Local, Timelike};
-use helpers::test_utils::EnvVarGuard;
-use serial_test::serial;
+use chrono::{Datelike, Timelike};
 
 /// Test BOM API data around DST spring forward transition
 /// BOM returns UTC times - verify the 1-hour gap (2 AM doesn't exist)
 /// Spring: First Sunday in October, 2:00 AM → 3:00 AM (AEST → AEDT)
 #[test]
-#[serial]
 fn test_bom_forecast_time_conversion_during_dst() {
     use pi_inky_weather_epd::apis::bom::models::HourlyForecast as BomHourlyForecast;
     use pi_inky_weather_epd::domain::models::HourlyForecast as DomainHourlyForecast;
 
-    // Set timezone to Australia/Melbourne for consistent test behavior
-    let _tz_guard = EnvVarGuard::new("TZ", "Australia/Melbourne");
+    let settings = helpers::test_utils::test_settings(|_| {});
 
     // Test multiple hours around the DST transition on Oct 5, 2025
     let test_cases = vec![
@@ -56,10 +52,10 @@ fn test_bom_forecast_time_conversion_during_dst() {
         );
 
         let bom_forecast: BomHourlyForecast = serde_json::from_str(&json).unwrap();
-        let domain_forecast: DomainHourlyForecast = bom_forecast.into();
+        let domain_forecast = DomainHourlyForecast::from_bom(bom_forecast, &settings);
 
         // Convert to local time for display
-        let local_time = domain_forecast.time.with_timezone(&Local);
+        let local_time = domain_forecast.time.with_timezone(&settings.misc.timezone);
 
         assert_eq!(
             local_time.hour(),
@@ -87,12 +83,8 @@ fn test_bom_forecast_time_conversion_during_dst() {
 /// Open-Meteo returns UTC times (timezone=UTC) - verify duplicate local hour (2 AM happens twice)
 /// Fall: First Sunday in April, 3:00 AM → 2:00 AM (AEDT → AEST, UTC+11 → UTC+10)
 #[test]
-#[serial]
 fn test_open_meteo_forecast_time_conversion_during_dst() {
     use pi_inky_weather_epd::apis::open_meteo::models::OpenMeteoHourlyResponse;
-
-    // Set timezone to Australia/Melbourne for consistent test behavior
-    let _tz_guard = EnvVarGuard::new("TZ", "Australia/Melbourne");
 
     // Test multiple hours around the DST fall back transition on April 6, 2025
     // Open-Meteo returns UTC times (timezone=UTC parameter)
@@ -159,8 +151,9 @@ fn test_open_meteo_forecast_time_conversion_during_dst() {
     }"#;
 
     let response: OpenMeteoHourlyResponse = serde_json::from_str(json).unwrap();
+    let settings = helpers::test_utils::test_settings(|_| {});
     let domain_forecasts: Vec<pi_inky_weather_epd::domain::models::HourlyForecast> =
-        response.into();
+        response.into_domain(&settings);
 
     // Verify we get 4 hourly forecasts
     assert_eq!(domain_forecasts.len(), 4, "Should have 4 hourly forecasts");
@@ -175,7 +168,7 @@ fn test_open_meteo_forecast_time_conversion_during_dst() {
 
     for (index, expected_hour, expected_day, description) in test_cases {
         let forecast = &domain_forecasts[index];
-        let local_time = forecast.time.with_timezone(&Local);
+        let local_time = forecast.time.with_timezone(&settings.misc.timezone);
 
         assert_eq!(
             local_time.hour(),
@@ -199,7 +192,7 @@ fn test_open_meteo_forecast_time_conversion_during_dst() {
     // This demonstrates the fall back behaviour
     let local_hours: Vec<u32> = domain_forecasts
         .iter()
-        .map(|f| f.time.with_timezone(&Local).hour())
+        .map(|f| f.time.with_timezone(&settings.misc.timezone).hour())
         .collect();
     assert_eq!(
         local_hours,

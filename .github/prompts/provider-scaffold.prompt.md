@@ -37,8 +37,7 @@ Generate output in this order:
 - Explicitly distinguish fetcher FetchOutcome from provider FetchResult usage.
 
 4. Test Plan
-- Commands and environment variables to run.
-- Include RUN_MODE=test and APP_API__PROVIDER examples.
+- Commands to run (plain `cargo test`; per-test settings values via tests/helpers/test_utils.rs select the provider).
 - Include snapshot workflow notes when output can affect rendered SVG.
 
 5. Done Criteria

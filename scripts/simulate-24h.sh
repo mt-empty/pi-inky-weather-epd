@@ -15,7 +15,8 @@ DEFAULT_UTC_HOUR=$(date -u +"%H")
 OUTPUT_DIR="simulation_output"
 START_DATE="${1:-$DEFAULT_UTC_DATE}"  # Default to current UTC date, can be overridden
 START_HOUR="${2:-$DEFAULT_UTC_HOUR}"  # Default to current UTC hour (0-23)
-TIMEZONE="${3:-$TZ}"              # Optional timezone (e.g., "America/New_York", "Australia/Melbourne")
+TIMEZONE="${3:-}"                 # Optional IANA timezone (e.g., "America/New_York", "Australia/Melbourne")
+                                   # Sets APP_MISC__TIMEZONE; the app no longer reads the TZ env var.
 
 # Color codes for output
 RED='\033[0;31m'
@@ -50,20 +51,20 @@ else
 fi
 echo ""
 
+# Set timezone if provided (must precede both invocations below)
+if [ -n "$TIMEZONE" ]; then
+    export APP_MISC__TIMEZONE="$TIMEZONE"
+    echo -e "${BLUE}Timezone set to: $TIMEZONE${NC}"
+fi
+
 # Fetch fresh weather data before simulation
 echo -e "${BLUE}Fetching fresh weather data...${NC}"
-if TZ=$TIMEZONE APP_DEV__DISABLE_WEATHER_API_REQUESTS=false ./target/debug/pi-inky-weather-epd > /dev/null 2>&1; then
+if APP_DEV__DISABLE_WEATHER_API_REQUESTS=false ./target/debug/pi-inky-weather-epd > /dev/null 2>&1; then
     echo -e "${GREEN}[OK] Weather data cached successfully${NC}"
 else
     echo -e "${YELLOW}Warning: Failed to fetch data, will use existing cache if available${NC}"
 fi
 echo ""
-
-# Set timezone if provided
-if [ -n "$TIMEZONE" ]; then
-    export TZ="$TIMEZONE"
-    echo -e "${BLUE}Timezone set to: $TIMEZONE${NC}"
-fi
 
 # Generate dashboards for each hour
 echo -e "${BLUE}Generating 24 hourly dashboards starting from ${START_DATE}T${START_HOUR}:00:00Z${NC}"
@@ -96,7 +97,7 @@ for hour in $(seq "$START_HOUR" $((START_HOUR + 23))); do
 
     # Run the application with simulated time
     # Redirect stdout to capture only the generated SVG
-    if TZ=$TIMEZONE APP_DEV__DISABLE_WEATHER_API_REQUESTS=true ./target/debug/pi-inky-weather-epd simulate "$timestamp" > /dev/null 2>&1; then
+    if APP_DEV__DISABLE_WEATHER_API_REQUESTS=true ./target/debug/pi-inky-weather-epd simulate "$timestamp" > /dev/null 2>&1; then
         # Copy the generated dashboard.svg to the timestamped file
         if [ -f "dashboard.svg" ]; then
             cp "dashboard.svg" "$output_file"

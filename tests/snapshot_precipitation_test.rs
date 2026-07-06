@@ -16,14 +16,14 @@
 //! ## Running
 //!
 //! ```bash
-//! RUN_MODE=test cargo test --test snapshot_precipitation_test
+//! cargo test --test snapshot_precipitation_test
 //! ```
 
 mod helpers;
 
-use helpers::test_utils::EnvVarGuard;
+use helpers::test_utils;
 use helpers::wiremock_setup;
-use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injection, CONFIG};
+use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injection};
 use std::fs;
 use std::path::Path;
 
@@ -48,35 +48,24 @@ fn count_pattern_opacity(svg: &str, pattern: &str, opacity: &str) -> usize {
 /// - No 25% opacity blocks are present (no low-chance rain hours)
 /// - `{snow_colour}` template variable is substituted
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_open_meteo_alaska_snow() {
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
-        eprintln!(
-            "Skipping Alaska snow test - provider is set to '{}'",
-            CONFIG.api.provider
-        );
-        return;
-    }
-
     let mock_server = wiremock_setup::setup_open_meteo_mock(
         "tests/fixtures/alaska_snow/open_meteo_hourly_forecast.json",
         "tests/fixtures/alaska_snow/open_meteo_daily_forecast.json",
     )
     .await;
-    let open_meteo_base_url = mock_server.uri();
-    let _open_meteo_base_url_guard =
-        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
+    let settings =
+        test_utils::open_meteo_settings_in_tz(&mock_server.uri(), chrono_tz::America::Anchorage);
 
     let clock =
         FixedClock::from_rfc3339("2026-01-15T21:00:00Z").expect("Failed to create fixed clock");
     let output_svg_name = Path::new("tests/output/snapshot_open_meteo_alaska_snow.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        let _tz_guard = EnvVarGuard::new("TZ", "America/Anchorage");
-
         let result = generate_weather_dashboard_injection(
+            &settings,
             &clock,
-            &CONFIG.misc.template_path,
+            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(
@@ -141,24 +130,13 @@ async fn snapshot_open_meteo_alaska_snow() {
 /// - Exact block counts match the fixture (8 per category)
 /// - No `url(#heavy-rain)` or other unexpected patterns appear
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_open_meteo_mixed_precip() {
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
-        eprintln!(
-            "Skipping mixed precip test - provider is set to '{}'",
-            CONFIG.api.provider
-        );
-        return;
-    }
-
     let mock_server = wiremock_setup::setup_open_meteo_mock(
         "tests/fixtures/mixed_precip/open_meteo_hourly_forecast.json",
         "tests/fixtures/mixed_precip/open_meteo_daily_forecast.json",
     )
     .await;
-    let open_meteo_base_url = mock_server.uri();
-    let _open_meteo_base_url_guard =
-        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
+    let settings = test_utils::open_meteo_settings(&mock_server.uri());
 
     let clock =
         FixedClock::from_rfc3339("2026-02-01T00:00:00Z").expect("Failed to create fixed clock");
@@ -166,8 +144,9 @@ async fn snapshot_open_meteo_mixed_precip() {
 
     let svg_content = tokio::task::spawn_blocking(move || {
         let result = generate_weather_dashboard_injection(
+            &settings,
             &clock,
-            &CONFIG.misc.template_path,
+            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(

@@ -3,7 +3,8 @@ use serde::Deserialize;
 use std::{fs, path::PathBuf, time::Duration};
 use url::Url;
 
-use crate::{errors::DashboardError, logger, CONFIG};
+use crate::configs::settings::DashboardSettings;
+use crate::{errors::DashboardError, logger};
 
 /// Type alias for API-specific error checking function
 pub type ErrorChecker = fn(&str) -> Result<(), DashboardError>;
@@ -400,6 +401,7 @@ impl Fetcher {
     /// - Falls back to cached data if all retries fail
     pub fn fetch_data<T>(
         &self,
+        settings: &DashboardSettings,
         endpoint: Url,
         cache_filename: &str,
         error_checker: Option<ErrorChecker>,
@@ -429,7 +431,7 @@ impl Fetcher {
             fs::create_dir_all(file_path.parent().unwrap())?;
         }
 
-        match CONFIG.dev.disable_weather_api_requests {
+        match settings.dev.disable_weather_api_requests {
             true => {
                 let cached = self.load_cached(&file_path)?;
                 Ok(FetchOutcome::Fresh(cached))

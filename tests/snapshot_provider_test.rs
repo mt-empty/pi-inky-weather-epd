@@ -5,55 +5,33 @@
 //!
 //! ## How These Tests Work
 //!
-//! **Open-Meteo Tests** (using Wiremock):
 //! 1. **Wiremock Server**: Start mock HTTP server with fixture data
-//! 2. **URL Override**: Set OPEN_METEO_BASE_URL env var to point to mock server
+//! 2. **Config Override**: Install a per-test config selecting the provider
+//!    and pointing its base URL at the mock server
 //! 3. **Fixed Time**: Use FixedClock to ensure deterministic "current hour"
 //! 4. **HTTP Calls**: Provider makes HTTP calls (intercepted by wiremock)
 //! 5. **Snapshot SVG**: Capture and compare the full SVG output
 //!
-//! **BOM Tests** (using Fixtures):
-//! 1. **Fixed Time**: Use FixedClock to ensure deterministic "current hour"
-//! 2. **Fixture Data**: Load pre-defined weather data (no API calls)
-//! 3. **Full Pipeline**: Run complete dashboard generation
-//! 4. **Snapshot SVG**: Capture and compare the full SVG output
-//!
 //! ## Running These Tests
 //!
-//! **Test Open-Meteo provider** (default in test.toml):
+//! Both providers run in a single invocation — no env vars required:
 //! ```bash
-//! RUN_MODE=test cargo test --test snapshot_provider_test
-//! # Explicitly:
-//! RUN_MODE=test APP_API__PROVIDER=open_meteo cargo test --test snapshot_provider_test
+//! cargo test --test snapshot_provider_test
 //! ```
-//!
-//! **Test BOM provider**:
-//! ```bash
-//! RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test
-//! ```
-//!
-//! **Test both providers** (for CI or comprehensive testing):
-//! ```bash
-//! RUN_MODE=test APP_API__PROVIDER=open_meteo cargo test --test snapshot_provider_test
-//! RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test
-//! ```
-//!
-//! **Important**: Set `RUN_MODE=test` to load test configuration.
 //!
 //! ## Reviewing Snapshots
 //!
 //! On first run or after intentional changes:
 //! ```bash
-//! RUN_MODE=test APP_API__PROVIDER=open_meteo cargo test --test snapshot_provider_test
-//! RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test
+//! cargo test --test snapshot_provider_test
 //! cargo insta review  # Review and accept/reject changes
 //! ```
 
 mod helpers;
 
-use helpers::test_utils::EnvVarGuard;
+use helpers::test_utils;
 use helpers::wiremock_setup;
-use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injection, CONFIG};
+use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injection};
 use std::fs;
 use std::path::Path;
 
@@ -82,22 +60,10 @@ use std::path::Path;
 ///
 /// **Running This Test**:
 /// ```bash
-/// RUN_MODE=test cargo test --test snapshot_provider_test
-/// # Or explicitly with Open-Meteo:
-/// RUN_MODE=test APP_API__PROVIDER=open_meteo cargo test --test snapshot_provider_test
+/// cargo test --test snapshot_provider_test
 /// ```
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_open_meteo_dashboard() {
-    // Skip test if BOM provider is configured (test is provider-specific)
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
-        eprintln!(
-            "Skipping Open-Meteo test - provider is set to '{}'",
-            CONFIG.api.provider
-        );
-        return;
-    }
-
     // Start wiremock server with fixture data
     let mock_server = wiremock_setup::setup_open_meteo_mock(
         "tests/fixtures/open_meteo_hourly_forecast.json",
@@ -105,10 +71,8 @@ async fn snapshot_open_meteo_dashboard() {
     )
     .await;
 
-    // Override Open-Meteo base URL to point to mock server
-    let open_meteo_base_url = mock_server.uri();
-    let _open_meteo_base_url_guard =
-        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
+    // Point the Open-Meteo provider at the mock server
+    let settings = test_utils::open_meteo_settings(&mock_server.uri());
 
     // Fixed time: Oct 25, 2025, 1:00 AM UTC
     // In Melbourne AEDT (UTC+11): Oct 25, 2025, 12:00 PM (noon)
@@ -120,8 +84,9 @@ async fn snapshot_open_meteo_dashboard() {
     // Run sync dashboard generation in blocking task
     let svg_content = tokio::task::spawn_blocking(move || {
         let result = generate_weather_dashboard_injection(
+            &settings,
             &clock,
-            &CONFIG.misc.template_path,
+            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(
@@ -153,24 +118,13 @@ async fn snapshot_open_meteo_dashboard() {
 /// - Hourly graph starts from the correct hour
 /// - Sunrise/sunset times are properly associated with the right date
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_open_meteo_midnight_boundary() {
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
-        eprintln!(
-            "Skipping Open-Meteo midnight test - provider is set to '{}'",
-            CONFIG.api.provider
-        );
-        return;
-    }
-
     let mock_server = wiremock_setup::setup_open_meteo_mock(
         "tests/fixtures/open_meteo_hourly_forecast.json",
         "tests/fixtures/open_meteo_daily_forecast.json",
     )
     .await;
-    let open_meteo_base_url = mock_server.uri();
-    let _open_meteo_base_url_guard =
-        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
+    let settings = test_utils::open_meteo_settings(&mock_server.uri());
 
     let clock =
         FixedClock::from_rfc3339("2025-10-26T00:00:00Z").expect("Failed to create fixed clock");
@@ -178,8 +132,9 @@ async fn snapshot_open_meteo_midnight_boundary() {
 
     let svg_content = tokio::task::spawn_blocking(move || {
         let result = generate_weather_dashboard_injection(
+            &settings,
             &clock,
-            &CONFIG.misc.template_path,
+            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(
@@ -207,24 +162,13 @@ async fn snapshot_open_meteo_midnight_boundary() {
 /// - Yesterday's data is not incorrectly shown as today
 /// - Daily forecasts align with local calendar days
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_open_meteo_end_of_day() {
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
-        eprintln!(
-            "Skipping Open-Meteo end-of-day test - provider is set to '{}'",
-            CONFIG.api.provider
-        );
-        return;
-    }
-
     let mock_server = wiremock_setup::setup_open_meteo_mock(
         "tests/fixtures/open_meteo_hourly_forecast.json",
         "tests/fixtures/open_meteo_daily_forecast.json",
     )
     .await;
-    let open_meteo_base_url = mock_server.uri();
-    let _open_meteo_base_url_guard =
-        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
+    let settings = test_utils::open_meteo_settings(&mock_server.uri());
 
     let clock =
         FixedClock::from_rfc3339("2025-10-25T13:00:00Z").expect("Failed to create fixed clock");
@@ -232,8 +176,9 @@ async fn snapshot_open_meteo_end_of_day() {
 
     let svg_content = tokio::task::spawn_blocking(move || {
         let result = generate_weather_dashboard_injection(
+            &settings,
             &clock,
-            &CONFIG.misc.template_path,
+            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(
@@ -261,24 +206,13 @@ async fn snapshot_open_meteo_end_of_day() {
 /// - Hour labels in graph start from 3 AM
 /// - No hour is skipped or duplicated in the 24-hour window
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_open_meteo_early_morning() {
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
-        eprintln!(
-            "Skipping Open-Meteo early morning test - provider is set to '{}'",
-            CONFIG.api.provider
-        );
-        return;
-    }
-
     let mock_server = wiremock_setup::setup_open_meteo_mock(
         "tests/fixtures/open_meteo_hourly_forecast.json",
         "tests/fixtures/open_meteo_daily_forecast.json",
     )
     .await;
-    let open_meteo_base_url = mock_server.uri();
-    let _open_meteo_base_url_guard =
-        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
+    let settings = test_utils::open_meteo_settings(&mock_server.uri());
 
     let clock =
         FixedClock::from_rfc3339("2025-10-25T16:00:00Z").expect("Failed to create fixed clock");
@@ -286,8 +220,9 @@ async fn snapshot_open_meteo_early_morning() {
 
     let svg_content = tokio::task::spawn_blocking(move || {
         let result = generate_weather_dashboard_injection(
+            &settings,
             &clock,
-            &CONFIG.misc.template_path,
+            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(
@@ -329,22 +264,11 @@ async fn snapshot_open_meteo_early_morning() {
 ///
 /// **Running This Test**:
 /// ```bash
-/// RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test
+/// cargo test --test snapshot_provider_test
 /// cargo insta review
 /// ```
-/// Note: Double underscore __ is used as separator for nested config keys (api.provider -> API__PROVIDER)
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_bom_dashboard() {
-    // Skip test if Open-Meteo provider is configured (test is provider-specific)
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
-        eprintln!(
-            "Skipping BOM test - provider is set to '{}'",
-            CONFIG.api.provider
-        );
-        return;
-    }
-
     // Start wiremock server with BOM fixture data
     let mock_server = wiremock_setup::setup_bom_mock(
         "tests/fixtures/bom_daily_forecast.json",
@@ -352,10 +276,8 @@ async fn snapshot_bom_dashboard() {
     )
     .await;
 
-    // Override BOM base URL to point to mock server
-    // Note: BOM URLs are constructed as {base_url}/{geohash}/forecasts/{frequency}
-    let bom_base_url = format!("{}/v1/locations", mock_server.uri());
-    let _bom_base_url_guard = EnvVarGuard::new("BOM_BASE_URL", bom_base_url.as_str());
+    // Select the BOM provider and point it at the mock server
+    let settings = test_utils::bom_settings(&mock_server.uri());
 
     // Fixed time: Oct 25, 2025, 10:00 AM UTC
     // In Melbourne AEDT (UTC+11): Oct 25, 2025, 9:00 PM
@@ -368,8 +290,9 @@ async fn snapshot_bom_dashboard() {
     // Run sync dashboard generation in blocking task
     let svg_content = tokio::task::spawn_blocking(move || {
         let result = generate_weather_dashboard_injection(
+            &settings,
             &clock,
-            &CONFIG.misc.template_path,
+            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(
@@ -397,23 +320,13 @@ async fn snapshot_bom_dashboard() {
 /// **Edge Case**: Midnight UTC boundary for BOM provider.
 /// Verifies BOM-specific parsing handles date transitions correctly.
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_bom_midnight_boundary() {
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
-        eprintln!(
-            "Skipping BOM midnight test - provider is set to '{}'",
-            CONFIG.api.provider
-        );
-        return;
-    }
-
     let mock_server = wiremock_setup::setup_bom_mock(
         "tests/fixtures/bom_daily_forecast.json",
         "tests/fixtures/bom_hourly_forecast.json",
     )
     .await;
-    let bom_base_url = format!("{}/v1/locations", mock_server.uri());
-    let _bom_base_url_guard = EnvVarGuard::new("BOM_BASE_URL", bom_base_url.as_str());
+    let settings = test_utils::bom_settings(&mock_server.uri());
 
     // Midnight UTC on Oct 26 = 11:00 AM Melbourne
     let clock =
@@ -423,8 +336,9 @@ async fn snapshot_bom_midnight_boundary() {
 
     let svg_content = tokio::task::spawn_blocking(move || {
         let result = generate_weather_dashboard_injection(
+            &settings,
             &clock,
-            &CONFIG.misc.template_path,
+            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(
@@ -449,23 +363,13 @@ async fn snapshot_bom_midnight_boundary() {
 /// **Edge Case**: Tests BOM provider at local midnight.
 /// Verifies daily forecast alignment with Australian calendar days.
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_bom_local_midnight() {
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
-        eprintln!(
-            "Skipping BOM local midnight test - provider is set to '{}'",
-            CONFIG.api.provider
-        );
-        return;
-    }
-
     let mock_server = wiremock_setup::setup_bom_mock(
         "tests/fixtures/bom_daily_forecast.json",
         "tests/fixtures/bom_hourly_forecast.json",
     )
     .await;
-    let bom_base_url = format!("{}/v1/locations", mock_server.uri());
-    let _bom_base_url_guard = EnvVarGuard::new("BOM_BASE_URL", bom_base_url.as_str());
+    let settings = test_utils::bom_settings(&mock_server.uri());
 
     // 13:00 UTC = Midnight Melbourne (Oct 26)
     let clock =
@@ -475,8 +379,9 @@ async fn snapshot_bom_local_midnight() {
 
     let svg_content = tokio::task::spawn_blocking(move || {
         let result = generate_weather_dashboard_injection(
+            &settings,
             &clock,
-            &CONFIG.misc.template_path,
+            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(
@@ -504,23 +409,13 @@ async fn snapshot_bom_local_midnight() {
 /// - Wind speed conversion (knots to km/h) is accurate
 /// - Current conditions reflect early morning state
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_bom_early_morning() {
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "bom" {
-        eprintln!(
-            "Skipping BOM early morning test - provider is set to '{}'",
-            CONFIG.api.provider
-        );
-        return;
-    }
-
     let mock_server = wiremock_setup::setup_bom_mock(
         "tests/fixtures/bom_daily_forecast.json",
         "tests/fixtures/bom_hourly_forecast.json",
     )
     .await;
-    let bom_base_url = format!("{}/v1/locations", mock_server.uri());
-    let _bom_base_url_guard = EnvVarGuard::new("BOM_BASE_URL", bom_base_url.as_str());
+    let settings = test_utils::bom_settings(&mock_server.uri());
 
     // 19:00 UTC = 6:00 AM Melbourne
     let clock =
@@ -530,8 +425,9 @@ async fn snapshot_bom_early_morning() {
 
     let svg_content = tokio::task::spawn_blocking(move || {
         let result = generate_weather_dashboard_injection(
+            &settings,
             &clock,
-            &CONFIG.misc.template_path,
+            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(
@@ -559,24 +455,14 @@ async fn snapshot_bom_early_morning() {
 /// This is 1 hour before the UTC midnight boundary. The daily forecast should show days
 /// aligned with the local (NY) calendar.
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_open_meteo_ny_6pm_before_gmt_boundary() {
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
-        eprintln!(
-            "Skipping Open-Meteo NY 6pm test - provider is set to '{}'",
-            CONFIG.api.provider
-        );
-        return;
-    }
-
     let mock_server = wiremock_setup::setup_open_meteo_mock(
         "tests/fixtures/ny_6pm_before_gmt/open_meteo_hourly_forecast.json",
         "tests/fixtures/ny_6pm_before_gmt/open_meteo_daily_forecast.json",
     )
     .await;
-    let open_meteo_base_url = mock_server.uri();
-    let _open_meteo_base_url_guard =
-        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
+    let settings =
+        test_utils::open_meteo_settings_in_tz(&mock_server.uri(), chrono_tz::America::New_York);
 
     let clock =
         FixedClock::from_rfc3339("2025-12-28T23:00:00Z").expect("Failed to create fixed clock");
@@ -584,12 +470,10 @@ async fn snapshot_open_meteo_ny_6pm_before_gmt_boundary() {
         Path::new("tests/output/snapshot_open_meteo_ny_6pm_before_gmt_boundary.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        // Set timezone
-        let _tz_guard = EnvVarGuard::new("TZ", "America/New_York");
-
         let result = generate_weather_dashboard_injection(
+            &settings,
             &clock,
-            &CONFIG.misc.template_path,
+            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(
@@ -628,24 +512,14 @@ async fn snapshot_open_meteo_ny_6pm_before_gmt_boundary() {
 /// **Note**: To fix the incomplete data warning, API request needs `past_days=1` parameter
 /// to include Dec 28 in the fixture.
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_open_meteo_ny_7pm_after_gmt_boundary() {
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
-        eprintln!(
-            "Skipping Open-Meteo NY 7pm test - provider is set to '{}'",
-            CONFIG.api.provider
-        );
-        return;
-    }
-
     let mock_server = wiremock_setup::setup_open_meteo_mock(
         "tests/fixtures/ny_7pm_after_gmt/open_meteo_hourly_forecast.json",
         "tests/fixtures/ny_7pm_after_gmt/open_meteo_daily_forecast.json",
     )
     .await;
-    let open_meteo_base_url = mock_server.uri();
-    let _open_meteo_base_url_guard =
-        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
+    let settings =
+        test_utils::open_meteo_settings_in_tz(&mock_server.uri(), chrono_tz::America::New_York);
 
     let clock =
         FixedClock::from_rfc3339("2025-12-29T00:00:00Z").expect("Failed to create fixed clock");
@@ -653,12 +527,10 @@ async fn snapshot_open_meteo_ny_7pm_after_gmt_boundary() {
         Path::new("tests/output/snapshot_open_meteo_ny_7pm_after_gmt_boundary.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        // Set timezone
-        let _tz_guard = EnvVarGuard::new("TZ", "America/New_York");
-
         let result = generate_weather_dashboard_injection(
+            &settings,
             &clock,
-            &CONFIG.misc.template_path,
+            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(

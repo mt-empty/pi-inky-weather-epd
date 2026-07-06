@@ -1,3 +1,5 @@
+mod helpers;
+
 use pi_inky_weather_epd::configs::settings::WindSpeedUnit;
 use pi_inky_weather_epd::domain::models::Wind;
 

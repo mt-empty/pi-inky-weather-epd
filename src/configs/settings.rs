@@ -129,6 +129,10 @@ pub struct Api {
     pub provider: Providers,
     pub longitude: Longitude,
     pub latitude: Latitude,
+    /// Base URL for the BOM API; overridable so tests can point at a mock server.
+    pub bom_base_url: Url,
+    /// Base URL for the Open-Meteo API; overridable so tests can point at a mock server.
+    pub open_meteo_base_url: Url,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -144,9 +148,40 @@ pub struct Colours {
     pub snow_colour: Colour,
 }
 
+/// Detects the system timezone, falling back to UTC and logging a warning
+/// distinguishing *why* detection failed — otherwise a misconfigured device
+/// silently renders every time in UTC with no indication in its logs.
+fn system_timezone() -> chrono_tz::Tz {
+    match iana_time_zone::get_timezone() {
+        Ok(name) => match name.parse() {
+            Ok(tz) => tz,
+            Err(_) => {
+                crate::logger::warning(format!(
+                    "detected system timezone '{name}' is not a recognized IANA identifier; \
+                     falling back to UTC. Set `misc.timezone` in config to override."
+                ));
+                chrono_tz::UTC
+            }
+        },
+        Err(e) => {
+            crate::logger::warning(format!(
+                "could not detect system timezone ({e}); falling back to UTC. \
+                 Set `misc.timezone` in config to override."
+            ));
+            chrono_tz::UTC
+        }
+    }
+}
+
 // TODO: rename the fields to indicate if it's a path or a name
 #[derive(Debug, Deserialize)]
 pub struct Misc {
+    /// IANA timezone all "local" times are rendered in (e.g. "Australia/Melbourne").
+    /// When absent from config, the system timezone is detected once at load
+    /// time (UTC as a last resort), so the rest of the code always sees a
+    /// concrete timezone.
+    #[serde(default = "system_timezone")]
+    pub timezone: chrono_tz::Tz,
     pub weather_data_cache_path: PathBuf,
     pub template_path: PathBuf,
     pub generated_svg_name: PathBuf,
@@ -199,6 +234,14 @@ fn validate_release_cross_fields(
     Ok(())
 }
 
+/// Which config layer to merge on top of `default.toml`, selected by `RUN_MODE`.
+enum ConfigLayer {
+    /// `development.toml` + `local.toml` (local dev overrides, not checked into git).
+    Development,
+    /// `test.toml` only — deterministic, no `development.toml`/`local.toml`.
+    Test,
+}
+
 /// Dashboard settings.
 ///
 /// # Fields
@@ -218,55 +261,93 @@ fn validate_release_cross_fields(
 ///
 /// Panics if the configuration file is not found.
 impl DashboardSettings {
-    pub(crate) fn new() -> Result<Self, ConfigError> {
+    /// Loads configuration from config files, the user config, and `APP_*`
+    /// environment variables. Called once at startup; the result is passed
+    /// down by reference (no global).
+    ///
+    /// `RUN_MODE=test` selects the same deterministic layer [`Self::load_test_config`]
+    /// uses, but — unlike `load_test_config` — still merges the user config file
+    /// and `APP_*` environment variables on top of it.
+    pub fn load() -> Result<Self, ConfigError> {
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
-        let is_test_mode = run_mode == "test";
-
-        let root = std::env::current_dir().map_err(|e| ConfigError::Message(e.to_string()))?;
-
-        let default_config_path = root.join(CONFIG_DIR).join(DEFAULT_CONFIG_NAME);
-        let development_config_path = root.join(CONFIG_DIR).join("development");
-        let local_config_path = root.join(CONFIG_DIR).join("local");
-        let test_config_path = root.join(CONFIG_DIR).join("test");
-
-        // user config path is located at ~/.config/pi-inky-weather-epd.toml
-        let home_dir = env::var("HOME").unwrap();
-        let user_config_path = std::path::PathBuf::from(&home_dir)
-            .join(".config")
-            .join(env!("CARGO_PKG_NAME"));
-
-        let mut config_builder = Config::builder()
-            // Start off by merging in the "default" configuration file
-            .add_source(File::with_name(default_config_path.to_str().unwrap()))
-            // Add in user configuration file
-            .add_source(File::with_name(user_config_path.to_str().unwrap()).required(false));
-
-        // If running tests (RUN_MODE=test), load test.toml and skip development/local
-        // Otherwise, load development.toml and local.toml
-        if is_test_mode {
-            config_builder = config_builder
-                .add_source(File::with_name(test_config_path.to_str().unwrap()).required(false));
+        let layer = if run_mode == "test" {
+            ConfigLayer::Test
         } else {
+            ConfigLayer::Development
+        };
+        Self::load_from_sources(layer, /* include_user_and_env */ true)
+    }
+
+    /// Load configuration for tests: `default.toml` merged with `test.toml` only.
+    ///
+    /// Deliberately skips the user config file (`~/.config/...`) and `APP_*`
+    /// environment variables so results are deterministic regardless of the
+    /// invoking shell. Tests mutate the returned settings and pass them
+    /// directly into the code under test (see `tests/helpers/test_utils.rs`).
+    pub fn load_test_config() -> Result<Self, ConfigError> {
+        Self::load_from_sources(ConfigLayer::Test, /* include_user_and_env */ false)
+    }
+
+    /// Shared source-composition pipeline behind [`Self::load`] and
+    /// [`Self::load_test_config`], so the two never drift on how a config
+    /// layer is merged in — only on whether the user config file and `APP_*`
+    /// env are included.
+    fn load_from_sources(
+        layer: ConfigLayer,
+        include_user_and_env: bool,
+    ) -> Result<Self, ConfigError> {
+        let root = std::env::current_dir().map_err(|e| ConfigError::Message(e.to_string()))?;
+        let default_config_path = root.join(CONFIG_DIR).join(DEFAULT_CONFIG_NAME);
+
+        let mut config_builder =
+            Config::builder().add_source(File::with_name(default_config_path.to_str().unwrap()));
+
+        if include_user_and_env {
+            // user config path is located at ~/.config/pi-inky-weather-epd.toml
+            let home_dir = env::var("HOME").unwrap();
+            let user_config_path = std::path::PathBuf::from(&home_dir)
+                .join(".config")
+                .join(env!("CARGO_PKG_NAME"));
             config_builder = config_builder
-                // Add in development configuration file
-                .add_source(
-                    File::with_name(development_config_path.to_str().unwrap()).required(false),
-                )
-                // Add in local configuration file (for dev overrides, not checked into git)
-                .add_source(File::with_name(local_config_path.to_str().unwrap()).required(false));
+                .add_source(File::with_name(user_config_path.to_str().unwrap()).required(false));
         }
 
-        let settings = config_builder
+        config_builder = match layer {
+            ConfigLayer::Test => {
+                let test_config_path = root.join(CONFIG_DIR).join("test");
+                config_builder
+                    .add_source(File::with_name(test_config_path.to_str().unwrap()).required(false))
+            }
+            ConfigLayer::Development => {
+                let development_config_path = root.join(CONFIG_DIR).join("development");
+                let local_config_path = root.join(CONFIG_DIR).join("local");
+                config_builder
+                    .add_source(
+                        File::with_name(development_config_path.to_str().unwrap()).required(false),
+                    )
+                    .add_source(
+                        File::with_name(local_config_path.to_str().unwrap()).required(false),
+                    )
+            }
+        };
+
+        if include_user_and_env {
             // Add in settings from the environment (with a prefix of APP)
             // Eg.. `APP_API__PROVIDER=open_meteo` would set the `api.provider` key
             // Note: Single underscore _ separates prefix from key, double __ for nesting
-            .add_source(
+            config_builder = config_builder.add_source(
                 Environment::with_prefix("APP")
                     .prefix_separator("_") // Separator between prefix and key (APP_api)
                     .separator("__") // Separator for nested keys (api__provider)
                     .try_parsing(true), // Parse values to correct types
-            )
-            .build()?;
+            );
+        }
+
+        let settings = config_builder.build()?;
+        Self::deserialize_and_validate(settings)
+    }
+
+    fn deserialize_and_validate(settings: Config) -> Result<Self, ConfigError> {
         let final_settings: Result<DashboardSettings, ConfigError> = settings.try_deserialize();
 
         // Validate the settings after deserializing

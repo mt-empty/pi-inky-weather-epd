@@ -3,12 +3,10 @@ use crate::errors::GeohashError;
 use crate::logger;
 use anyhow::Error;
 use anyhow::Result;
-use chrono::Local;
+use chrono::DateTime;
 use chrono::TimeZone;
-use chrono::{DateTime, NaiveDateTime};
 use resvg::tiny_skia;
 use resvg::usvg;
-use serde::Deserialize;
 use std::fs;
 use std::path::PathBuf;
 use usvg::fontdb;
@@ -160,50 +158,6 @@ where
             }
         })
         .fold(V::default(), |acc, x| if x > acc { x } else { acc })
-}
-
-/// Deserializes an optional NaiveDateTime from a string.
-///
-/// # Arguments
-///
-/// * `deserializer` - The deserializer to use.
-///
-/// # Returns
-///
-/// * `Result<Option<NaiveDateTime>, D::Error>` - The deserialized `NaiveDateTime` or an error.
-pub fn deserialize_optional_naive_date<'de, D>(
-    deserializer: D,
-) -> Result<Option<NaiveDateTime>, D::Error>
-where
-    D: serde::de::Deserializer<'de>,
-{
-    let opt: Option<String> = Option::deserialize(deserializer)?;
-    if let Some(date_str) = opt {
-        NaiveDateTime::parse_from_str(&date_str, "%Y-%m-%dT%H:%M:%SZ")
-            .map(|dt| Some(Local.from_utc_datetime(&dt).naive_local()))
-            .map_err(serde::de::Error::custom)
-    } else {
-        Ok(None)
-    }
-}
-
-/// Deserializes a NaiveDateTime from a string.
-///
-/// # Arguments
-///
-/// * `s` - The deserializer to use.
-///
-/// # Returns
-///
-/// * `Result<NaiveDateTime, S::Error>` - The deserialized `NaiveDateTime` or an error.
-pub fn deserialize_naive_date<'de, S>(s: S) -> Result<NaiveDateTime, S::Error>
-where
-    S: serde::de::Deserializer<'de>,
-{
-    let date_str: &str = serde::Deserialize::deserialize(s)?;
-    NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%SZ")
-        .map(|dt| Local.from_utc_datetime(&dt).naive_local())
-        .map_err(serde::de::Error::custom)
 }
 
 // Below code was adopted from Geohash crate

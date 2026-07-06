@@ -1,12 +1,12 @@
 ---
-description: "Use when writing, debugging, or fixing Rust tests, snapshot tests, fixtures, or cargo test commands in this repository. Enforces RUN_MODE=test, APP_API__PROVIDER naming, deterministic test patterns, and cargo insta review workflow."
+description: "Use when writing, debugging, or fixing Rust tests, snapshot tests, fixtures, or cargo test commands in this repository. Enforces the per-test config override pattern, deterministic test patterns, and cargo insta review workflow."
 applyTo: "tests/**/*.rs"
 ---
 
 # Test Workflow Guardrails
 
-- Run tests with RUN_MODE=test so config/test.toml is loaded.
-- For provider overrides, use APP_API__PROVIDER with a double underscore.
+- Run tests with plain `cargo test`; no env vars are needed and tests run fully in parallel.
+- Configuration is a plain value: build per-test settings via tests/helpers/test_utils.rs (`test_settings`, `open_meteo_settings`, `bom_settings`) and pass them into the code under test (e.g. `generate_weather_dashboard_injection(&settings, ...)`). No global config, no `#[serial]`.
 - Provider values are lowercase: bom and open_meteo.
 - Prefer existing workspace tasks for common test runs.
 

@@ -6,6 +6,8 @@
 //! 3. Temperature conversion logic
 //! 4. Data transformation correctness
 
+mod helpers;
+
 use pi_inky_weather_epd::apis::bom::models::{DailyForecastResponse, HourlyForecastResponse};
 use pi_inky_weather_epd::domain::models::{DailyForecast, HourlyForecast};
 use std::fs;
@@ -20,8 +22,11 @@ fn test_bom_hourly_to_domain_conversion() {
     let bom_data = response.data;
 
     // Convert to domain models
-    let domain_forecasts: Vec<HourlyForecast> =
-        bom_data.into_iter().map(|bom| bom.into()).collect();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain_forecasts: Vec<HourlyForecast> = bom_data
+        .into_iter()
+        .map(|bom| HourlyForecast::from_bom(bom, &settings))
+        .collect();
 
     // Verify conversion happened
     assert!(
@@ -46,7 +51,11 @@ fn test_bom_daily_to_domain_conversion() {
     let bom_data = response.data;
 
     // Convert to domain models
-    let domain_forecasts: Vec<DailyForecast> = bom_data.into_iter().map(|bom| bom.into()).collect();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain_forecasts: Vec<DailyForecast> = bom_data
+        .into_iter()
+        .map(|bom| DailyForecast::from_bom(bom, &settings))
+        .collect();
 
     // Verify conversion happened
     assert!(
@@ -91,7 +100,12 @@ fn test_bom_precipitation_edge_cases() {
     }"#;
 
     let response: HourlyForecastResponse = serde_json::from_str(json).unwrap();
-    let domain: Vec<HourlyForecast> = response.data.into_iter().map(|bom| bom.into()).collect();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain: Vec<HourlyForecast> = response
+        .data
+        .into_iter()
+        .map(|bom| HourlyForecast::from_bom(bom, &settings))
+        .collect();
 
     let forecast = &domain[0];
 
@@ -127,7 +141,12 @@ fn test_bom_extreme_weather_conversion() {
     }"#;
 
     let response: HourlyForecastResponse = serde_json::from_str(json).unwrap();
-    let domain: Vec<HourlyForecast> = response.data.into_iter().map(|bom| bom.into()).collect();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain: Vec<HourlyForecast> = response
+        .data
+        .into_iter()
+        .map(|bom| HourlyForecast::from_bom(bom, &settings))
+        .collect();
 
     let forecast = &domain[0];
 
@@ -162,7 +181,12 @@ fn test_bom_daily_missing_temps() {
     }"#;
 
     let response: DailyForecastResponse = serde_json::from_str(json).unwrap();
-    let domain: Vec<DailyForecast> = response.data.into_iter().map(|bom| bom.into()).collect();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain: Vec<DailyForecast> = response
+        .data
+        .into_iter()
+        .map(|bom| DailyForecast::from_bom(bom, &settings))
+        .collect();
 
     let forecast = &domain[0];
 
@@ -181,8 +205,12 @@ fn test_bom_hourly_conversion_preserves_order() {
     let response: HourlyForecastResponse = serde_json::from_str(&json).unwrap();
     let expected_count = response.data.len();
 
-    let domain_forecasts: Vec<HourlyForecast> =
-        response.data.into_iter().map(|bom| bom.into()).collect();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain_forecasts: Vec<HourlyForecast> = response
+        .data
+        .into_iter()
+        .map(|bom| HourlyForecast::from_bom(bom, &settings))
+        .collect();
 
     // Verify same number of forecasts
     assert_eq!(domain_forecasts.len(), expected_count);

@@ -109,6 +109,8 @@ pub struct HourlyForecastGraph {
     pub y_right_ticks: u16,
     pub x_axis_always_at_min: bool,
     pub text_colour: String,
+    /// Display timezone for time-dependent labels (e.g. the "tomorrow" day name).
+    pub tz: chrono_tz::Tz,
 }
 
 // TODO: use the builder pattern to create the graph
@@ -139,6 +141,7 @@ impl Default for HourlyForecastGraph {
             y_right_ticks: 5,
             x_axis_always_at_min: false,
             text_colour: "black".to_string(),
+            tz: chrono_tz::UTC,
         }
     }
 }
@@ -481,7 +484,7 @@ impl HourlyForecastGraph {
 
     fn draw_tomorrow_line(&self, x_coor: f32, clock: &dyn Clock) -> String {
         let tomorrow_day_name = clock
-            .now_local()
+            .now_local(self.tz)
             .checked_add_days(chrono::Days::new(1))
             .map(|d| d.format("%A").to_string())
             .unwrap_or_else(|| "Tomorrow".to_string());

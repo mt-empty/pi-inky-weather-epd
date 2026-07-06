@@ -3,6 +3,8 @@
 //! These tests verify that users can configure the date display format
 //! using strftime format strings in their configuration.
 
+mod helpers;
+
 use chrono::{TimeZone, Utc};
 use pi_inky_weather_epd::configs::validation::is_valid_date_format;
 

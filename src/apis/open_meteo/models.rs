@@ -130,12 +130,13 @@ pub struct DailyUnits {
 #[serde(rename_all = "camelCase")]
 pub struct Daily {
     pub time: Vec<NaiveDate>,
-    /// Sunrise times as NaiveDateTime (timezone-agnostic)
-    /// When timezone=auto is used, these represent local time and must be converted using response.timezone
+    /// Sunrise times as NaiveDateTime, in the forecast location's timezone
+    /// (requested via `timezone=auto`) — see `OpenMeteoDailyResponse::timezone`
+    /// and `into_domain`, which converts these to the display timezone.
     #[serde(deserialize_with = "deserialize_vec_naive_datetime")]
     pub sunrise: Vec<NaiveDateTime>,
-    /// Sunset times as NaiveDateTime (timezone-agnostic)
-    /// When timezone=auto is used, these represent local time and must be converted using response.timezone
+    /// Sunset times as NaiveDateTime, in the forecast location's timezone —
+    /// see the note on `sunrise`.
     #[serde(deserialize_with = "deserialize_vec_naive_datetime")]
     pub sunset: Vec<NaiveDateTime>,
     #[serde(rename = "temperature_2m_max")]
@@ -154,38 +155,38 @@ pub struct Daily {
     pub weather_code: Option<Vec<u8>>,
 }
 
-impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast> {
-    fn from(response: OpenMeteoHourlyResponse) -> Self {
+impl OpenMeteoHourlyResponse {
+    /// Maps the API response into domain models, applying the configured
+    /// temperature unit.
+    pub fn into_domain(
+        self,
+        settings: &crate::configs::settings::DashboardSettings,
+    ) -> Vec<crate::domain::models::HourlyForecast> {
         use crate::domain::models::{Precipitation, Temperature as DomainTemp, Wind as DomainWind};
-        use crate::{logger, CONFIG};
+        use crate::logger;
 
+        let response = self;
         let hourly_data = response.hourly;
         let num_entries = hourly_data.time.len();
         logger::debug(format!(
             "Converting {} Open-Meteo hourly entries to domain model",
             num_entries
         ));
-        let unit = CONFIG.render_options.temp_unit;
+        let unit = settings.render_options.temp_unit;
 
         (0..num_entries)
             .map(|i| {
-                let temperature = {
-                    let val = hourly_data.temperature_2m[i];
-                    let temp = DomainTemp::new(val, crate::configs::settings::TemperatureUnit::C);
-                    match unit {
-                        crate::configs::settings::TemperatureUnit::C => temp,
-                        crate::configs::settings::TemperatureUnit::F => temp.to_fahrenheit(),
-                    }
-                };
+                let temperature = DomainTemp::new(
+                    hourly_data.temperature_2m[i],
+                    crate::configs::settings::TemperatureUnit::C,
+                )
+                .to_unit(unit);
 
-                let apparent_temperature = {
-                    let val = hourly_data.apparent_temperature[i];
-                    let temp = DomainTemp::new(val, crate::configs::settings::TemperatureUnit::C);
-                    match unit {
-                        crate::configs::settings::TemperatureUnit::C => temp,
-                        crate::configs::settings::TemperatureUnit::F => temp.to_fahrenheit(),
-                    }
-                };
+                let apparent_temperature = DomainTemp::new(
+                    hourly_data.apparent_temperature[i],
+                    crate::configs::settings::TemperatureUnit::C,
+                )
+                .to_unit(unit);
 
                 let wind = DomainWind::new(
                     hourly_data.wind_speed_10m[i].round() as u16,
@@ -231,12 +232,55 @@ impl From<OpenMeteoHourlyResponse> for Vec<crate::domain::models::HourlyForecast
     }
 }
 
-impl From<OpenMeteoDailyResponse> for Vec<crate::domain::models::DailyForecast> {
-    fn from(response: OpenMeteoDailyResponse) -> Self {
-        use crate::domain::models::{Astronomical, Precipitation, Temperature as DomainTemp};
-        use crate::{logger, CONFIG};
+/// Converts a naive datetime returned by Open-Meteo's `timezone=auto` daily
+/// endpoint — which is in the forecast location's timezone, named by
+/// `location_tz_name` (the response's own `timezone` field) — into the
+/// configured display timezone.
+///
+/// Falls back to returning `naive` unconverted (with a logged warning) if
+/// `location_tz_name` isn't a recognized IANA identifier, or if `naive` falls
+/// in a DST gap that doesn't exist in that timezone; sunrise/sunset times
+/// essentially never land in a DST transition gap in practice.
+fn convert_location_local_to_display(
+    naive: NaiveDateTime,
+    location_tz_name: &str,
+    display_tz: chrono_tz::Tz,
+) -> NaiveDateTime {
+    use chrono::TimeZone;
 
-        let unit = CONFIG.render_options.temp_unit;
+    let Ok(location_tz) = location_tz_name.parse::<chrono_tz::Tz>() else {
+        crate::logger::warning(format!(
+            "Open-Meteo returned unrecognized timezone '{location_tz_name}'; \
+             using sunrise/sunset time unconverted"
+        ));
+        return naive;
+    };
+
+    match location_tz.from_local_datetime(&naive) {
+        chrono::LocalResult::Single(dt) => dt.with_timezone(&display_tz).naive_local(),
+        chrono::LocalResult::Ambiguous(dt, _) => dt.with_timezone(&display_tz).naive_local(),
+        chrono::LocalResult::None => {
+            crate::logger::warning(format!(
+                "Sunrise/sunset time {naive} does not exist in timezone \
+                 '{location_tz_name}' (DST gap); using unconverted"
+            ));
+            naive
+        }
+    }
+}
+
+impl OpenMeteoDailyResponse {
+    /// Maps the API response into domain models, applying the configured
+    /// temperature unit.
+    pub fn into_domain(
+        self,
+        settings: &crate::configs::settings::DashboardSettings,
+    ) -> Vec<crate::domain::models::DailyForecast> {
+        use crate::domain::models::{Astronomical, Precipitation, Temperature as DomainTemp};
+        use crate::logger;
+
+        let response = self;
+        let unit = settings.render_options.temp_unit;
         logger::debug(format!(
             "Converting {} Open-Meteo daily entries to domain model",
             response.daily.time.len()
@@ -248,26 +292,21 @@ impl From<OpenMeteoDailyResponse> for Vec<crate::domain::models::DailyForecast> 
             .iter()
             .enumerate()
             .map(|(i, date)| {
-                let raw_temp_max = response.daily.temperature_2m_max[i];
-                let raw_temp_min = response.daily.temperature_2m_min[i];
+                let temp_max = Some(
+                    DomainTemp::new(
+                        response.daily.temperature_2m_max[i],
+                        crate::configs::settings::TemperatureUnit::C,
+                    )
+                    .to_unit(unit),
+                );
 
-                let temp_max = {
-                    let val = raw_temp_max;
-                    let temp = DomainTemp::new(val, crate::configs::settings::TemperatureUnit::C);
-                    Some(match unit {
-                        crate::configs::settings::TemperatureUnit::C => temp,
-                        crate::configs::settings::TemperatureUnit::F => temp.to_fahrenheit(),
-                    })
-                };
-
-                let temp_min = {
-                    let val = raw_temp_min;
-                    let temp = DomainTemp::new(val, crate::configs::settings::TemperatureUnit::C);
-                    Some(match unit {
-                        crate::configs::settings::TemperatureUnit::C => temp,
-                        crate::configs::settings::TemperatureUnit::F => temp.to_fahrenheit(),
-                    })
-                };
+                let temp_min = Some(
+                    DomainTemp::new(
+                        response.daily.temperature_2m_min[i],
+                        crate::configs::settings::TemperatureUnit::C,
+                    )
+                    .to_unit(unit),
+                );
 
                 let precipitation = {
                     let amount_max = response.daily.precipitation_sum[i].round() as u16;
@@ -288,10 +327,23 @@ impl From<OpenMeteoDailyResponse> for Vec<crate::domain::models::DailyForecast> 
                 };
 
                 let astronomical = {
-                    // With timezone=auto, sunrise/sunset are already in local time (NaiveDateTime)
-                    // Store them directly without timezone conversion
-                    let sunrise = response.daily.sunrise.get(i).copied();
-                    let sunset = response.daily.sunset.get(i).copied();
+                    // sunrise/sunset arrive in the forecast location's timezone
+                    // (response.timezone, from timezone=auto); convert to the
+                    // display timezone so they agree with every other rendered time.
+                    let sunrise = response.daily.sunrise.get(i).copied().map(|dt| {
+                        convert_location_local_to_display(
+                            dt,
+                            &response.timezone,
+                            settings.misc.timezone,
+                        )
+                    });
+                    let sunset = response.daily.sunset.get(i).copied().map(|dt| {
+                        convert_location_local_to_display(
+                            dt,
+                            &response.timezone,
+                            settings.misc.timezone,
+                        )
+                    });
 
                     if sunrise.is_some() || sunset.is_some() {
                         Some(Astronomical {

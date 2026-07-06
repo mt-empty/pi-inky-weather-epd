@@ -19,16 +19,18 @@
 //!
 //! ```bash
 //! # Test should PASS with fixed code:
-//! RUN_MODE=test cargo test --test daily_forecast_seven_days_test
+//! cargo test --test daily_forecast_test
 //!
 //! # Test should FAIL with buggy code:
 //! git checkout HEAD~1 src/dashboard/context.rs
-//! RUN_MODE=test cargo test --test daily_forecast_seven_days_test
+//! cargo test --test daily_forecast_test
 //! # Should see: "FAILED: Day 7 name is 'NA'"
 //!
 //! # Restore fixed code:
 //! git checkout HEAD -- src/dashboard/context.rs
 //! ```
+
+mod helpers;
 
 use chrono::NaiveDate;
 use pi_inky_weather_epd::{
@@ -87,7 +89,8 @@ fn test_timezone_bug_causes_missing_seventh_day() {
     let daily_forecast_data = create_mock_daily_forecast(start_date, 7);
 
     // Build context with the forecast data
-    let mut builder = ContextBuilder::new();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let mut builder = ContextBuilder::new(&settings, &clock);
     builder.with_daily_forecast_data(daily_forecast_data, &clock);
 
     let context = &builder.context;

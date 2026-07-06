@@ -3,7 +3,8 @@
 //! This module provides a trait-based abstraction for accessing the current time,
 //! which allows for dependency injection and testing of time-dependent logic.
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
+use chrono_tz::Tz;
 
 /// Trait for accessing the current time
 ///
@@ -16,21 +17,24 @@ use chrono::{DateTime, Local, Utc};
 ///
 /// ```ignore
 /// let clock = SystemClock;
-/// let now = clock.now_local();
+/// let now = clock.now_local(chrono_tz::Australia::Melbourne);
 /// ```
 ///
 /// Using a fixed clock in tests:
 ///
 /// ```ignore
 /// let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 10, 9, 22, 0, 0).unwrap());
-/// let now = clock.now_local();  // Always returns 10 PM Melbourne time
+/// let now = clock.now_local(chrono_tz::Australia::Melbourne);
 /// ```
 pub trait Clock {
-    /// Returns the current local time
-    fn now_local(&self) -> DateTime<Local>;
-
     /// Returns the current UTC time
     fn now_utc(&self) -> DateTime<Utc>;
+
+    /// Returns the current time in the given display timezone
+    /// (normally `settings.misc.timezone`)
+    fn now_local(&self, tz: Tz) -> DateTime<Tz> {
+        self.now_utc().with_timezone(&tz)
+    }
 }
 
 /// System clock implementation that returns actual current time
@@ -40,10 +44,6 @@ pub trait Clock {
 pub struct SystemClock;
 
 impl Clock for SystemClock {
-    fn now_local(&self) -> DateTime<Local> {
-        Local::now()
-    }
-
     fn now_utc(&self) -> DateTime<Utc> {
         Utc::now()
     }
@@ -101,10 +101,6 @@ impl FixedClock {
 }
 
 impl Clock for FixedClock {
-    fn now_local(&self) -> DateTime<Local> {
-        self.fixed_time.with_timezone(&Local)
-    }
-
     fn now_utc(&self) -> DateTime<Utc> {
         self.fixed_time
     }
@@ -118,7 +114,7 @@ mod tests {
     #[test]
     fn test_system_clock_returns_real_time() {
         let clock = SystemClock;
-        let now_local = clock.now_local();
+        let now_local = clock.now_local(chrono_tz::Australia::Melbourne);
         let now_utc = clock.now_utc();
 
         // Just verify they return something (can't test exact values)
@@ -134,7 +130,7 @@ mod tests {
         let now_utc = clock.now_utc();
         assert_eq!(now_utc, fixed_time);
 
-        let now_local = clock.now_local();
+        let now_local = clock.now_local(chrono_tz::Australia::Melbourne);
         assert_eq!(now_local.year(), 2025);
         assert_eq!(now_local.month(), 10);
         // Day could be 9 or 10 depending on timezone (e.g., AEDT is UTC+11)

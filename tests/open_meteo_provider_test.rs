@@ -7,6 +7,8 @@
 //! Test fixtures are stored in tests/fixtures/ directory to avoid
 //! dependency on runtime cache files from executing the binary.
 
+mod helpers;
+
 use pi_inky_weather_epd::apis::open_meteo::models::{
     OpenMeteoDailyResponse, OpenMeteoHourlyResponse,
 };

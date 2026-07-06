@@ -6,6 +6,8 @@
 //! 3. Hourly and daily data extraction from combined response
 //! 4. Edge cases and data consistency
 
+mod helpers;
+
 use pi_inky_weather_epd::apis::open_meteo::models::{
     OpenMeteoDailyResponse, OpenMeteoHourlyResponse,
 };
@@ -22,7 +24,8 @@ fn test_open_meteo_hourly_conversion() {
     let expected_count = response.hourly.time.len();
 
     // Convert to domain models
-    let domain_forecasts: Vec<HourlyForecast> = response.into();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain_forecasts: Vec<HourlyForecast> = response.into_domain(&settings);
 
     // Verify conversion happened
     assert_eq!(
@@ -48,7 +51,8 @@ fn test_open_meteo_daily_conversion() {
     let expected_count = response.daily.time.len();
 
     // Convert to domain models
-    let domain_forecasts: Vec<DailyForecast> = response.into();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain_forecasts: Vec<DailyForecast> = response.into_domain(&settings);
 
     // Verify conversion happened
     assert_eq!(
@@ -122,7 +126,8 @@ fn test_open_meteo_array_consistency() {
     }"#;
 
     let response: OpenMeteoHourlyResponse = serde_json::from_str(json).unwrap();
-    let domain: Vec<HourlyForecast> = response.into();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain: Vec<HourlyForecast> = response.into_domain(&settings);
 
     // Verify each hourly forecast has correct values from arrays
     assert_eq!(domain.len(), 2);
@@ -193,7 +198,8 @@ fn test_open_meteo_extreme_values() {
     }"#;
 
     let response: OpenMeteoHourlyResponse = serde_json::from_str(json).unwrap();
-    let domain: Vec<HourlyForecast> = response.into();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain: Vec<HourlyForecast> = response.into_domain(&settings);
 
     let forecast = &domain[0];
 
@@ -213,7 +219,8 @@ fn test_open_meteo_daily_temp_relationship() {
         .expect("Failed to read Open-Meteo daily forecast fixture");
 
     let response: OpenMeteoDailyResponse = serde_json::from_str(&json).unwrap();
-    let domain_forecasts: Vec<DailyForecast> = response.into();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain_forecasts: Vec<DailyForecast> = response.into_domain(&settings);
 
     // Verify every daily forecast has max >= min
     for forecast in &domain_forecasts {
@@ -283,7 +290,8 @@ fn test_open_meteo_zero_precipitation() {
     }"#;
 
     let response: OpenMeteoHourlyResponse = serde_json::from_str(json).unwrap();
-    let domain: Vec<HourlyForecast> = response.into();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain: Vec<HourlyForecast> = response.into_domain(&settings);
 
     let forecast = &domain[0];
 
@@ -299,7 +307,8 @@ fn test_open_meteo_conversion_preserves_order() {
         .expect("Failed to read Open-Meteo hourly forecast fixture");
 
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
-    let domain_forecasts: Vec<HourlyForecast> = response.into();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain_forecasts: Vec<HourlyForecast> = response.into_domain(&settings);
 
     // Verify chronological order is preserved
     for i in 1..domain_forecasts.len() {
@@ -318,7 +327,8 @@ fn test_hourly_forecast_conversion_preserves_snowfall() {
         .expect("Failed to read Open-Meteo hourly forecast fixture");
 
     let response: OpenMeteoHourlyResponse = serde_json::from_str(&json).unwrap();
-    let hourly_forecasts: Vec<HourlyForecast> = response.into();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let hourly_forecasts: Vec<HourlyForecast> = response.into_domain(&settings);
 
     // Find an entry with snowfall
     let with_snow = hourly_forecasts.iter().find(|f| f.precipitation.has_snow());
@@ -346,7 +356,8 @@ fn test_daily_forecast_conversion_preserves_snowfall() {
         .expect("Failed to read Open-Meteo daily forecast fixture");
 
     let response: OpenMeteoDailyResponse = serde_json::from_str(&json).unwrap();
-    let daily_forecasts: Vec<DailyForecast> = response.into();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let daily_forecasts: Vec<DailyForecast> = response.into_domain(&settings);
 
     // Find an entry with snowfall
     let with_snow = daily_forecasts.iter().find(|f| {
@@ -403,7 +414,8 @@ fn test_zero_snowfall_handled_correctly() {
     }"#;
 
     let response: OpenMeteoHourlyResponse = serde_json::from_str(json).unwrap();
-    let domain: Vec<HourlyForecast> = response.into();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain: Vec<HourlyForecast> = response.into_domain(&settings);
 
     assert_eq!(domain.len(), 1);
     assert_eq!(domain[0].precipitation.snowfall_amount, Some(0));

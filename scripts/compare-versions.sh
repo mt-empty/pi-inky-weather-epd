@@ -55,10 +55,10 @@ run_dashboard() {
     local lon=$4
     local output_name=$5
 
-    log_info "Running: TZ=$tz PROVIDER=$provider LAT=$lat LON=$lon"
+    log_info "Running: TIMEZONE=$tz PROVIDER=$provider LAT=$lat LON=$lon"
 
     # Run with specific config
-    TZ="$tz" \
+    APP_MISC__TIMEZONE="$tz" \
     APP_API__PROVIDER="$provider" \
     APP_API__LATITUDE="$lat" \
     APP_API__LONGITUDE="$lon" \

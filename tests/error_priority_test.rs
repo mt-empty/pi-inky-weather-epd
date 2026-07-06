@@ -1,3 +1,5 @@
+mod helpers;
+
 use chrono::{TimeZone, Utc};
 /// Tests for the multi-error priority system
 ///
@@ -9,9 +11,18 @@ use pi_inky_weather_epd::dashboard::context::ContextBuilder;
 use pi_inky_weather_epd::domain::models::DailyForecast;
 use pi_inky_weather_epd::errors::DashboardError;
 
+/// `ContextBuilder::new` requires a clock, but only reads it when
+/// `dev.enable_debug_logs` is true (off by default in test config) — tests
+/// below that don't otherwise need a clock use this placeholder.
+fn placeholder_clock() -> FixedClock {
+    FixedClock::new(Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap())
+}
+
 #[test]
 fn test_single_validation_error_displays() {
-    let mut builder = ContextBuilder::new();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let clock = placeholder_clock();
+    let mut builder = ContextBuilder::new(&settings, &clock);
 
     // Add a single validation error
     builder.with_validation_error(DashboardError::IncompleteData {
@@ -29,7 +40,9 @@ fn test_single_validation_error_displays() {
 
 #[test]
 fn test_single_api_warning_displays() {
-    let mut builder = ContextBuilder::new();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let clock = placeholder_clock();
+    let mut builder = ContextBuilder::new(&settings, &clock);
 
     // Add API warning
     builder.with_warning(DashboardError::NetworkError {
@@ -47,7 +60,9 @@ fn test_single_api_warning_displays() {
 
 #[test]
 fn test_high_priority_api_error_overrides_low_priority_incomplete_data() {
-    let mut builder = ContextBuilder::new();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let clock = placeholder_clock();
+    let mut builder = ContextBuilder::new(&settings, &clock);
 
     // Add low priority error first
     builder.with_validation_error(DashboardError::IncompleteData {
@@ -75,7 +90,9 @@ fn test_high_priority_api_error_overrides_low_priority_incomplete_data() {
 
 #[test]
 fn test_medium_priority_overrides_low_priority() {
-    let mut builder = ContextBuilder::new();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let clock = placeholder_clock();
+    let mut builder = ContextBuilder::new(&settings, &clock);
 
     // Add low priority error
     builder.with_validation_error(DashboardError::IncompleteData {
@@ -99,8 +116,11 @@ fn test_medium_priority_overrides_low_priority() {
 
 #[test]
 fn test_order_doesnt_matter_highest_priority_wins() {
-    let mut builder1 = ContextBuilder::new();
-    let mut builder2 = ContextBuilder::new();
+    let clock = placeholder_clock();
+    let settings1 = helpers::test_utils::test_settings(|_| {});
+    let mut builder1 = ContextBuilder::new(&settings1, &clock);
+    let settings2 = helpers::test_utils::test_settings(|_| {});
+    let mut builder2 = ContextBuilder::new(&settings2, &clock);
 
     // Add in one order
     builder1.with_validation_error(DashboardError::IncompleteData {
@@ -135,7 +155,9 @@ fn test_order_doesnt_matter_highest_priority_wins() {
 
 #[test]
 fn test_multiple_errors_same_priority_shows_first() {
-    let mut builder = ContextBuilder::new();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let clock = placeholder_clock();
+    let mut builder = ContextBuilder::new(&settings, &clock);
 
     // Add two low priority errors
     builder.with_validation_error(DashboardError::IncompleteData {
@@ -160,7 +182,8 @@ fn test_realistic_scenario_api_stale_and_incomplete_data() {
     // Result: Should display the API unreachable warning (higher priority)
 
     let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 10, 15, 10, 0, 0).unwrap());
-    let mut builder = ContextBuilder::new();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let mut builder = ContextBuilder::new(&settings, &clock);
 
     // Simulate API warning (from provider)
     builder.with_warning(DashboardError::NetworkError {
@@ -182,7 +205,9 @@ fn test_realistic_scenario_api_stale_and_incomplete_data() {
 
 #[test]
 fn test_no_errors_hides_warning_display() {
-    let builder = ContextBuilder::new();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let clock = placeholder_clock();
+    let builder = ContextBuilder::new(&settings, &clock);
     let context = builder.context;
 
     // No errors added, should be hidden
@@ -194,7 +219,9 @@ fn test_no_errors_hides_warning_display() {
 
 #[test]
 fn test_cascading_icons_svg_generated_for_multiple_errors() {
-    let mut builder = ContextBuilder::new();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let clock = placeholder_clock();
+    let mut builder = ContextBuilder::new(&settings, &clock);
 
     // Add multiple errors of different priorities
     builder.with_warning(DashboardError::NetworkError {
@@ -233,7 +260,9 @@ fn test_cascading_icons_svg_generated_for_multiple_errors() {
 
 #[test]
 fn test_cascading_icons_are_sorted_by_priority() {
-    let mut builder = ContextBuilder::new();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let clock = placeholder_clock();
+    let mut builder = ContextBuilder::new(&settings, &clock);
 
     // Add in reverse priority order (low to high)
     builder.with_validation_error(DashboardError::IncompleteData {
@@ -268,7 +297,9 @@ fn test_cascading_icons_are_sorted_by_priority() {
 
 #[test]
 fn test_single_error_shows_one_icon() {
-    let mut builder = ContextBuilder::new();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let clock = placeholder_clock();
+    let mut builder = ContextBuilder::new(&settings, &clock);
 
     builder.with_validation_error(DashboardError::IncompleteData {
         details: "Only issue".to_string(),

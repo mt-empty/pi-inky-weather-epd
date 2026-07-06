@@ -22,8 +22,8 @@ pub enum MoonPhaseIconName {
     WaningCrescent,
 }
 
-pub fn moon_phase_icon_name() -> MoonPhaseIconName {
-    let now = chrono::Local::now();
+pub fn moon_phase_icon_name(tz: chrono_tz::Tz) -> MoonPhaseIconName {
+    let now = chrono::Utc::now().with_timezone(&tz);
     let year = now.year();
     let month = now.month();
     let day = now.day();

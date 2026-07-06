@@ -8,13 +8,13 @@ This file is intentionally concise. Keep project rules here minimal and actionab
 - Run: `cargo run --bin=pi-inky-weather-epd`
 - Format check: `cargo fmt -- --check`
 - Lint: `cargo clippy -- -D warnings`
-- Tests: `RUN_MODE=test cargo test`
+- Tests: `cargo test` (covers all providers and render options in one run)
 - Snapshot review after rendering changes: `cargo insta review`
 
 ## Critical Runtime and Test Context
 
-- Tests must run with `RUN_MODE=test` so `config/test.toml` is loaded.
-- Use nested config env vars with double underscores, for example `APP_API__PROVIDER=bom`.
+- Tests need no env vars and run fully in parallel: configuration is a plain value — build one with `tests/helpers/test_utils.rs` (`test_settings`, `open_meteo_settings`, `bom_settings`, `open_meteo_settings_in_tz`) and pass it into the code under test. There is no global config and no `#[serial]`.
+- For the application (not tests), use nested config env vars with double underscores, for example `APP_API__PROVIDER=bom`, and `RUN_MODE` to select the config file set.
 - The provider values are lowercase strings: `bom` and `open_meteo`.
 - CLI simulation is feature-gated. Use `--features cli` when testing simulated time.
 
@@ -36,6 +36,7 @@ This file is intentionally concise. Keep project rules here minimal and actionab
 ## Known Pitfalls
 
 - `APP_API_PROVIDER` is wrong; use `APP_API__PROVIDER`.
+- `APP_*` env vars do not affect tests; tests use `config/test.toml` plus per-test overrides.
 - Snapshot tests can fail after intentional SVG changes until snapshots are reviewed/accepted.
 - `resvg` has text quirks with some `tspan` combinations; follow existing SVG comments/workarounds.
 

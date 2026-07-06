@@ -2,6 +2,8 @@
 ///
 /// These tests show how to use the Clock trait abstraction to write
 /// deterministic tests for time-dependent functionality.
+mod helpers;
+
 use chrono::{Datelike, TimeZone, Timelike, Utc};
 use pi_inky_weather_epd::clock::{Clock, FixedClock};
 

@@ -6,9 +6,10 @@ use std::path::PathBuf;
 
 use crate::{
     apis::open_meteo::models::{OpenMeteoDailyResponse, OpenMeteoError, OpenMeteoHourlyResponse},
+    configs::settings::DashboardSettings,
     constants::{
-        DAILY_CACHE_SUFFIX, HOURLY_CACHE_SUFFIX, OPEN_METEO_DAILY_ENDPOINT,
-        OPEN_METEO_HOURLY_ENDPOINT,
+        open_meteo_daily_endpoint, open_meteo_hourly_endpoint, DAILY_CACHE_SUFFIX,
+        HOURLY_CACHE_SUFFIX,
     },
     domain::models::{DailyForecast, HourlyForecast},
     errors::DashboardError,
@@ -50,27 +51,39 @@ impl OpenMeteoProvider {
 }
 
 impl WeatherProvider for OpenMeteoProvider {
-    fn fetch_hourly_forecast(&self) -> Result<FetchResult<Vec<HourlyForecast>>, Error> {
+    fn fetch_hourly_forecast(
+        &self,
+        settings: &DashboardSettings,
+    ) -> Result<FetchResult<Vec<HourlyForecast>>, Error> {
         let result = match self.fetcher.fetch_data::<OpenMeteoHourlyResponse>(
-            (*OPEN_METEO_HOURLY_ENDPOINT).clone(),
+            settings,
+            open_meteo_hourly_endpoint(settings),
             &self.generate_cache_filename(HOURLY_CACHE_SUFFIX),
             Some(check_open_meteo_error),
         )? {
-            FetchOutcome::Fresh(data) => FetchResult::fresh(data.into()),
-            FetchOutcome::Stale { data, error } => FetchResult::stale(data.into(), error),
+            FetchOutcome::Fresh(data) => FetchResult::fresh(data.into_domain(settings)),
+            FetchOutcome::Stale { data, error } => {
+                FetchResult::stale(data.into_domain(settings), error)
+            }
         };
 
         Ok(result)
     }
 
-    fn fetch_daily_forecast(&self) -> Result<FetchResult<Vec<DailyForecast>>, Error> {
+    fn fetch_daily_forecast(
+        &self,
+        settings: &DashboardSettings,
+    ) -> Result<FetchResult<Vec<DailyForecast>>, Error> {
         let result = match self.fetcher.fetch_data::<OpenMeteoDailyResponse>(
-            (*OPEN_METEO_DAILY_ENDPOINT).clone(),
+            settings,
+            open_meteo_daily_endpoint(settings),
             &self.generate_cache_filename(DAILY_CACHE_SUFFIX),
             Some(check_open_meteo_error),
         )? {
-            FetchOutcome::Fresh(data) => FetchResult::fresh(data.into()),
-            FetchOutcome::Stale { data, error } => FetchResult::stale(data.into(), error),
+            FetchOutcome::Fresh(data) => FetchResult::fresh(data.into_domain(settings)),
+            FetchOutcome::Stale { data, error } => {
+                FetchResult::stale(data.into_domain(settings), error)
+            }
         };
 
         Ok(result)

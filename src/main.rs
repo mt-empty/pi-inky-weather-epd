@@ -1,7 +1,18 @@
 use anyhow::Result;
+use pi_inky_weather_epd::configs::settings::DashboardSettings;
 
 #[cfg(not(feature = "cli"))]
 use pi_inky_weather_epd::run_weather_dashboard;
+
+fn load_settings() -> DashboardSettings {
+    match DashboardSettings::load() {
+        Ok(settings) => settings,
+        Err(e) => {
+            eprintln!("Failed to load config: {e}");
+            std::process::exit(1);
+        }
+    }
+}
 
 // CLI features only available when 'cli' feature is enabled (for simulation/testing)
 #[cfg(feature = "cli")]
@@ -53,17 +64,18 @@ mod cli {
 
     pub fn run() -> Result<()> {
         let args = Args::parse();
-
+        let settings = super::load_settings();
+        // passing settings to the functions that need it, instead of relying on global state, makes everything purely functional and easier to test.
         match args.command {
             Some(Command::Simulate { timestamp }) => {
                 let fixed_clock = FixedClock::new(timestamp);
-                run_weather_dashboard_with_clock(&fixed_clock)?;
+                run_weather_dashboard_with_clock(&settings, &fixed_clock)?;
             }
             Some(Command::RenderSvg { svg_file }) => {
-                render_svg_to_png(&svg_file)?;
+                render_svg_to_png(&settings, &svg_file)?;
             }
             None => {
-                run_weather_dashboard()?;
+                run_weather_dashboard(&settings)?;
             }
         }
 
@@ -78,6 +90,7 @@ fn main() -> Result<()> {
 
 #[cfg(not(feature = "cli"))]
 fn main() -> Result<()> {
-    run_weather_dashboard()?;
+    let settings = load_settings();
+    run_weather_dashboard(&settings)?;
     Ok(())
 }

@@ -67,24 +67,12 @@ if ! cargo clippy -- -D warnings; then
     exit 1
 fi
 
-echo "Running cargo test with RUN_MODE=test..."
+# A single run covers all providers and render options: each test builds
+# its own settings value (see tests/helpers).
+echo "Running cargo test..."
 
-if ! RUN_MODE=test cargo test; then
+if ! cargo test; then
     echo "❌ Tests failed. Please fix failing tests before pushing."
-    exit 1
-fi
-
-echo "Running BOM snapshot tests..."
-
-if ! RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test; then
-    echo "❌ BOM snapshot tests failed. Please fix failing tests before pushing."
-    exit 1
-fi
-
-echo "Running Open-Meteo prefer_weather_codes snapshot tests..."
-
-if ! RUN_MODE=test APP_RENDER_OPTIONS__PREFER_WEATHER_CODES=true cargo test --test snapshot_open_meteo_prefer_codes_test; then
-    echo "❌ prefer_weather_codes snapshot tests failed. Please fix failing tests before pushing."
     exit 1
 fi
 
@@ -116,9 +104,7 @@ echo ""
 echo "pre-push:"
 echo "  1. Code formatting (cargo fmt)"
 echo "  2. Clippy linting (cargo clippy -- -D warnings)"
-echo "  3. All tests (RUN_MODE=test cargo test)"
-echo "  4. BOM snapshot tests"
-echo "  5. Open-Meteo prefer_weather_codes snapshot tests"
-echo "  6. Version tag validation"
+echo "  3. All tests (cargo test — covers all providers and render options)"
+echo "  4. Version tag validation"
 echo ""
 echo "🎉 Git hooks setup complete!"

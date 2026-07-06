@@ -2,7 +2,27 @@ use std::path::Path;
 
 use strum_macros::Display;
 
-use crate::CONFIG;
+use crate::configs::settings::{DashboardSettings, RenderOptions};
+
+/// The subset of settings icon rendering actually depends on — narrower than
+/// `&DashboardSettings` so icon impls aren't coupled to config fields
+/// (`api`, `release`, `colours`, `dev`) they never touch.
+#[derive(Clone, Copy)]
+pub struct IconContext<'a> {
+    pub svg_icons_directory: &'a Path,
+    pub render_options: &'a RenderOptions,
+    pub timezone: chrono_tz::Tz,
+}
+
+impl<'a> IconContext<'a> {
+    pub fn from_settings(settings: &'a DashboardSettings) -> Self {
+        Self {
+            svg_icons_directory: &settings.misc.svg_icons_directory,
+            render_options: &settings.render_options,
+            timezone: settings.misc.timezone,
+        }
+    }
+}
 
 #[derive(Debug, Display, Copy, Clone)]
 pub enum PrecipitationChanceName {
@@ -141,38 +161,36 @@ impl From<u16> for HumidityIconName {
 /// - `icon_path(&self) -> String`
 ///
 ///   Returns the full path to the icon as a `String`. The path is constructed
-///   by concatenating the `svg_icons_directory` from the `CONFIG` with the icon name.
+///   by concatenating the `svg_icons_directory` from the icon context with the icon name.
 pub trait Icon {
     /// Returns the name of the icon
-    fn icon_name(&self) -> String;
+    fn icon_name(&self, ctx: &IconContext) -> String;
 
     /// Returns the path of the icon as a `String`.
-    /// The path is constructed using the `svg_icons_directory` from the configuration
-    /// and the icon name obtained from `icon_name`.
-    fn icon_path(&self) -> String {
-        CONFIG
-            .misc
-            .svg_icons_directory
-            .join(Path::new(&self.icon_name()))
+    /// The path is constructed using the `svg_icons_directory` from the given
+    /// context and the icon name obtained from `icon_name`.
+    fn icon_path(&self, ctx: &IconContext) -> String {
+        ctx.svg_icons_directory
+            .join(Path::new(&self.icon_name(ctx)))
             .to_string_lossy()
             .to_string()
     }
 }
 
 impl Icon for SunPositionIconName {
-    fn icon_name(&self) -> String {
+    fn icon_name(&self, _ctx: &IconContext) -> String {
         self.to_string()
     }
 }
 
 impl Icon for HumidityIconName {
-    fn icon_name(&self) -> String {
+    fn icon_name(&self, _ctx: &IconContext) -> String {
         self.to_string()
     }
 }
 
 impl Icon for UVIndexIcon {
-    fn icon_name(&self) -> String {
+    fn icon_name(&self, _ctx: &IconContext) -> String {
         self.to_string()
     }
 }

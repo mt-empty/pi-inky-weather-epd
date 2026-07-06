@@ -8,6 +8,8 @@
 //!
 //! Uses wiremock for HTTP mocking to avoid external dependencies
 
+mod helpers;
+
 use pi_inky_weather_epd::errors::DashboardError;
 use pi_inky_weather_epd::providers::fetcher::Fetcher;
 use std::time::Duration;
