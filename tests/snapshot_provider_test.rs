@@ -83,12 +83,7 @@ async fn snapshot_open_meteo_dashboard() {
 
     // Run sync dashboard generation in blocking task
     let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(
-            &settings,
-            &clock,
-            &settings.misc.template_path,
-            output_svg_name,
-        );
+        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
         assert!(
             result.is_ok(),
             "Dashboard generation failed: {:?}",
@@ -131,12 +126,7 @@ async fn snapshot_open_meteo_midnight_boundary() {
     let output_svg_name = Path::new("tests/output/snapshot_open_meteo_midnight_boundary.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(
-            &settings,
-            &clock,
-            &settings.misc.template_path,
-            output_svg_name,
-        );
+        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
         assert!(
             result.is_ok(),
             "Dashboard generation failed: {:?}",
@@ -175,12 +165,7 @@ async fn snapshot_open_meteo_end_of_day() {
     let output_svg_name = Path::new("tests/output/snapshot_open_meteo_end_of_day.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(
-            &settings,
-            &clock,
-            &settings.misc.template_path,
-            output_svg_name,
-        );
+        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
         assert!(
             result.is_ok(),
             "Dashboard generation failed: {:?}",
@@ -219,12 +204,7 @@ async fn snapshot_open_meteo_early_morning() {
     let output_svg_name = Path::new("tests/output/snapshot_open_meteo_early_morning.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(
-            &settings,
-            &clock,
-            &settings.misc.template_path,
-            output_svg_name,
-        );
+        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
         assert!(
             result.is_ok(),
             "Dashboard generation failed: {:?}",
@@ -289,12 +269,7 @@ async fn snapshot_bom_dashboard() {
 
     // Run sync dashboard generation in blocking task
     let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(
-            &settings,
-            &clock,
-            &settings.misc.template_path,
-            output_svg_name,
-        );
+        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
         assert!(
             result.is_ok(),
             "Dashboard generation failed: {:?}",
@@ -335,12 +310,7 @@ async fn snapshot_bom_midnight_boundary() {
     let output_svg_name = Path::new("tests/output/snapshot_bom_midnight_boundary.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(
-            &settings,
-            &clock,
-            &settings.misc.template_path,
-            output_svg_name,
-        );
+        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
         assert!(
             result.is_ok(),
             "Dashboard generation failed: {:?}",
@@ -378,12 +348,7 @@ async fn snapshot_bom_local_midnight() {
     let output_svg_name = Path::new("tests/output/snapshot_bom_local_midnight.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(
-            &settings,
-            &clock,
-            &settings.misc.template_path,
-            output_svg_name,
-        );
+        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
         assert!(
             result.is_ok(),
             "Dashboard generation failed: {:?}",
@@ -424,12 +389,7 @@ async fn snapshot_bom_early_morning() {
     let output_svg_name = Path::new("tests/output/snapshot_bom_early_morning.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(
-            &settings,
-            &clock,
-            &settings.misc.template_path,
-            output_svg_name,
-        );
+        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
         assert!(
             result.is_ok(),
             "Dashboard generation failed: {:?}",
@@ -470,12 +430,7 @@ async fn snapshot_open_meteo_ny_6pm_before_gmt_boundary() {
         Path::new("tests/output/snapshot_open_meteo_ny_6pm_before_gmt_boundary.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(
-            &settings,
-            &clock,
-            &settings.misc.template_path,
-            output_svg_name,
-        );
+        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
         assert!(
             result.is_ok(),
             "Dashboard generation failed: {:?}",
@@ -527,12 +482,7 @@ async fn snapshot_open_meteo_ny_7pm_after_gmt_boundary() {
         Path::new("tests/output/snapshot_open_meteo_ny_7pm_after_gmt_boundary.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(
-            &settings,
-            &clock,
-            &settings.misc.template_path,
-            output_svg_name,
-        );
+        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
         assert!(
             result.is_ok(),
             "Dashboard generation failed: {:?}",

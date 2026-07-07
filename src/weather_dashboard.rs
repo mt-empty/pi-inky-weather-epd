@@ -132,20 +132,19 @@ pub fn render_svg_to_png(settings: &DashboardSettings, svg_path: &Path) -> Resul
 /// Generate weather dashboard using the system clock (production)
 pub fn generate_weather_dashboard(settings: &DashboardSettings) -> Result<(), Error> {
     let clock = SystemClock;
-    let input_template_name = &settings.misc.template_path;
     let output_svg_name = &settings.misc.generated_svg_name;
-    generate_weather_dashboard_injection(settings, &clock, input_template_name, output_svg_name)
+    generate_weather_dashboard_injection(settings, &clock, output_svg_name)
 }
 
-/// Generate weather dashboard with a custom clock and custom paths  (for testing)
+/// Generate weather dashboard with a custom clock and output path (for testing)
 ///
-/// This function allows dependency injection of a Clock implementation and custom paths,
-/// enabling deterministic testing with FixedClock.
+/// This function allows dependency injection of a Clock implementation and a
+/// custom output path, enabling deterministic testing with FixedClock. The
+/// input template is always read from `settings.misc.template_path`.
 ///
 /// # Arguments
 ///
 /// * `clock` - The clock implementation to use for time-dependent operations
-/// * `input_template_name` - Path to the input SVG template file
 /// * `output_svg_name` - Path to save the generated SVG file
 ///
 /// # Examples
@@ -153,20 +152,19 @@ pub fn generate_weather_dashboard(settings: &DashboardSettings) -> Result<(), Er
 /// ```ignore
 /// use pi_inky_weather_epd::clock::FixedClock;
 ///
-/// let input_template_name = std::path::Path::new("templates/weather_dashboard.svg");
 /// let output_svg_name = std::path::Path::new("output/weather_dashboard.svg");
 /// let clock = FixedClock::from_rfc3339("2025-10-09T22:00:00Z").unwrap();
-/// generate_weather_dashboard_injection(&settings, &clock, input_template_name, output_svg_name)?;
+/// generate_weather_dashboard_injection(&settings, &clock, output_svg_name)?;
 /// ```
 pub fn generate_weather_dashboard_injection(
     settings: &DashboardSettings,
     clock: &dyn Clock,
-    input_template_name: &Path,
     output_svg_name: &Path,
 ) -> Result<(), Error> {
     logger::init(settings.dev.enable_debug_logs, settings.misc.timezone);
     let current_dir = std::env::current_dir()?;
     let mut context_builder = ContextBuilder::new(settings, clock);
+    let input_template_name = &settings.misc.template_path;
 
     let template_svg = match fs::read_to_string(input_template_name) {
         Ok(svg) => svg,

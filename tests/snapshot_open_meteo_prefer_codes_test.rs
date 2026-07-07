@@ -49,13 +49,8 @@ async fn run_prefer_codes_snapshot(time_rfc3339: &str, output_path: &'static str
     let output_svg_name = Path::new(output_path);
 
     let svg = tokio::task::spawn_blocking(move || {
-        generate_weather_dashboard_injection(
-            &settings,
-            &clock,
-            &settings.misc.template_path,
-            output_svg_name,
-        )
-        .expect("dashboard generation failed");
+        generate_weather_dashboard_injection(&settings, &clock, output_svg_name)
+            .expect("dashboard generation failed");
         let svg = fs::read_to_string(output_svg_name).expect("failed to read generated SVG");
         assert!(
             !svg.is_empty() && svg.contains("<svg"),

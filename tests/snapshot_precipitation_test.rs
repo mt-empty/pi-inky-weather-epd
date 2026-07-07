@@ -65,7 +65,6 @@ async fn snapshot_open_meteo_alaska_snow() {
         let result = generate_weather_dashboard_injection(
             &settings,
             &clock,
-            &settings.misc.template_path,
             output_svg_name,
         );
         assert!(
@@ -143,12 +142,7 @@ async fn snapshot_open_meteo_mixed_precip() {
     let output_svg_name = Path::new("tests/output/snapshot_open_meteo_mixed_precip.svg");
 
     let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(
-            &settings,
-            &clock,
-            &settings.misc.template_path,
-            output_svg_name,
-        );
+        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
         assert!(
             result.is_ok(),
             "Dashboard generation failed: {:?}",
