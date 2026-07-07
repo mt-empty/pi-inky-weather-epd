@@ -33,6 +33,10 @@ pub fn init(enable_debug_logs: bool, timezone: chrono_tz::Tz) {
 
 /// Global clock for timestamp generation. Defaults to SystemClock but can be
 /// overridden for testing with [`set_clock`].
+///
+/// Deliberately not wired to the rendering pipeline's `Clock` (e.g. `simulate`'s
+/// `FixedClock`) — log timestamps should track real wall-clock time, not the
+/// simulated render date.
 static CLOCK: OnceLock<Box<dyn Clock + Send + Sync>> = OnceLock::new();
 
 /// Set a custom clock for testing. Must be called before any log messages.

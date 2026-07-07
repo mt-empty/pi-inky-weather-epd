@@ -107,8 +107,8 @@ pub struct Context {
 }
 
 impl Context {
-    fn new(settings: &DashboardSettings) -> Self {
-        let icon_ctx = IconContext::from_settings(settings);
+    fn new(settings: &DashboardSettings, today: NaiveDate) -> Self {
+        let icon_ctx = IconContext::from_settings(settings, today);
         let not_available_icon_path = not_available_icon_path(settings)
             .to_string_lossy()
             .to_string();
@@ -208,8 +208,9 @@ pub struct ContextBuilder<'a> {
 
 impl<'a> ContextBuilder<'a> {
     pub fn new(settings: &'a DashboardSettings, clock: &dyn Clock) -> Self {
-        let icon_ctx = IconContext::from_settings(settings);
-        let mut context = Context::new(settings);
+        let today = clock.now_local(settings.misc.timezone).date_naive();
+        let icon_ctx = IconContext::from_settings(settings, today);
+        let mut context = Context::new(settings, today);
 
         if settings.dev.enable_debug_logs {
             context.debug_info_visibility = ElementVisibility::Visible.to_string();

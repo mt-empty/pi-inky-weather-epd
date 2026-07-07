@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use chrono::NaiveDate;
 use strum_macros::Display;
 
 use crate::configs::settings::{DashboardSettings, RenderOptions};
@@ -11,15 +12,17 @@ use crate::configs::settings::{DashboardSettings, RenderOptions};
 pub struct IconContext<'a> {
     pub svg_icons_directory: &'a Path,
     pub render_options: &'a RenderOptions,
-    pub timezone: chrono_tz::Tz,
+    /// Resolved once from the injected `Clock`, so moon-phase selection
+    /// stays deterministic under `FixedClock`.
+    pub today: NaiveDate,
 }
 
 impl<'a> IconContext<'a> {
-    pub fn from_settings(settings: &'a DashboardSettings) -> Self {
+    pub fn from_settings(settings: &'a DashboardSettings, today: NaiveDate) -> Self {
         Self {
             svg_icons_directory: &settings.misc.svg_icons_directory,
             render_options: &settings.render_options,
-            timezone: settings.misc.timezone,
+            today,
         }
     }
 }

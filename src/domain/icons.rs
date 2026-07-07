@@ -33,7 +33,7 @@ fn apply_moon_phase_override(icon: String, is_night: bool, ctx: &IconContext) ->
 
     if icon.ends_with(&clear_night_suffix) {
         logger::detail("Using moon phase icon instead of clear night");
-        moon_phase_icon_name(ctx.timezone).to_string()
+        moon_phase_icon_name(ctx.today).to_string()
     } else {
         icon
     }

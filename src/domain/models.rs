@@ -290,8 +290,8 @@ impl HourlyForecast {
         let unit = settings.render_options.temp_unit;
         HourlyForecast {
             time: bom.time,
-            temperature: bom.temp.to_unit(unit).into(),
-            apparent_temperature: bom.temp_feels_like.to_unit(unit).into(),
+            temperature: Temperature::from(bom.temp).to_unit(unit),
+            apparent_temperature: Temperature::from(bom.temp_feels_like).to_unit(unit),
             wind: Wind::new(bom.wind.speed_kilometre, bom.wind.gust_speed_kilometre),
             precipitation: Precipitation::new(
                 bom.rain.chance,
@@ -319,8 +319,8 @@ impl DailyForecast {
         DailyForecast {
             // BOM returns UTC timestamps - convert to local timezone to extract calendar date
             date: bom.date.map(|dt| dt.with_timezone(&tz).date_naive()),
-            temp_max: bom.temp_max.map(|t| t.to_unit(unit).into()),
-            temp_min: bom.temp_min.map(|t| t.to_unit(unit).into()),
+            temp_max: bom.temp_max.map(|t| Temperature::from(t).to_unit(unit)),
+            temp_min: bom.temp_min.map(|t| Temperature::from(t).to_unit(unit)),
             precipitation: bom
                 .rain
                 .map(|r| Precipitation::new(r.chance, r.amount.min, r.amount.max)),

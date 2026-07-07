@@ -22,35 +22,6 @@ pub struct Temperature {
     pub unit: TemperatureUnit,
 }
 
-impl Temperature {
-    pub fn to_celsius(self) -> Temperature {
-        match self.unit {
-            TemperatureUnit::C => self,
-            TemperatureUnit::F => Temperature {
-                value: (self.value - 32.0) * 5.0 / 9.0,
-                unit: TemperatureUnit::C,
-            },
-        }
-    }
-    pub fn to_fahrenheit(self) -> Temperature {
-        match self.unit {
-            TemperatureUnit::C => Temperature {
-                value: (self.value * 9.0 / 5.0) + 32.0,
-                unit: TemperatureUnit::F,
-            },
-            TemperatureUnit::F => self,
-        }
-    }
-
-    /// Converts to the given unit, dispatching to `to_celsius`/`to_fahrenheit`.
-    pub fn to_unit(self, unit: TemperatureUnit) -> Temperature {
-        match unit {
-            TemperatureUnit::C => self.to_celsius(),
-            TemperatureUnit::F => self.to_fahrenheit(),
-        }
-    }
-}
-
 impl Deref for Temperature {
     type Target = f32;
 
