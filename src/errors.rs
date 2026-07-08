@@ -2,7 +2,7 @@ use std::fmt;
 use strum_macros::Display;
 use thiserror::Error;
 
-use crate::weather::icons::Icon;
+use crate::weather::icons::{Icon, IconContext};
 
 /// Priority levels for dashboard diagnostics (higher value = higher priority)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -42,7 +42,7 @@ pub trait Description {
 }
 
 impl Icon for DashboardError {
-    fn icon_name(&self) -> String {
+    fn icon_name(&self, _ctx: &IconContext) -> String {
         match self {
             DashboardError::NetworkError { .. } => DashboardErrorIconName::NoInternet,
             DashboardError::ApiError { .. } => DashboardErrorIconName::ApiError,

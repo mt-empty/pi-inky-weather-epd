@@ -1,22 +1,19 @@
 use serde::{Deserialize, Deserializer};
 
-use crate::{configs::settings::TemperatureUnit, constants::BOM_API_TEMP_UNIT, CONFIG};
+use crate::constants::BOM_API_TEMP_UNIT;
 
 use super::models::Temperature;
 
+// Deserializers stay config-free: BOM temperatures are parsed as raw Celsius
+// and converted to the configured unit in the API->domain mapping layer.
 pub fn de_temp_celsius<'de, D>(deserializer: D) -> Result<Temperature, D::Error>
 where
     D: Deserializer<'de>,
 {
     let value = i16::deserialize(deserializer)?;
-    let temp = Temperature {
+    Ok(Temperature {
         value: value as f32,
         unit: BOM_API_TEMP_UNIT,
-    };
-
-    Ok(match CONFIG.render_options.temp_unit {
-        TemperatureUnit::C => temp,
-        TemperatureUnit::F => temp.to_fahrenheit(),
     })
 }
 
@@ -26,13 +23,9 @@ where
 {
     let value = i16::deserialize(deserializer);
     if let Ok(value) = value {
-        let temp = Temperature {
+        Ok(Some(Temperature {
             value: value as f32,
             unit: BOM_API_TEMP_UNIT,
-        };
-        Ok(Some(match CONFIG.render_options.temp_unit {
-            TemperatureUnit::C => temp,
-            TemperatureUnit::F => temp.to_fahrenheit(),
         }))
     } else {
         Ok(None)

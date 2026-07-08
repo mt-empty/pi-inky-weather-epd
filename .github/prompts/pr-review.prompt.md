@@ -14,7 +14,7 @@ Priorities:
 - Keep summary brief and findings detailed.
 
 Repository-specific checks:
-- Verify test commands use RUN_MODE=test when applicable.
+- Verify tests build per-test settings values (tests/helpers/test_utils.rs) and pass them in instead of relying on env vars or globals.
 - Check nested env var naming for config overrides (APP_API__*).
 - For rendering or template changes, require snapshot workflow coverage.
 - For time-dependent code, verify Clock abstraction usage instead of direct local time calls.

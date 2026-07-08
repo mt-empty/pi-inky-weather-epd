@@ -1,4 +1,6 @@
-use chrono::Utc;
+mod helpers;
+
+use chrono::{NaiveDate, Utc};
 /// Tests for icon name generation with cloud cover data and precipitation override logic.
 ///
 /// The icon selection system now prioritizes cloud_cover data when available,
@@ -7,7 +9,13 @@ use chrono::Utc;
 use pi_inky_weather_epd::domain::models::{
     DailyForecast, HourlyForecast, Precipitation, Temperature, Wind,
 };
-use pi_inky_weather_epd::weather::icons::Icon;
+use pi_inky_weather_epd::weather::icons::{Icon, IconContext};
+
+/// Arbitrary date for `IconContext::today` — unused by tests below since
+/// `use_moon_phase_instead_of_clear_night` is `false` in `config/test.toml`.
+fn placeholder_today() -> NaiveDate {
+    NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()
+}
 
 // ============================================================================
 // Cloud Cover Feature Tests
@@ -15,6 +23,8 @@ use pi_inky_weather_epd::weather::icons::Icon;
 
 #[test]
 fn test_cloud_cover_overrides_low_precipitation_chance() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // High cloud cover (80%) should produce overcast icon even with low precip chance (10%)
     let forecast = HourlyForecast {
         time: Utc::now(),
@@ -33,11 +43,13 @@ fn test_cloud_cover_overrides_low_precipitation_chance() {
         weather_code: None,
     };
 
-    assert_eq!(forecast.icon_name(), "extreme-day.svg");
+    assert_eq!(forecast.icon_name(&ctx), "extreme-day.svg");
 }
 
 #[test]
 fn test_cloud_cover_boundary_25_percent() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // 25% cloud cover is upper limit of Clear range
     let forecast_25 = HourlyForecast {
         time: Utc::now(),
@@ -57,12 +69,14 @@ fn test_cloud_cover_boundary_25_percent() {
         ..forecast_25.clone()
     };
 
-    assert_eq!(forecast_25.icon_name(), "clear-day.svg");
-    assert_eq!(forecast_26.icon_name(), "partly-cloudy-day.svg");
+    assert_eq!(forecast_25.icon_name(&ctx), "clear-day.svg");
+    assert_eq!(forecast_26.icon_name(&ctx), "partly-cloudy-day.svg");
 }
 
 #[test]
 fn test_cloud_cover_boundary_50_and_51_percent() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Test boundary between PartlyCloudy (50%) and Overcast (51%)
     let forecast_50 = HourlyForecast {
         time: Utc::now(),
@@ -82,12 +96,14 @@ fn test_cloud_cover_boundary_50_and_51_percent() {
         ..forecast_50.clone()
     };
 
-    assert_eq!(forecast_50.icon_name(), "partly-cloudy-day.svg");
-    assert_eq!(forecast_51.icon_name(), "overcast-day.svg");
+    assert_eq!(forecast_50.icon_name(&ctx), "partly-cloudy-day.svg");
+    assert_eq!(forecast_51.icon_name(&ctx), "overcast-day.svg");
 }
 
 #[test]
 fn test_cloud_cover_boundary_75_and_76_percent() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Test boundary between Overcast (75%) and Extreme (76%)
     let forecast_75 = HourlyForecast {
         time: Utc::now(),
@@ -107,12 +123,14 @@ fn test_cloud_cover_boundary_75_and_76_percent() {
         ..forecast_75.clone()
     };
 
-    assert_eq!(forecast_75.icon_name(), "overcast-day.svg");
-    assert_eq!(forecast_76.icon_name(), "extreme-day.svg");
+    assert_eq!(forecast_75.icon_name(&ctx), "overcast-day.svg");
+    assert_eq!(forecast_76.icon_name(&ctx), "extreme-day.svg");
 }
 
 #[test]
 fn test_null_cloud_cover_falls_back_to_precipitation() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // When cloud_cover is None, should use precipitation chance for cloud level
     let forecast = HourlyForecast {
         time: Utc::now(),
@@ -131,7 +149,7 @@ fn test_null_cloud_cover_falls_back_to_precipitation() {
         weather_code: None,
     };
 
-    assert_eq!(forecast.icon_name(), "partly-cloudy-day.svg");
+    assert_eq!(forecast.icon_name(&ctx), "partly-cloudy-day.svg");
 }
 
 // ============================================================================
@@ -140,6 +158,8 @@ fn test_null_cloud_cover_falls_back_to_precipitation() {
 
 #[test]
 fn test_precipitation_override_drizzle_requires_partly_cloudy() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Clear skies (20% cloud) + drizzle should be bumped to PartlyCloudy
     let forecast = HourlyForecast {
         time: Utc::now(),
@@ -159,11 +179,13 @@ fn test_precipitation_override_drizzle_requires_partly_cloudy() {
     };
 
     // Should be bumped to partly-cloudy due to drizzle
-    assert_eq!(forecast.icon_name(), "partly-cloudy-day-drizzle.svg");
+    assert_eq!(forecast.icon_name(&ctx), "partly-cloudy-day-drizzle.svg");
 }
 
 #[test]
 fn test_precipitation_override_rain_requires_overcast() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Clear skies (20% cloud) + heavy rain should be bumped to Overcast
     let forecast = HourlyForecast {
         time: Utc::now(),
@@ -183,11 +205,13 @@ fn test_precipitation_override_rain_requires_overcast() {
     };
 
     // Should be bumped to overcast due to heavy rain
-    assert_eq!(forecast.icon_name(), "overcast-day-rain.svg");
+    assert_eq!(forecast.icon_name(&ctx), "overcast-day-rain.svg");
 }
 
 #[test]
 fn test_precipitation_override_partly_cloudy_rain_becomes_overcast() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // PartlyCloudy (40% cloud) + heavy rain should be bumped to Overcast
     let forecast = HourlyForecast {
         time: Utc::now(),
@@ -207,11 +231,13 @@ fn test_precipitation_override_partly_cloudy_rain_becomes_overcast() {
     };
 
     // Should be bumped to overcast due to heavy rain
-    assert_eq!(forecast.icon_name(), "overcast-day-rain.svg");
+    assert_eq!(forecast.icon_name(&ctx), "overcast-day-rain.svg");
 }
 
 #[test]
 fn test_fallback_with_precipitation_override() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Test fallback behaviour: low precipitation chance + drizzle amount
     // Median of 0-5mm = 2.5mm which is in None range (0-2.0), so no override needed
     let forecast = DailyForecast {
@@ -228,7 +254,7 @@ fn test_fallback_with_precipitation_override() {
         weather_code: None,
     };
 
-    assert_eq!(forecast.icon_name(), "clear-day.svg");
+    assert_eq!(forecast.icon_name(&ctx), "clear-day.svg");
 }
 
 // ============================================================================
@@ -237,6 +263,8 @@ fn test_fallback_with_precipitation_override() {
 
 #[test]
 fn test_partly_cloudy_with_drizzle_is_valid() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Test case: Partly cloudy (26-50%) with drizzle should work fine
 
     let forecast = HourlyForecast {
@@ -256,7 +284,7 @@ fn test_partly_cloudy_with_drizzle_is_valid() {
         weather_code: None,
     };
 
-    let icon_name = forecast.icon_name();
+    let icon_name = forecast.icon_name(&ctx);
 
     // Should be "partly-cloudy-day-drizzle.svg" - this file exists
     assert_eq!(icon_name, "partly-cloudy-day-drizzle.svg");
@@ -264,6 +292,8 @@ fn test_partly_cloudy_with_drizzle_is_valid() {
 
 #[test]
 fn test_overcast_with_rain_is_valid() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Test case: Overcast (51-75%) with rain should work fine
 
     let forecast = HourlyForecast {
@@ -283,7 +313,7 @@ fn test_overcast_with_rain_is_valid() {
         weather_code: None,
     };
 
-    let icon_name = forecast.icon_name();
+    let icon_name = forecast.icon_name(&ctx);
 
     // Should be "overcast-day-rain.svg" - this file exists
     assert_eq!(icon_name, "overcast-day-rain.svg");
@@ -291,6 +321,8 @@ fn test_overcast_with_rain_is_valid() {
 
 #[test]
 fn test_extreme_with_drizzle_is_valid() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Test case: Extreme chance (76%+) with drizzle amount
 
     let forecast = HourlyForecast {
@@ -310,7 +342,7 @@ fn test_extreme_with_drizzle_is_valid() {
         weather_code: None,
     };
 
-    let icon_name = forecast.icon_name();
+    let icon_name = forecast.icon_name(&ctx);
 
     // Should be "extreme-night-drizzle.svg" - this file exists
     assert_eq!(icon_name, "extreme-night-drizzle.svg");
@@ -318,6 +350,8 @@ fn test_extreme_with_drizzle_is_valid() {
 
 #[test]
 fn test_zero_chance_zero_amount_produces_clear() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Edge case: No precipitation at all
 
     let forecast = DailyForecast {
@@ -334,13 +368,15 @@ fn test_zero_chance_zero_amount_produces_clear() {
         weather_code: None,
     };
 
-    let icon_name = forecast.icon_name();
+    let icon_name = forecast.icon_name(&ctx);
 
     assert_eq!(icon_name, "clear-day.svg");
 }
 
 #[test]
 fn test_boundary_case_25_percent_is_still_clear() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Boundary test: 25% is the upper limit of Clear (0-25%)
 
     let forecast = HourlyForecast {
@@ -360,7 +396,7 @@ fn test_boundary_case_25_percent_is_still_clear() {
         weather_code: None,
     };
 
-    let icon_name = forecast.icon_name();
+    let icon_name = forecast.icon_name(&ctx);
 
     // 25% is still Clear, so should ignore the amount
     assert_eq!(icon_name, "clear-day.svg");
@@ -368,6 +404,8 @@ fn test_boundary_case_25_percent_is_still_clear() {
 
 #[test]
 fn test_boundary_case_26_percent_allows_precipitation_suffix() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Boundary test: 26% is PartlyCloudy (26-50%) so drizzle suffix is allowed
 
     let forecast = HourlyForecast {
@@ -387,7 +425,7 @@ fn test_boundary_case_26_percent_allows_precipitation_suffix() {
         weather_code: None,
     };
 
-    let icon_name = forecast.icon_name();
+    let icon_name = forecast.icon_name(&ctx);
 
     // 26% is PartlyCloudy, so drizzle suffix should appear
     assert_eq!(icon_name, "partly-cloudy-day-drizzle.svg");
@@ -399,6 +437,8 @@ fn test_boundary_case_26_percent_allows_precipitation_suffix() {
 
 #[test]
 fn test_snow_icon_selected_with_high_snowfall() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Heavy snow: 14.3cm snow × 1.43 = ~20.4mm water, total ~10mm = 204% (well above threshold)
     let forecast = HourlyForecast {
         time: Utc::now(),
@@ -419,7 +459,7 @@ fn test_snow_icon_selected_with_high_snowfall() {
     };
 
     assert_eq!(
-        forecast.icon_name(),
+        forecast.icon_name(&ctx),
         "extreme-day-snow.svg",
         "Heavy snowfall should produce snow icon"
     );
@@ -427,6 +467,8 @@ fn test_snow_icon_selected_with_high_snowfall() {
 
 #[test]
 fn test_snow_icon_at_60_percent_threshold() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Just above the 60% snow threshold.
     // Open-Meteo ratio: 7 cm snow = 10 mm water, so snow_water = snow_cm × 10/7
     // With median precip = (9+11)/2 = 10 mm:
@@ -451,7 +493,7 @@ fn test_snow_icon_at_60_percent_threshold() {
     };
 
     assert_eq!(
-        forecast.icon_name(),
+        forecast.icon_name(&ctx),
         "overcast-night-snow.svg",
         "Exactly 60% snow threshold should produce snow icon"
     );
@@ -459,6 +501,8 @@ fn test_snow_icon_at_60_percent_threshold() {
 
 #[test]
 fn test_rain_icon_below_snow_threshold() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // ~43% snow -> should show rain (3.0 cm = ~4.3 mm water, total 10 mm)
     // 3.0 cm × 10/7 = 4.29 mm water; 4.29 / 10 = 42.9% (below 60%)
     let forecast = HourlyForecast {
@@ -481,7 +525,7 @@ fn test_rain_icon_below_snow_threshold() {
 
     // Below 60% threshold, should be rain not snow
     assert_eq!(
-        forecast.icon_name(),
+        forecast.icon_name(&ctx),
         "overcast-day-rain.svg",
         "Below 60% snow threshold should produce rain icon"
     );
@@ -489,6 +533,8 @@ fn test_rain_icon_below_snow_threshold() {
 
 #[test]
 fn test_snow_override_requires_partly_cloudy() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Snow with clear skies should bump to partly-cloudy
     let forecast = HourlyForecast {
         time: Utc::now(),
@@ -510,7 +556,7 @@ fn test_snow_override_requires_partly_cloudy() {
 
     // Should be bumped to partly-cloudy due to snow
     assert_eq!(
-        forecast.icon_name(),
+        forecast.icon_name(&ctx),
         "partly-cloudy-day-snow.svg",
         "Snow with clear skies should be upgraded to partly-cloudy"
     );
@@ -518,6 +564,8 @@ fn test_snow_override_requires_partly_cloudy() {
 
 #[test]
 fn test_low_snowfall_shows_clear_not_snow() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Very light snowfall below 1.4mm threshold (0.2cm × 1.43 = ~0.29mm water)
     let forecast = HourlyForecast {
         time: Utc::now(),
@@ -539,7 +587,7 @@ fn test_low_snowfall_shows_clear_not_snow() {
 
     // Below 1.4mm threshold for snow, should show clear
     assert_eq!(
-        forecast.icon_name(),
+        forecast.icon_name(&ctx),
         "clear-day.svg",
         "Very light snow below threshold should show clear icon"
     );
@@ -547,6 +595,8 @@ fn test_low_snowfall_shows_clear_not_snow() {
 
 #[test]
 fn test_mixed_precipitation_favors_rain() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Mixed: ~29% snow, 71% rain (2.0 cm = ~2.86 mm water, total ~10 mm)
     // 2.0 cm × 10/7 = 2.86 mm water; 2.86 / 10 = 28.6% (below 60%)
     let forecast = HourlyForecast {
@@ -569,7 +619,7 @@ fn test_mixed_precipitation_favors_rain() {
 
     // Below 60% snow threshold -> rain
     assert_eq!(
-        forecast.icon_name(),
+        forecast.icon_name(&ctx),
         "overcast-night-rain.svg",
         "Mixed precipitation below 60% snow should show rain icon"
     );
@@ -577,6 +627,8 @@ fn test_mixed_precipitation_favors_rain() {
 
 #[test]
 fn test_partly_cloudy_snow_at_night() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Light snow at night (10cm × 1.43 = ~14.3mm water, total ~8mm = 179% — well above threshold)
     let forecast = HourlyForecast {
         time: Utc::now(),
@@ -597,7 +649,7 @@ fn test_partly_cloudy_snow_at_night() {
     };
 
     assert_eq!(
-        forecast.icon_name(),
+        forecast.icon_name(&ctx),
         "partly-cloudy-night-snow.svg",
         "Partly cloudy with snow at night should produce night snow icon"
     );
@@ -605,6 +657,8 @@ fn test_partly_cloudy_snow_at_night() {
 
 #[test]
 fn test_overcast_day_snow() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Overcast day with snow (11.5cm × 1.43 = ~16.4mm water, total ~9mm = 183% — well above threshold)
     let forecast = HourlyForecast {
         time: Utc::now(),
@@ -625,7 +679,7 @@ fn test_overcast_day_snow() {
     };
 
     assert_eq!(
-        forecast.icon_name(),
+        forecast.icon_name(&ctx),
         "overcast-day-snow.svg",
         "Overcast day with snow should produce overcast-day-snow icon"
     );
@@ -633,6 +687,8 @@ fn test_overcast_day_snow() {
 
 #[test]
 fn test_extreme_night_snow() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
     // Extreme conditions with snow (20cm × 1.43 = ~28.6mm water, total ~15mm = 190% — well above threshold)
     let forecast = HourlyForecast {
         time: Utc::now(),
@@ -653,8 +709,54 @@ fn test_extreme_night_snow() {
     };
 
     assert_eq!(
-        forecast.icon_name(),
+        forecast.icon_name(&ctx),
         "extreme-night-snow.svg",
         "Extreme night conditions with heavy snow should produce extreme-night-snow icon"
     );
+}
+
+// ============================================================================
+// Moon Phase Override Tests
+// ============================================================================
+
+fn clear_night_forecast() -> HourlyForecast {
+    HourlyForecast {
+        time: Utc::now(),
+        temperature: Temperature::celsius(10.0),
+        apparent_temperature: Temperature::celsius(9.0),
+        wind: Wind::new(5, 8),
+        precipitation: Precipitation::new(Some(0), Some(0), Some(0)),
+        uv_index: 0,
+        relative_humidity: 50,
+        is_night: true,
+        cloud_cover: Some(10), // Clear range (0-25%)
+        weather_code: None,
+    }
+}
+
+#[test]
+fn test_moon_phase_override_disabled_shows_clear_night() {
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let ctx = IconContext::from_settings(&settings, placeholder_today());
+
+    assert_eq!(clear_night_forecast().icon_name(&ctx), "clear-night.svg");
+}
+
+#[test]
+fn test_moon_phase_override_is_deterministic_for_a_fixed_date() {
+    let settings = helpers::test_utils::test_settings(|settings| {
+        settings
+            .render_options
+            .use_moon_phase_instead_of_clear_night = true;
+    });
+    let today = NaiveDate::from_ymd_opt(2024, 6, 15).unwrap();
+    let ctx = IconContext::from_settings(&settings, today);
+
+    let icon = clear_night_forecast().icon_name(&ctx);
+
+    assert!(
+        icon.starts_with("moon-"),
+        "expected a moon-phase icon, got {icon}"
+    );
+    assert_eq!(icon, clear_night_forecast().icon_name(&ctx));
 }

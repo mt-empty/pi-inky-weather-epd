@@ -1,4 +1,6 @@
-use pi_inky_weather_epd::CONFIG;
+mod helpers;
+
+use helpers::test_utils;
 use std::fs;
 
 /// Validates that the base SVG template file is valid
@@ -7,7 +9,8 @@ use std::fs;
 /// It doesn't test rendering - see snapshot_provider_test.rs for E2E tests.
 #[test]
 fn base_template_svg_ok() {
-    let svg_content = fs::read_to_string(CONFIG.misc.template_path.clone())
+    let settings = test_utils::test_settings(|_| {});
+    let svg_content = fs::read_to_string(&settings.misc.template_path)
         .expect("Failed to read the base template SVG file");
     let svg_tree = usvg::Tree::from_str(&svg_content, &usvg::Options::default());
 

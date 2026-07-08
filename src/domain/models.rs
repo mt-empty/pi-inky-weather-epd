@@ -52,6 +52,14 @@ impl Temperature {
             TemperatureUnit::F => self,
         }
     }
+
+    /// Converts to the given unit, dispatching to `to_celsius`/`to_fahrenheit`.
+    pub fn to_unit(self, unit: TemperatureUnit) -> Temperature {
+        match unit {
+            TemperatureUnit::C => self.to_celsius(),
+            TemperatureUnit::F => self.to_fahrenheit(),
+        }
+    }
 }
 
 impl Deref for Temperature {
@@ -272,12 +280,18 @@ pub struct DailyForecast {
 // Conversion from BOM models to domain models
 // ============================================================================
 
-impl From<crate::apis::bom::models::HourlyForecast> for HourlyForecast {
-    fn from(bom: crate::apis::bom::models::HourlyForecast) -> Self {
+impl HourlyForecast {
+    /// Maps a BOM API hourly entry into the domain model, applying the
+    /// configured temperature unit.
+    pub fn from_bom(
+        bom: crate::apis::bom::models::HourlyForecast,
+        settings: &crate::configs::settings::DashboardSettings,
+    ) -> Self {
+        let unit = settings.render_options.temp_unit;
         HourlyForecast {
             time: bom.time,
-            temperature: bom.temp.into(),
-            apparent_temperature: bom.temp_feels_like.into(),
+            temperature: Temperature::from(bom.temp).to_unit(unit),
+            apparent_temperature: Temperature::from(bom.temp_feels_like).to_unit(unit),
             wind: Wind::new(bom.wind.speed_kilometre, bom.wind.gust_speed_kilometre),
             precipitation: Precipitation::new(
                 bom.rain.chance,
@@ -293,26 +307,27 @@ impl From<crate::apis::bom::models::HourlyForecast> for HourlyForecast {
     }
 }
 
-impl From<crate::apis::bom::models::DailyEntry> for DailyForecast {
-    fn from(bom: crate::apis::bom::models::DailyEntry) -> Self {
+impl DailyForecast {
+    /// Maps a BOM API daily entry into the domain model, applying the
+    /// configured temperature unit and display timezone.
+    pub fn from_bom(
+        bom: crate::apis::bom::models::DailyEntry,
+        settings: &crate::configs::settings::DashboardSettings,
+    ) -> Self {
+        let unit = settings.render_options.temp_unit;
+        let tz = settings.misc.timezone;
         DailyForecast {
             // BOM returns UTC timestamps - convert to local timezone to extract calendar date
-            date: bom
-                .date
-                .map(|dt| dt.with_timezone(&chrono::Local).date_naive()),
-            temp_max: bom.temp_max.map(|t| t.into()),
-            temp_min: bom.temp_min.map(|t| t.into()),
+            date: bom.date.map(|dt| dt.with_timezone(&tz).date_naive()),
+            temp_max: bom.temp_max.map(|t| Temperature::from(t).to_unit(unit)),
+            temp_min: bom.temp_min.map(|t| Temperature::from(t).to_unit(unit)),
             precipitation: bom
                 .rain
                 .map(|r| Precipitation::new(r.chance, r.amount.min, r.amount.max)),
             astronomical: bom.astronomical.map(|a| Astronomical {
                 // BOM returns UTC times, convert to local NaiveDateTime for display
-                sunrise_time: a
-                    .sunrise_time
-                    .map(|dt| dt.with_timezone(&chrono::Local).naive_local()),
-                sunset_time: a
-                    .sunset_time
-                    .map(|dt| dt.with_timezone(&chrono::Local).naive_local()),
+                sunrise_time: a.sunrise_time.map(|dt| dt.with_timezone(&tz).naive_local()),
+                sunset_time: a.sunset_time.map(|dt| dt.with_timezone(&tz).naive_local()),
             }),
             cloud_cover: None,  // BOM API doesn't provide cloud cover data
             weather_code: None, // BOM API doesn't provide WMO weather codes

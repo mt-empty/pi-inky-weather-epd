@@ -6,7 +6,26 @@ use crate::clock::{Clock, SystemClock};
 use std::fmt::Display;
 use std::io::IsTerminal;
 use std::io::Write;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
+
+// ---------------------------------------------------------------------------
+// Logger configuration
+// ---------------------------------------------------------------------------
+
+/// Whether debug-level messages are emitted. Set once by [`init`].
+static DEBUG_ENABLED: AtomicBool = AtomicBool::new(false);
+
+/// Timezone used for log timestamps. Set once by [`init`]; UTC until then.
+static LOG_TZ: OnceLock<chrono_tz::Tz> = OnceLock::new();
+
+/// Configure the logger from the loaded settings. Call once at startup;
+/// later calls only affect the debug flag. Before `init`, debug messages
+/// are suppressed and timestamps are in UTC — safe defaults for tests.
+pub fn init(enable_debug_logs: bool, timezone: chrono_tz::Tz) {
+    DEBUG_ENABLED.store(enable_debug_logs, Ordering::Relaxed);
+    let _ = LOG_TZ.set(timezone);
+}
 
 // ---------------------------------------------------------------------------
 // Clock abstraction
@@ -14,6 +33,10 @@ use std::sync::{Mutex, OnceLock};
 
 /// Global clock for timestamp generation. Defaults to SystemClock but can be
 /// overridden for testing with [`set_clock`].
+///
+/// Deliberately not wired to the rendering pipeline's `Clock` (e.g. `simulate`'s
+/// `FixedClock`) — log timestamps should track real wall-clock time, not the
+/// simulated render date.
 static CLOCK: OnceLock<Box<dyn Clock + Send + Sync>> = OnceLock::new();
 
 /// Set a custom clock for testing. Must be called before any log messages.
@@ -34,8 +57,9 @@ fn get_clock() -> &'static (dyn Clock + Send + Sync) {
 
 /// Get a formatted timestamp for log messages
 fn timestamp() -> String {
+    let tz = LOG_TZ.get().copied().unwrap_or(chrono_tz::UTC);
     get_clock()
-        .now_local()
+        .now_local(tz)
         .format("%Y-%m-%d %H:%M:%S%.3f")
         .to_string()
 }
@@ -263,7 +287,7 @@ pub fn error(message: impl Display) {
 /// Log a debug message
 #[allow(dead_code)]
 pub fn debug(message: impl Display) {
-    if crate::CONFIG.dev.enable_debug_logs {
+    if DEBUG_ENABLED.load(Ordering::Relaxed) {
         log_message(LogLevel::Debug, message);
     }
 }

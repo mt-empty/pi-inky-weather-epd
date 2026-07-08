@@ -3,8 +3,9 @@ use std::path::PathBuf;
 
 use crate::{
     apis::bom::models::{BomError, DailyForecastResponse, HourlyForecastResponse},
+    configs::settings::DashboardSettings,
     constants::{
-        DAILY_CACHE_SUFFIX, DAILY_FORECAST_ENDPOINT, HOURLY_CACHE_SUFFIX, HOURLY_FORECAST_ENDPOINT,
+        daily_forecast_endpoint, hourly_forecast_endpoint, DAILY_CACHE_SUFFIX, HOURLY_CACHE_SUFFIX,
     },
     domain::models::{DailyForecast, HourlyForecast},
     errors::DashboardError,
@@ -63,16 +64,23 @@ impl BomProvider {
 }
 
 impl WeatherProvider for BomProvider {
-    fn fetch_hourly_forecast(&self) -> Result<FetchResult<Vec<HourlyForecast>>, Error> {
+    fn fetch_hourly_forecast(
+        &self,
+        settings: &DashboardSettings,
+    ) -> Result<FetchResult<Vec<HourlyForecast>>, Error> {
         match self.fetcher.fetch_data::<HourlyForecastResponse>(
-            (*HOURLY_FORECAST_ENDPOINT).clone(),
+            settings,
+            hourly_forecast_endpoint(settings),
             &self.generate_cache_filename(HOURLY_CACHE_SUFFIX),
             Some(check_bom_error),
         )? {
             FetchOutcome::Fresh(data) => {
                 // Convert BOM models to domain models
-                let domain_data: Vec<HourlyForecast> =
-                    data.data.into_iter().map(|h| h.into()).collect();
+                let domain_data: Vec<HourlyForecast> = data
+                    .data
+                    .into_iter()
+                    .map(|h| HourlyForecast::from_bom(h, settings))
+                    .collect();
                 crate::logger::debug(format!(
                     "Converted {} BOM hourly entries to domain model",
                     domain_data.len()
@@ -80,23 +88,33 @@ impl WeatherProvider for BomProvider {
                 Ok(FetchResult::fresh(domain_data))
             }
             FetchOutcome::Stale { data, error } => {
-                let domain_data: Vec<HourlyForecast> =
-                    data.data.into_iter().map(|h| h.into()).collect();
+                let domain_data: Vec<HourlyForecast> = data
+                    .data
+                    .into_iter()
+                    .map(|h| HourlyForecast::from_bom(h, settings))
+                    .collect();
                 Ok(FetchResult::stale(domain_data, error))
             }
         }
     }
 
-    fn fetch_daily_forecast(&self) -> Result<FetchResult<Vec<DailyForecast>>, Error> {
+    fn fetch_daily_forecast(
+        &self,
+        settings: &DashboardSettings,
+    ) -> Result<FetchResult<Vec<DailyForecast>>, Error> {
         match self.fetcher.fetch_data::<DailyForecastResponse>(
-            (*DAILY_FORECAST_ENDPOINT).clone(),
+            settings,
+            daily_forecast_endpoint(settings),
             &self.generate_cache_filename(DAILY_CACHE_SUFFIX),
             Some(check_bom_error),
         )? {
             FetchOutcome::Fresh(data) => {
                 // Convert BOM models to domain models
-                let domain_data: Vec<DailyForecast> =
-                    data.data.into_iter().map(|d| d.into()).collect();
+                let domain_data: Vec<DailyForecast> = data
+                    .data
+                    .into_iter()
+                    .map(|d| DailyForecast::from_bom(d, settings))
+                    .collect();
                 crate::logger::debug(format!(
                     "Converted {} BOM daily entries to domain model",
                     domain_data.len()
@@ -104,8 +122,11 @@ impl WeatherProvider for BomProvider {
                 Ok(FetchResult::fresh(domain_data))
             }
             FetchOutcome::Stale { data, error } => {
-                let domain_data: Vec<DailyForecast> =
-                    data.data.into_iter().map(|d| d.into()).collect();
+                let domain_data: Vec<DailyForecast> = data
+                    .data
+                    .into_iter()
+                    .map(|d| DailyForecast::from_bom(d, settings))
+                    .collect();
                 Ok(FetchResult::stale(domain_data, error))
             }
         }

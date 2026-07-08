@@ -8,6 +8,8 @@
 //! - >= 60% snow water equivalent -> Snow icon
 //! - < 60% snow water equivalent -> Rain icon
 
+mod helpers;
+
 use pi_inky_weather_epd::domain::models::Precipitation;
 
 // ============================================================================

@@ -7,72 +7,49 @@
 //!
 //! ## Running These Tests
 //!
-//! `prefer_weather_codes` is a lazy-static config value, so the env override
-//! must be present **before** the test binary starts.
-//!
 //! ```bash
-//! RUN_MODE=test APP_RENDER_OPTIONS__PREFER_WEATHER_CODES=true \
-//!   cargo test --test snapshot_open_meteo_prefer_codes_test
+//! cargo test --test snapshot_open_meteo_prefer_codes_test
 //! ```
-//!
-//! CI runs this automatically (see `.github/workflows/test.yml`).
 //!
 //! ## Reviewing Snapshots
 //!
 //! ```bash
-//! RUN_MODE=test APP_RENDER_OPTIONS__PREFER_WEATHER_CODES=true \
-//!   cargo test --test snapshot_open_meteo_prefer_codes_test
+//! cargo test --test snapshot_open_meteo_prefer_codes_test
 //! cargo insta review
 //! ```
 
 mod helpers;
 
-use helpers::test_utils::EnvVarGuard;
+use helpers::test_utils;
 use helpers::wiremock_setup;
-use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injection, CONFIG};
+use pi_inky_weather_epd::configs::settings::Providers;
+use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injection};
 use std::fs;
 use std::path::Path;
 
-/// Shared setup: start wiremock, generate the dashboard, return the SVG string.
-///
-/// Returns `None` when the test should be skipped (wrong provider or
-/// `prefer_weather_codes` is not enabled).
+/// Shared setup: start wiremock, install a prefer-weather-codes config,
+/// generate the dashboard, and return the SVG string.
 ///
 /// The `insta::assert_snapshot!` call is intentionally left in each test
 /// function so that insta can derive the snapshot name from the caller.
-async fn run_prefer_codes_snapshot(
-    time_rfc3339: &str,
-    output_path: &'static str,
-) -> Option<String> {
-    if !CONFIG.render_options.prefer_weather_codes {
-        eprintln!(
-            "Skipping prefer-codes tests – set APP_RENDER_OPTIONS__PREFER_WEATHER_CODES=true \
-             and re-run `cargo test --test snapshot_open_meteo_prefer_codes_test`"
-        );
-        return None;
-    }
-    if format!("{}", CONFIG.api.provider).to_lowercase() != "openmeteo" {
-        eprintln!(
-            "Skipping prefer-codes test – provider is '{}', expected 'openmeteo'",
-            CONFIG.api.provider
-        );
-        return None;
-    }
-
+async fn run_prefer_codes_snapshot(time_rfc3339: &str, output_path: &'static str) -> String {
     let mock_server = wiremock_setup::setup_open_meteo_mock(
         "tests/fixtures/open_meteo_hourly_forecast.json",
         "tests/fixtures/open_meteo_daily_forecast.json",
     )
     .await;
-    let open_meteo_base_url = mock_server.uri();
-    let _open_meteo_base_url_guard =
-        EnvVarGuard::new("OPEN_METEO_BASE_URL", open_meteo_base_url.as_str());
+    let mock_base_url = url::Url::parse(&mock_server.uri()).expect("invalid mock server URL");
+    let settings = test_utils::test_settings(|settings| {
+        settings.api.provider = Providers::OpenMeteo;
+        settings.api.open_meteo_base_url = mock_base_url;
+        settings.render_options.prefer_weather_codes = true;
+    });
 
     let clock = FixedClock::from_rfc3339(time_rfc3339).expect("invalid RFC3339 time");
     let output_svg_name = Path::new(output_path);
 
     let svg = tokio::task::spawn_blocking(move || {
-        generate_weather_dashboard_injection(&clock, &CONFIG.misc.template_path, output_svg_name)
+        generate_weather_dashboard_injection(&settings, &clock, output_svg_name)
             .expect("dashboard generation failed");
         let svg = fs::read_to_string(output_svg_name).expect("failed to read generated SVG");
         assert!(
@@ -84,7 +61,7 @@ async fn run_prefer_codes_snapshot(
     .await
     .expect("task panicked");
 
-    Some(svg)
+    svg
 }
 
 // ---------------------------------------------------------------------------
@@ -93,60 +70,44 @@ async fn run_prefer_codes_snapshot(
 
 /// Oct 25 2025, 01:00 UTC = Oct 25 2025, 12:00 Melbourne (AEDT) – noon
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_open_meteo_dashboard_prefer_codes() {
-    let Some(svg) = run_prefer_codes_snapshot(
+    let svg = run_prefer_codes_snapshot(
         "2025-10-25T01:00:00Z",
         "tests/output/snapshot_open_meteo_dashboard_prefer_codes.svg",
     )
-    .await
-    else {
-        return;
-    };
+    .await;
     insta::assert_snapshot!(svg);
 }
 
 /// Oct 26 2025, 00:00 UTC = Oct 26 2025, 11:00 Melbourne (AEDT) – midnight boundary
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_open_meteo_midnight_boundary_prefer_codes() {
-    let Some(svg) = run_prefer_codes_snapshot(
+    let svg = run_prefer_codes_snapshot(
         "2025-10-26T00:00:00Z",
         "tests/output/snapshot_open_meteo_midnight_boundary_prefer_codes.svg",
     )
-    .await
-    else {
-        return;
-    };
+    .await;
     insta::assert_snapshot!(svg);
 }
 
 /// Oct 25 2025, 13:00 UTC = Oct 26 2025, 00:00 Melbourne (AEDT) – end of day
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_open_meteo_end_of_day_prefer_codes() {
-    let Some(svg) = run_prefer_codes_snapshot(
+    let svg = run_prefer_codes_snapshot(
         "2025-10-25T13:00:00Z",
         "tests/output/snapshot_open_meteo_end_of_day_prefer_codes.svg",
     )
-    .await
-    else {
-        return;
-    };
+    .await;
     insta::assert_snapshot!(svg);
 }
 
 /// Oct 25 2025, 16:00 UTC = Oct 26 2025, 03:00 Melbourne (AEDT) – early morning
 #[tokio::test]
-#[serial_test::serial]
 async fn snapshot_open_meteo_early_morning_prefer_codes() {
-    let Some(svg) = run_prefer_codes_snapshot(
+    let svg = run_prefer_codes_snapshot(
         "2025-10-25T16:00:00Z",
         "tests/output/snapshot_open_meteo_early_morning_prefer_codes.svg",
     )
-    .await
-    else {
-        return;
-    };
+    .await;
     insta::assert_snapshot!(svg);
 }

@@ -1,13 +1,20 @@
+# Deterministic test configuration, merged on top of default.toml by
+# `DashboardSettings::load_test_config()`. Tests build a settings *value* from
+# this base via tests/helpers/test_utils.rs (`test_settings` and friends),
+# mutate it as needed (provider, render options, mock base URLs), and pass it
+# into the code under test — no env vars, no globals, fully parallel.
+
 [release]
 update_interval_days = 0
 allow_pre_release_version = false
 
 [api]
-provider = "open_meteo"  # Default to Open-Meteo for tests (override with APP_API__PROVIDER=bom if needed)
+provider = "open_meteo"  # Default for tests; BOM tests set this in their settings value
 latitude = -37.8136
 longitude = 144.9631
 
 [misc]
+timezone = "Australia/Melbourne"  # Deterministic display timezone; tests set their own where needed
 weather_data_cache_path = "tests/output/cached_data/"  # Separate from fixtures to avoid overwriting test data
 
 [render_options]
@@ -15,15 +22,8 @@ use_moon_phase_instead_of_clear_night = false
 prefer_weather_codes = false
 
 [dev]
-# For Open-Meteo tests (wiremock):
-# - disable_weather_api_requests = false (allows HTTP calls that wiremock intercepts)
-# - Tests set OPEN_METEO_BASE_URL env var to point to mock server
-#
-# For BOM tests (fixture-based, not yet migrated):
-# - Would need disable_weather_api_requests = true to use cached fixtures
-# - For now, set to false globally since Open-Meteo tests are the default
-#
-# Note: To run BOM tests, override with: APP_DEV__DISABLE_WEATHER_API_REQUESTS=true APP_API__PROVIDER=bom
+# disable_weather_api_requests = false allows HTTP calls, which wiremock
+# intercepts (tests point the provider base URLs at the mock server).
 disable_weather_api_requests = false
 disable_png_output = true
 enable_debug_logs = false

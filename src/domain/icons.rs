@@ -1,18 +1,17 @@
 use super::models::{DailyForecast, HourlyForecast, Precipitation, Wind};
 use crate::logger;
 use crate::weather::icons::{
-    DayNight, Icon, PrecipitationChanceName, PrecipitationKind, WindIconName,
+    DayNight, Icon, IconContext, PrecipitationChanceName, PrecipitationKind, WindIconName,
 };
 use crate::weather::utils::moon_phase_icon_name;
-use crate::CONFIG;
 
 // ============================================================================
 // Icon implementations for domain models
 // ============================================================================
 
 impl Icon for Wind {
-    fn icon_name(&self) -> String {
-        let speed = self.speed(CONFIG.render_options.use_gust_instead_of_wind);
+    fn icon_name(&self, ctx: &IconContext) -> String {
+        let speed = self.speed(ctx.render_options.use_gust_instead_of_wind);
         match speed {
             0..=20 => WindIconName::Wind,
             21..=40 => WindIconName::UmbrellaWind,
@@ -25,8 +24,8 @@ impl Icon for Wind {
 /// If `use_moon_phase_instead_of_clear_night` is enabled and the icon represents
 /// a clear night, replaces it with the current moon phase icon.
 /// only relevant for hourly forecasts, as daily forecasts always use day icons.
-fn apply_moon_phase_override(icon: String, is_night: bool) -> String {
-    if !is_night || !CONFIG.render_options.use_moon_phase_instead_of_clear_night {
+fn apply_moon_phase_override(icon: String, is_night: bool, ctx: &IconContext) -> String {
+    if !is_night || !ctx.render_options.use_moon_phase_instead_of_clear_night {
         return icon;
     }
 
@@ -34,7 +33,7 @@ fn apply_moon_phase_override(icon: String, is_night: bool) -> String {
 
     if icon.ends_with(&clear_night_suffix) {
         logger::detail("Using moon phase icon instead of clear night");
-        moon_phase_icon_name().to_string()
+        moon_phase_icon_name(ctx.today).to_string()
     } else {
         icon
     }
@@ -145,9 +144,9 @@ fn apply_precipitation_override(
 }
 
 impl Icon for DailyForecast {
-    fn icon_name(&self) -> String {
+    fn icon_name(&self, ctx: &IconContext) -> String {
         // Priority 1: Use WMO weather code if available (most accurate)
-        let fallback_reason = if CONFIG.render_options.prefer_weather_codes {
+        let fallback_reason = if ctx.render_options.prefer_weather_codes {
             match self.weather_code {
                 Some(Ok(wmo_code)) => {
                     logger::debug("DailyForecast: Using WMO weather code for icon selection");
@@ -188,14 +187,14 @@ impl Icon for DailyForecast {
 }
 
 impl Icon for HourlyForecast {
-    fn icon_name(&self) -> String {
+    fn icon_name(&self, ctx: &IconContext) -> String {
         // Priority 1: Use WMO weather code if available (most accurate)
-        let fallback_reason = if CONFIG.render_options.prefer_weather_codes {
+        let fallback_reason = if ctx.render_options.prefer_weather_codes {
             match self.weather_code {
                 Some(Ok(wmo_code)) => {
                     logger::debug("HourlyForecast: Using WMO weather code for icon selection");
                     let icon = wmo_code.icon_name(self.is_night);
-                    return apply_moon_phase_override(icon, self.is_night);
+                    return apply_moon_phase_override(icon, self.is_night, ctx);
                 }
                 Some(Err(code)) => format!("unknown WMO code ({code})"),
                 None => "no WMO code available".to_string(),
@@ -228,6 +227,6 @@ impl Icon for HourlyForecast {
         let suffix = amount_name.map(|k| k.to_string()).unwrap_or_default();
 
         let icon = format!("{cloud_name}{day_night}{suffix}.svg");
-        apply_moon_phase_override(icon, self.is_night)
+        apply_moon_phase_override(icon, self.is_night, ctx)
     }
 }

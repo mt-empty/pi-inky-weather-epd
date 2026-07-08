@@ -22,11 +22,10 @@ pub enum MoonPhaseIconName {
     WaningCrescent,
 }
 
-pub fn moon_phase_icon_name() -> MoonPhaseIconName {
-    let now = chrono::Local::now();
-    let year = now.year();
-    let month = now.month();
-    let day = now.day();
+pub fn moon_phase_icon_name(today: chrono::NaiveDate) -> MoonPhaseIconName {
+    let year = today.year();
+    let month = today.month();
+    let day = today.day();
 
     // Calculate the approximate age of the moon in days since the last new moon
     let mut moon_age_days = ((year as f32 - 2000.0) * 365.25 + month as f32 * 30.6 + day as f32
@@ -46,5 +45,20 @@ pub fn moon_phase_icon_name() -> MoonPhaseIconName {
         age if age < 20.30228 => MoonPhaseIconName::WaningGibbous,
         age if age < 23.99361 => MoonPhaseIconName::LastQuarter,
         _ => MoonPhaseIconName::WaningCrescent,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn moon_phase_changes_across_half_a_lunar_cycle() {
+        let early = chrono::NaiveDate::from_ymd_opt(2024, 6, 1).unwrap();
+        let half_cycle_later = chrono::NaiveDate::from_ymd_opt(2024, 6, 16).unwrap();
+        assert_ne!(
+            moon_phase_icon_name(early).to_string(),
+            moon_phase_icon_name(half_cycle_later).to_string()
+        );
     }
 }

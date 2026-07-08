@@ -175,10 +175,10 @@ All 36 icons referenced by `weather_code.rs` are now e-ink adapted.
 
 ```bash
 # Validate all icon filenames referenced in code exist on disk
-RUN_MODE=test cargo test --test icon_name_validation_test
+cargo test --test icon_name_validation_test
 
 # Run snapshot tests and review SVG output
-RUN_MODE=test cargo test --test snapshot_provider_test
+cargo test --test snapshot_provider_test
 cargo insta review
 
 # Visual inspection with VS Code SVG preview (dark background)

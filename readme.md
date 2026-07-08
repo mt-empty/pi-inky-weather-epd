@@ -260,11 +260,12 @@ Before submitting, please make sure the following is done:
 ### Running Tests
 
 ```bash
-# Run all tests with default open-meteo config
-RUN_MODE=test cargo test
+# Run all tests — covers both providers and all render options in one pass,
+# fully in parallel; each test builds its own settings value (see tests/helpers)
+cargo test
 
-# Test BOM API specifically
-RUN_MODE=test APP_API__PROVIDER=bom cargo test --test snapshot_provider_test snapshot_bom_dashboard -- --ignored
+# Run only the BOM dashboard snapshot test
+cargo test --test snapshot_provider_test snapshot_bom_dashboard
 
 # Review snapshot changes (uses insta crate)
 cargo insta review

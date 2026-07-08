@@ -1,6 +1,6 @@
 use crate::clock::Clock;
+use crate::configs::settings::DashboardSettings;
 use crate::logger;
-use crate::CONFIG;
 use anyhow::{Context, Error, Result};
 use chrono::{DateTime, Duration, Utc};
 use semver::Version;
@@ -49,16 +49,16 @@ pub struct UpdateService {
 }
 
 impl UpdateService {
-    pub fn new() -> Result<Self> {
+    pub fn new(settings: &DashboardSettings) -> Result<Self> {
         let current_version = Version::parse(env!("CARGO_PKG_VERSION"))?;
         Ok(Self {
             client: reqwest::blocking::Client::new(),
             base_dir: base_dir_path()?,
             user_agent: format!("{PACKAGE_NAME}/{current_version}"),
-            release_info_url: CONFIG.release.release_info_url.clone(),
-            download_base_url: CONFIG.release.download_base_url.clone(),
-            update_interval_days: CONFIG.release.update_interval_days.into_inner().into(),
-            allow_pre_release: CONFIG.release.allow_pre_release_version,
+            release_info_url: settings.release.release_info_url.clone(),
+            download_base_url: settings.release.download_base_url.clone(),
+            update_interval_days: settings.release.update_interval_days.into_inner().into(),
+            allow_pre_release: settings.release.allow_pre_release_version,
             current_version,
         })
     }
@@ -289,8 +289,8 @@ fn base_dir_path() -> Result<PathBuf> {
     Ok(base_dir.to_path_buf())
 }
 
-pub fn update_app(clock: &dyn Clock) -> Result<()> {
-    UpdateService::new()?.check_and_update(clock)
+pub fn update_app(settings: &DashboardSettings, clock: &dyn Clock) -> Result<()> {
+    UpdateService::new(settings)?.check_and_update(clock)
 }
 
 pub fn write_update_status(base_dir: &Path, result: &Result<(), Error>) {

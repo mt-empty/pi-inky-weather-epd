@@ -1,15 +1,16 @@
 use crate::{
     clock::Clock,
-    constants::{NOT_AVAILABLE, NOT_AVAILABLE_ICON_PATH},
+    configs::settings::DashboardSettings,
+    constants::{not_available_icon_path, NOT_AVAILABLE},
     dashboard::chart::{GraphDataPath, HourlyForecastGraph},
     domain::models::{DailyForecast, HourlyForecast},
     errors::{DashboardError, Description},
     logger,
     utils::{find_max_item_between_dates, total_between_dates},
-    weather::icons::{HumidityIconName, Icon, SunPositionIconName, UVIndexIcon},
-    CONFIG,
+    weather::icons::{HumidityIconName, Icon, IconContext, SunPositionIconName, UVIndexIcon},
 };
-use chrono::{DateTime, Local, NaiveDate, Timelike, Utc};
+use chrono::{DateTime, NaiveDate, Timelike, Utc};
+use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -105,11 +106,14 @@ pub struct Context {
     pub debug_timezone: String,
 }
 
-impl Default for Context {
-    fn default() -> Self {
-        let not_available_icon_path = NOT_AVAILABLE_ICON_PATH.to_string_lossy().to_string();
-        let colours = CONFIG.colours.clone();
-        let render_options = CONFIG.render_options.clone();
+impl Context {
+    fn new(settings: &DashboardSettings, today: NaiveDate) -> Self {
+        let icon_ctx = IconContext::from_settings(settings, today);
+        let not_available_icon_path = not_available_icon_path(settings)
+            .to_string_lossy()
+            .to_string();
+        let colours = settings.colours.clone();
+        let render_options = settings.render_options.clone();
         let graph_height = "300".to_string();
         let graph_width = "600".to_string();
         Self {
@@ -144,8 +148,8 @@ impl Default for Context {
             current_hour_rain_amount: NOT_AVAILABLE.to_string(),
             sunrise_time: NOT_AVAILABLE.to_string(),
             sunset_time: NOT_AVAILABLE.to_string(),
-            sunset_icon: SunPositionIconName::Sunset.icon_path(),
-            sunrise_icon: SunPositionIconName::Sunrise.icon_path(),
+            sunset_icon: SunPositionIconName::Sunset.icon_path(&icon_ctx),
+            sunrise_icon: SunPositionIconName::Sunrise.icon_path(&icon_ctx),
             graph_height,
             graph_width,
             actual_temp_curve_data: String::new(),
@@ -195,38 +199,38 @@ impl Default for Context {
     }
 }
 
-pub struct ContextBuilder {
+pub struct ContextBuilder<'a> {
+    settings: &'a DashboardSettings,
+    icon_ctx: IconContext<'a>,
     pub context: Context,
     diagnostics: Vec<DashboardError>,
 }
 
-impl Default for ContextBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+impl<'a> ContextBuilder<'a> {
+    pub fn new(settings: &'a DashboardSettings, clock: &dyn Clock) -> Self {
+        let today = clock.now_local(settings.misc.timezone).date_naive();
+        let icon_ctx = IconContext::from_settings(settings, today);
+        let mut context = Context::new(settings, today);
 
-impl ContextBuilder {
-    pub fn new() -> Self {
-        let mut context = Context::default();
-
-        if CONFIG.dev.enable_debug_logs {
+        if settings.dev.enable_debug_logs {
             context.debug_info_visibility = ElementVisibility::Visible.to_string();
             context.debug_version = format!("v{}", env!("CARGO_PKG_VERSION"));
 
-            context.debug_provider = CONFIG.api.provider.to_string();
+            context.debug_provider = settings.api.provider.to_string();
 
             // Location with reduced precision for privacy (1 decimal place ≈ 11km accuracy)
-            let lat = CONFIG.api.latitude.into_inner();
-            let lon = CONFIG.api.longitude.into_inner();
+            let lat = settings.api.latitude.into_inner();
+            let lon = settings.api.longitude.into_inner();
             context.debug_location = format!("{:.1}, {:.1}", lat, lon);
 
             // Timezone offset (e.g., "+11:00" or "-05:00")
-            let now = chrono::Local::now();
+            let now = clock.now_local(settings.misc.timezone);
             context.debug_timezone = now.format("%z").to_string();
         }
 
         Self {
+            settings,
+            icon_ctx,
             context,
             diagnostics: Vec::new(),
         }
@@ -273,7 +277,7 @@ impl ContextBuilder {
                 let y_pos = y_start + (index as i32 * y_offset);
                 format!(
                     r#"<image x="{x_pos}" y="{y_pos}" width="{icon_size}" height="{icon_size}" href="{}"/>"#,
-                    error.icon_path()
+                    error.icon_path(&self.icon_ctx)
                 )
             })
             .collect::<Vec<String>>()
@@ -312,8 +316,12 @@ impl ContextBuilder {
             .and_then(|f| f.temp_max)
             .map_or(NOT_AVAILABLE.to_string(), |temp| temp.to_string());
         let icon_value = forecast.map_or_else(
-            || NOT_AVAILABLE_ICON_PATH.to_string_lossy().to_string(),
-            |f| f.icon_path(),
+            || {
+                not_available_icon_path(self.settings)
+                    .to_string_lossy()
+                    .to_string()
+            },
+            |f| f.icon_path(&self.icon_ctx),
         );
 
         match day_index {
@@ -374,14 +382,14 @@ impl ContextBuilder {
         clock: &dyn Clock,
     ) -> &mut Self {
         // Get today's local date for comparison
-        let today_local_date = clock.now_local().date_naive();
+        let today_local_date = clock.now_local(self.settings.misc.timezone).date_naive();
 
         logger::detail(format!(
             "Processing daily forecast starting from: {today_local_date}"
         ));
 
         // Pre-populate day names from local calendar (tomorrow through +6 days)
-        self.initialize_day_names(clock.now_local());
+        self.initialize_day_names(clock.now_local(self.settings.misc.timezone));
 
         // Define the 7-day forecast window (today through +6 days)
         let forecast_window = Self::define_daily_forecast_window(today_local_date);
@@ -444,7 +452,7 @@ impl ContextBuilder {
         }
     }
 
-    fn initialize_day_names(&mut self, local_midnight_time: DateTime<Local>) {
+    fn initialize_day_names(&mut self, local_midnight_time: DateTime<Tz>) {
         // Pre-fill day names based on local calendar (independent of forecast data)
         self.context.day2_name = (local_midnight_time + chrono::Duration::days(1))
             .format("%a")
@@ -490,10 +498,10 @@ impl ContextBuilder {
             utc_forecast_window_end.format("%Y-%m-%d %H:%M")
         ));
 
-        let local_forecast_window_start: DateTime<Local> =
-            utc_forecast_window_start.with_timezone(&Local);
-        let local_forecast_window_end: DateTime<Local> =
-            utc_forecast_window_end.with_timezone(&Local);
+        let local_forecast_window_start: DateTime<Tz> =
+            utc_forecast_window_start.with_timezone(&self.settings.misc.timezone);
+        let local_forecast_window_end: DateTime<Tz> =
+            utc_forecast_window_end.with_timezone(&self.settings.misc.timezone);
         let day_end = local_forecast_window_start
             .with_hour(0)
             .unwrap()
@@ -512,8 +520,9 @@ impl ContextBuilder {
         // println!("Day end: {:?}", day_end);
 
         let mut graph = HourlyForecastGraph {
-            x_axis_always_at_min: CONFIG.render_options.x_axis_always_at_min,
-            text_colour: CONFIG.colours.text_colour.to_string(),
+            x_axis_always_at_min: self.settings.render_options.x_axis_always_at_min,
+            text_colour: self.settings.colours.text_colour.to_string(),
+            tz: self.settings.misc.timezone,
             ..Default::default()
         };
 
@@ -561,7 +570,7 @@ impl ContextBuilder {
             &local_forecast_window_start,
             &local_forecast_window_end,
             |item: &HourlyForecast| item.precipitation.amount(),
-            |item| item.time.with_timezone(&Local),
+            |item| item.time.with_timezone(&self.settings.misc.timezone),
         ))
         .to_string();
 
@@ -636,8 +645,8 @@ impl ContextBuilder {
     fn populate_graph_data(
         &mut self,
         hourly_forecast_data: &[HourlyForecast],
-        forecast_window_start: chrono::DateTime<Local>,
-        forecast_window_end: chrono::DateTime<Local>,
+        forecast_window_start: chrono::DateTime<Tz>,
+        forecast_window_end: chrono::DateTime<Tz>,
         graph: &mut HourlyForecastGraph,
         clock: &dyn Clock,
     ) {
@@ -703,11 +712,11 @@ impl ContextBuilder {
         clock: &dyn Clock,
     ) -> &mut Self {
         self.context.current_hour_actual_temp = current_hour.temperature.to_string();
-        self.context.current_hour_weather_icon = current_hour.icon_path();
+        self.context.current_hour_weather_icon = current_hour.icon_path(&self.icon_ctx);
         self.context.current_hour_feels_like = current_hour.apparent_temperature.to_string();
         self.context.current_day_date = clock
-            .now_local()
-            .format(CONFIG.render_options.date_format.as_ref())
+            .now_local(self.settings.misc.timezone)
+            .format(self.settings.render_options.date_format.as_ref())
             .to_string();
         self.context.current_hour_rain_amount = current_hour.precipitation.amount().to_string();
 
@@ -718,25 +727,25 @@ impl ContextBuilder {
         self.context.current_hour_wind_speed = current_hour
             .wind
             .speed_in_unit(
-                CONFIG.render_options.use_gust_instead_of_wind,
-                CONFIG.render_options.wind_speed_unit,
+                self.settings.render_options.use_gust_instead_of_wind,
+                self.settings.render_options.wind_speed_unit,
             )
             .to_string();
-        self.context.current_hour_wind_icon = current_hour.wind.icon_path();
+        self.context.current_hour_wind_icon = current_hour.wind.icon_path(&self.icon_ctx);
         self.context.current_hour_uv_index = current_hour.uv_index.to_string();
         self.context.current_hour_uv_index_icon =
-            UVIndexIcon::from(current_hour.uv_index).icon_path();
+            UVIndexIcon::from(current_hour.uv_index).icon_path(&self.icon_ctx);
         self.context.current_hour_relative_humidity = current_hour.relative_humidity.to_string();
         self.context.current_hour_relative_humidity_icon =
-            HumidityIconName::from(current_hour.relative_humidity).icon_path();
+            HumidityIconName::from(current_hour.relative_humidity).icon_path(&self.icon_ctx);
     }
 
     fn set_max_values_for_table(
         &mut self,
         hourly_forecast_data: &[HourlyForecast],
-        forecast_window_start: chrono::DateTime<Local>,
-        day_end: chrono::DateTime<Local>,
-        forecast_window_end: chrono::DateTime<Local>,
+        forecast_window_start: chrono::DateTime<Tz>,
+        day_end: chrono::DateTime<Tz>,
+        forecast_window_end: chrono::DateTime<Tz>,
     ) {
         logger::detail("Calculating Max24h values for table");
         let today_duration = day_end
@@ -761,7 +770,8 @@ impl ContextBuilder {
 
         macro_rules! max_in_today_and_tomorrow {
             ($get_value:expr) => {{
-                let get_time = |item: &HourlyForecast| item.time.with_timezone(&Local);
+                let get_time =
+                    |item: &HourlyForecast| item.time.with_timezone(&self.settings.misc.timezone);
                 let max_today = find_max_item_between_dates(
                     hourly_forecast_data,
                     &forecast_window_start,
@@ -782,16 +792,16 @@ impl ContextBuilder {
 
         let (max_wind_today, max_wind_tomorrow) = max_in_today_and_tomorrow!(|item| item
             .wind
-            .speed(CONFIG.render_options.use_gust_instead_of_wind));
+            .speed(self.settings.render_options.use_gust_instead_of_wind));
 
         // Convert wind speed to configured unit
         let max_wind_today_converted = crate::domain::models::Wind::convert_speed(
             max_wind_today,
-            CONFIG.render_options.wind_speed_unit,
+            self.settings.render_options.wind_speed_unit,
         );
         let max_wind_tomorrow_converted = crate::domain::models::Wind::convert_speed(
             max_wind_tomorrow,
-            CONFIG.render_options.wind_speed_unit,
+            self.settings.render_options.wind_speed_unit,
         );
 
         if max_wind_today > max_wind_tomorrow {

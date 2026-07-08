@@ -5,14 +5,13 @@
 mod helpers;
 
 use chrono::{NaiveDate, NaiveDateTime, TimeZone, Utc};
-use helpers::test_utils::EnvVarGuard;
+use helpers::test_utils;
 use pi_inky_weather_epd::{
     clock::FixedClock,
     configs::settings::TemperatureUnit,
     dashboard::context::ContextBuilder,
     domain::models::{Astronomical, DailyForecast, Precipitation, Temperature},
 };
-use serial_test::serial;
 
 /// Helper to create a Temperature in Celsius
 fn temp_c(value: f32) -> Temperature {
@@ -22,10 +21,11 @@ fn temp_c(value: f32) -> Temperature {
 /// Test with_daily_forecast_data in New York timezone (EST, UTC-5)
 /// Current time: Dec 17, 2025 at 10:00 AM EST
 #[test]
-#[serial]
 fn test_with_daily_forecast_data_new_york_est() {
-    // Set timezone to New York
-    let _tz_guard = EnvVarGuard::new("TZ", "America/New_York");
+    // Render in New York time
+    let settings = test_utils::test_settings(|settings| {
+        settings.misc.timezone = chrono_tz::America::New_York;
+    });
 
     // Fixed clock: Dec 17, 2025 at 10:00 AM EST (15:00 UTC)
     let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 12, 17, 15, 0, 0).unwrap());
@@ -109,7 +109,7 @@ fn test_with_daily_forecast_data_new_york_est() {
         },
     ];
 
-    let mut builder = ContextBuilder::new();
+    let mut builder = ContextBuilder::new(&settings, &clock);
     builder.with_daily_forecast_data(daily_forecasts, &clock);
 
     let context = builder.context;
@@ -154,9 +154,10 @@ fn test_with_daily_forecast_data_new_york_est() {
 
 /// Test that noon UTC timestamps don't cause date shifts in EST
 #[test]
-#[serial]
 fn test_noon_utc_prevents_date_shift_in_est() {
-    let _tz_guard = EnvVarGuard::new("TZ", "America/New_York");
+    let settings = test_utils::test_settings(|settings| {
+        settings.misc.timezone = chrono_tz::America::New_York;
+    });
 
     // Fixed clock: Dec 17, 2025 at 2:00 AM EST (early morning)
     let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 12, 17, 7, 0, 0).unwrap());
@@ -229,7 +230,7 @@ fn test_noon_utc_prevents_date_shift_in_est() {
         },
     ];
 
-    let mut builder = ContextBuilder::new();
+    let mut builder = ContextBuilder::new(&settings, &clock);
     builder.with_daily_forecast_data(daily_forecasts, &clock);
 
     let context = builder.context;
@@ -246,9 +247,10 @@ fn test_noon_utc_prevents_date_shift_in_est() {
 
 /// Test that dates before today are correctly skipped
 #[test]
-#[serial]
 fn test_skips_past_dates() {
-    let _tz_guard = EnvVarGuard::new("TZ", "America/New_York");
+    let settings = test_utils::test_settings(|settings| {
+        settings.misc.timezone = chrono_tz::America::New_York;
+    });
 
     // Fixed clock: Dec 19, 2025 at 10:00 AM EST
     let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 12, 19, 15, 0, 0).unwrap());
@@ -338,7 +340,7 @@ fn test_skips_past_dates() {
         },
     ];
 
-    let mut builder = ContextBuilder::new();
+    let mut builder = ContextBuilder::new(&settings, &clock);
     builder.with_daily_forecast_data(daily_forecasts, &clock);
 
     let context = builder.context;

@@ -23,7 +23,7 @@ You are a specialist for snapshot maintenance in this repository.
 ## Approach
 
 1. Identify the relevant snapshot test file and command.
-2. Execute tests with RUN_MODE=test and any required provider overrides.
+2. Execute tests with plain `cargo test` (each test builds its own settings value covering providers and render options).
 3. If snapshots changed, run cargo insta review workflow and capture key diffs.
 4. Report likely intentional changes vs suspicious regressions.
 5. Ask for explicit confirmation before any acceptance-style action.

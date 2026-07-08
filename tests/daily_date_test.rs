@@ -1,6 +1,8 @@
 /// Test to verify that daily forecast dates are correctly mapped to day names
 ///
 /// This test ensures that the date-to-day-name conversion works correctly for both providers
+mod helpers;
+
 use chrono::{Datelike, Weekday};
 use pi_inky_weather_epd::apis::open_meteo::models::OpenMeteoDailyResponse;
 
