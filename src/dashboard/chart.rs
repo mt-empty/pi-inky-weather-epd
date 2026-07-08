@@ -208,10 +208,9 @@ fn generate_unified_precipitation_svg(
     let mut gradient_stops = String::new();
     for block in blocks.iter() {
         let offset = (block.x_start - x_start) / x_range * 100.0;
-        let colour = if block.pattern == "snow" {
-            snow_colour
-        } else {
-            rain_colour
+        let colour = match &block.pattern {
+            PrecipitationPattern::Snow => snow_colour,
+            PrecipitationPattern::Rain => rain_colour,
         };
         let stop_opacity = 0.25 + (block.chance / 100.0) * 0.20;
         gradient_stops.push_str(&format!(
@@ -219,10 +218,9 @@ fn generate_unified_precipitation_svg(
         ));
     }
     if let Some(last) = blocks.last() {
-        let colour = if last.pattern == "snow" {
-            snow_colour
-        } else {
-            rain_colour
+        let colour = match &last.pattern {
+            PrecipitationPattern::Snow => snow_colour,
+            PrecipitationPattern::Rain => rain_colour,
         };
         let stop_opacity = 0.25 + (last.chance / 100.0) * 0.20;
         gradient_stops.push_str(&format!(
@@ -240,7 +238,11 @@ fn generate_unified_precipitation_svg(
         if block.chance == 0.0 || block.max_height == 0.0 {
             continue;
         }
-        let is_snow = block.pattern == "snow";
+        let is_snow = match &block.pattern {
+            PrecipitationPattern::Snow => true,
+            PrecipitationPattern::Rain => false,
+        };
+
         let width = block.x_end - block.x_start;
 
         let (density_div, max_count) = if is_snow { (150.0, 25) } else { (80.0, 30) };
