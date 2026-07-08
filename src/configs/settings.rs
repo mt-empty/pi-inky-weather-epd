@@ -304,12 +304,21 @@ impl DashboardSettings {
 
         if include_user_and_env {
             // user config path is located at ~/.config/pi-inky-weather-epd.toml
-            let home_dir = env::var("HOME").unwrap();
-            let user_config_path = std::path::PathBuf::from(&home_dir)
-                .join(".config")
-                .join(env!("CARGO_PKG_NAME"));
-            config_builder = config_builder
-                .add_source(File::with_name(user_config_path.to_str().unwrap()).required(false));
+            match env::var("HOME") {
+                Ok(home_dir) => {
+                    let user_config_path = std::path::PathBuf::from(&home_dir)
+                        .join(".config")
+                        .join(env!("CARGO_PKG_NAME"));
+                    config_builder = config_builder.add_source(
+                        File::with_name(user_config_path.to_str().unwrap()).required(false),
+                    );
+                }
+                Err(_) => {
+                    crate::logger::warning(
+                        "HOME environment variable not set; skipping user config file (~/.config/...)",
+                    );
+                }
+            }
         }
 
         config_builder = match layer {
