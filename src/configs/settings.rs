@@ -189,6 +189,12 @@ pub struct Misc {
     pub svg_icons_directory: PathBuf,
 }
 
+#[nutype(
+    validate(greater_or_equal = 0.0, less_or_equal = 1.0),
+    derive(Debug, Deserialize, Clone, Copy)
+)]
+pub struct Opacity(f32);
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct RenderOptions {
     pub temp_unit: TemperatureUnit,
@@ -198,6 +204,10 @@ pub struct RenderOptions {
     pub x_axis_always_at_min: bool,
     pub use_gust_instead_of_wind: bool,
     pub prefer_weather_codes: bool,
+    /// Gradient fill opacity at 0% precipitation chance. Must be < precipitation_opacity_max.
+    pub precipitation_opacity_min: Opacity,
+    /// Gradient fill opacity at 100% precipitation chance. Must be > precipitation_opacity_min.
+    pub precipitation_opacity_max: Opacity,
 }
 
 #[derive(Debug, Deserialize)]
@@ -375,6 +385,13 @@ impl DashboardSettings {
                 s.release.allow_pre_release_version,
             ) {
                 return Err(ConfigError::Message(msg));
+            }
+            let omin = s.render_options.precipitation_opacity_min.into_inner();
+            let omax = s.render_options.precipitation_opacity_max.into_inner();
+            if omin >= omax {
+                return Err(ConfigError::Message(format!(
+                    "precipitation_opacity_min ({omin}) must be less than precipitation_opacity_max ({omax})"
+                )));
             }
         }
 

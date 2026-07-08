@@ -52,7 +52,6 @@ impl fmt::Display for PrecipitationPattern {
 pub struct PrecipitationBlock {
     pub path: String,
     pub pattern: PrecipitationPattern,
-    pub opacity: &'static str,
     pub x_start: f32,
     pub x_end: f32,
     pub height_left: f32,
@@ -181,18 +180,20 @@ fn lcg_next(seed: u64) -> u64 {
 
 /// Builds one unified SVG fragment for all precipitation blocks (rain and snow mixed):
 /// - one `<clipPath>` covering every block regardless of type
-/// - one `<linearGradient>` whose stop-colour and stop-opacity vary per hour
-///   (rain_colour for rain hours, snow_colour for snow hours; opacity = chance/100 * 0.35)
+/// - one `<linearGradient>` whose stop-colour varies per hour at a fixed 35% opacity
+///   (rain_colour for rain hours, snow_colour for snow hours)
 /// - a single LCG placement pass with a shared `placed` list so the seed never
 ///   resets at block boundaries; glyph type is chosen per block from `pattern`
 ///
 /// Separation uses the larger snowflake threshold whenever either the new or an
 /// existing glyph is a snowflake, keeping glyphs of different types from colliding.
-fn generate_unified_precipitation_svg(
+pub(crate) fn generate_unified_precipitation_svg(
     blocks: &[PrecipitationBlock],
     rain_colour: &str,
     snow_colour: &str,
     graph_height: f32,
+    opacity_min: f32,
+    opacity_max: f32,
 ) -> String {
     let x_start = blocks.first().map(|b| b.x_start).unwrap_or(0.0);
     let x_end = blocks.last().map(|b| b.x_end).unwrap_or(0.0);
@@ -212,7 +213,7 @@ fn generate_unified_precipitation_svg(
             PrecipitationPattern::Snow => snow_colour,
             PrecipitationPattern::Rain => rain_colour,
         };
-        let stop_opacity = 0.25 + (block.chance / 100.0) * 0.20;
+        let stop_opacity = opacity_min + (block.chance / 100.0) * (opacity_max - opacity_min);
         gradient_stops.push_str(&format!(
             r#"<stop offset="{offset:.2}%" stop-color="{colour}" stop-opacity="{stop_opacity:.3}"/>"#
         ));
@@ -222,7 +223,7 @@ fn generate_unified_precipitation_svg(
             PrecipitationPattern::Snow => snow_colour,
             PrecipitationPattern::Rain => rain_colour,
         };
-        let stop_opacity = 0.25 + (last.chance / 100.0) * 0.20;
+        let stop_opacity = opacity_min + (last.chance / 100.0) * (opacity_max - opacity_min);
         gradient_stops.push_str(&format!(
             r#"<stop offset="100%" stop-color="{colour}" stop-opacity="{stop_opacity:.3}"/>"#
         ));
@@ -725,27 +726,6 @@ impl HourlyForecastGraph {
         }
     }
 
-    fn select_opacity(chance: f32, _is_snow: bool) -> &'static str {
-        if chance >= 50.0 {
-            "35%"
-        } else {
-            "25%"
-        }
-    }
-
-    /// Generate SVG for all precipitation blocks in one unified layer.
-    pub fn generate_precipitation_pattern_svg(
-        blocks: &[PrecipitationBlock],
-        rain_colour: &str,
-        snow_colour: &str,
-        graph_height: f32,
-    ) -> String {
-        if blocks.is_empty() {
-            return String::new();
-        }
-        generate_unified_precipitation_svg(blocks, rain_colour, snow_colour, graph_height)
-    }
-
     pub fn draw_graph(&mut self) -> Result<Vec<GraphDataPath>, Error> {
         // Calculate the minimum and maximum x values from the points
         let mut data_path = vec![];
@@ -805,7 +785,6 @@ impl HourlyForecastGraph {
                         let precip_chance = precipitation_data.points[i].chance;
                         let is_snow = precipitation_data.points[i].is_primarily_snow;
                         let pattern = Self::select_precipitation_pattern(precip_chance, is_snow);
-                        let opacity = Self::select_opacity(precip_chance, is_snow);
 
                         // Interpolated block: top-left -> bottom-left -> bottom-right -> top-right
                         // Bottom edge tapers from current.y to next.y, smoothly blending between hours.
@@ -817,7 +796,6 @@ impl HourlyForecastGraph {
                         blocks.push(PrecipitationBlock {
                             path: block_path,
                             pattern,
-                            opacity,
                             x_start: current.x,
                             x_end: next.x,
                             height_left: current.y,

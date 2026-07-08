@@ -14,7 +14,7 @@ use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::chart::{CurveType, ElementVisibility, FontStyle};
+use super::chart::{generate_unified_precipitation_svg, CurveType, ElementVisibility, FontStyle};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Context {
@@ -541,6 +541,14 @@ impl<'a> ContextBuilder<'a> {
             &self.context.rain_colour,
             &self.context.snow_colour,
             graph.height,
+            self.settings
+                .render_options
+                .precipitation_opacity_min
+                .into_inner(),
+            self.settings
+                .render_options
+                .precipitation_opacity_max
+                .into_inner(),
         );
         self.context.graph_height = graph.height.to_string();
         self.context.graph_width = graph.width.to_string();
@@ -632,6 +640,8 @@ impl<'a> ContextBuilder<'a> {
         rain_colour: &str,
         snow_colour: &str,
         graph_height: f32,
+        opacity_min: f32,
+        opacity_max: f32,
     ) -> (String, String, String) {
         svg_result.iter().fold(
             (String::new(), String::new(), String::new()),
@@ -640,14 +650,14 @@ impl<'a> ContextBuilder<'a> {
                     GraphDataPath::Temp(data) => temp_acc.push_str(data),
                     GraphDataPath::TempFeelLike(data) => feel_like_acc.push_str(data),
                     GraphDataPath::Precipitation(blocks) => {
-                        rain_acc.push_str(
-                            &HourlyForecastGraph::generate_precipitation_pattern_svg(
-                                blocks,
-                                rain_colour,
-                                snow_colour,
-                                graph_height,
-                            ),
-                        );
+                        rain_acc.push_str(&generate_unified_precipitation_svg(
+                            blocks,
+                            rain_colour,
+                            snow_colour,
+                            graph_height,
+                            opacity_min,
+                            opacity_max,
+                        ));
                     }
                 }
                 (temp_acc, feel_like_acc, rain_acc)

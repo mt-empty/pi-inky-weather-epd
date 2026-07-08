@@ -245,10 +245,10 @@
         {y_right_labels}
         <!-- temp curve -->
         <path stroke="{actual_temp_colour}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
-            d="{actual_temp_curve_data}" stroke-width="3.0" fill="none" />
+            d="{actual_temp_curve_data}" stroke-width="4.0" fill="none" />
         <!-- feels like temp curve -->
-        <path stroke="{feels_like_colour}" stroke-linejoin="round" stroke-dasharray="5,5"
-            transform="translate(0, 300) scale(1, -1)" d="{feel_like_curve_data}" stroke-width="3.0" fill="none" />
+        <path stroke="{feels_like_colour}" stroke-linejoin="round" stroke-dasharray="12,5"
+            transform="translate(0, 300) scale(1, -1)" d="{feel_like_curve_data}" stroke-width="4.0" fill="none" />
         <defs>
             <linearGradient id="UVGradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%">
                 {uv_gradient}
