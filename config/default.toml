@@ -25,8 +25,8 @@ y_left_axis_colour = "red"    # Temperature axis
 y_right_axis_colour = "blue"  # Rain scale
 actual_temp_colour = "red"
 feels_like_colour = "green"
-rain_colour = "blue"
-snow_colour = "blue"
+rain_colour = "blue"    # Fill colour of the rain forecast area; rain drops are always white
+snow_colour = "blue"    # Fill colour of the snow forecast area; snowflakes are always white
 
 ## Dark Mode Example
 # background_colour   = "black"    # solid black – no dithering
