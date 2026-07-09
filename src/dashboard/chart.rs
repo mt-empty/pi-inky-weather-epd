@@ -180,8 +180,8 @@ fn lcg_next(seed: u64) -> u64 {
 
 /// Builds one unified SVG fragment for all precipitation blocks (rain and snow mixed):
 /// - one `<clipPath>` covering every block regardless of type
-/// - one `<linearGradient>` whose stop-colour varies per hour at a fixed 35% opacity
-///   (rain_colour for rain hours, snow_colour for snow hours)
+/// - one `<linearGradient>` whose stop-colour and stop-opacity vary per block
+///   (rain_colour/snow_colour, opacity scaled between opacity_min and opacity_max by chance)
 /// - a single LCG placement pass with a shared `placed` list so the seed never
 ///   resets at block boundaries; glyph type is chosen per block from `pattern`
 ///
@@ -213,7 +213,8 @@ pub(crate) fn generate_unified_precipitation_svg(
             PrecipitationPattern::Snow => snow_colour,
             PrecipitationPattern::Rain => rain_colour,
         };
-        let stop_opacity = opacity_min + (block.chance / 100.0) * (opacity_max - opacity_min);
+        let stop_opacity =
+            (opacity_min + (block.chance / 100.0) * (opacity_max - opacity_min)).clamp(0.0, 1.0);
         gradient_stops.push_str(&format!(
             r#"<stop offset="{offset:.2}%" stop-color="{colour}" stop-opacity="{stop_opacity:.3}"/>"#
         ));
@@ -223,7 +224,8 @@ pub(crate) fn generate_unified_precipitation_svg(
             PrecipitationPattern::Snow => snow_colour,
             PrecipitationPattern::Rain => rain_colour,
         };
-        let stop_opacity = opacity_min + (last.chance / 100.0) * (opacity_max - opacity_min);
+        let stop_opacity =
+            (opacity_min + (last.chance / 100.0) * (opacity_max - opacity_min)).clamp(0.0, 1.0);
         gradient_stops.push_str(&format!(
             r#"<stop offset="100%" stop-color="{colour}" stop-opacity="{stop_opacity:.3}"/>"#
         ));
