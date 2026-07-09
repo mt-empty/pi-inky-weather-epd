@@ -2,15 +2,80 @@
 
 This document records the exact commands used to generate the high-quality timelapse GIF with optimal Bayer dithering.
 
+## Quick Start
+
+`scripts/generate-timelapse-gif.sh` wraps everything below (frame generation
++ palette + Bayer-dithered encode) into one command. It checks for `ffmpeg`
+up front and exits with install instructions if it's missing.
+
+```bash
+cargo build --features cli
+
+# Uses your configured location:
+./scripts/generate-timelapse-gif.sh
+
+# Or target any location for this run only ("lat,lon"):
+./scripts/generate-timelapse-gif.sh "-41.244772,-71.015625"
+
+# Full signature: [location] [date] [start_hour] [timezone] [output_gif]
+./scripts/generate-timelapse-gif.sh "-41.244772,-71.015625" 2025-12-26 6 "America/Argentina/Buenos_Aires"
+```
+
+Output: `simulation_output/timelapse.gif`. Promote it to the tracked GIF with
+`mv simulation_output/timelapse.gif misc/timelapse.gif` once you're happy
+with it.
+
+The rest of this document explains what the script does and why, and covers
+the manual/cron alternative.
+
 ## Final Working Commands
 
 The following commands produced the best quality GIF (`timelapse.gif`) with Bayer dithering:
 
-### Step 1: Save the generated PNG files to `/workspaces/inky-weather-display/arch_png/`
+### Step 1: Generate the PNG frames
 
-Use a cron job to save the dashboard.png in that directory with filenames like `dashboard_YYYYMMDD_HH.png` for proper chronological ordering.
+Two ways to get chronologically-ordered `dashboard_*.png` frames:
 
-Then use this script to convert SVGs to PNGs:
+**Option A — `simulate` (recommended, fast, no cron needed)**
+
+Fetches real weather data once, then renders every hour of the forecast
+window from that single cached fetch — a full 24-hour set of frames in a
+few seconds. Also works for any lat/lon, not just your configured location
+(see `readme.md`'s "Dashboard Simulation" section for the underlying flags):
+
+```bash
+cargo build --features cli
+
+# Optionally target a different location for this run only:
+APP_API__PROVIDER=open_meteo \
+APP_API__LATITUDE=-41.877741 \
+APP_API__LONGITUDE=-70.356445 \
+./scripts/simulate-24h.sh "$(date -u +%Y-%m-%d)" "$(date -u +%H)" "America/Argentina/Buenos_Aires"
+```
+
+The script renders each frame's PNG itself (`APP_DEV__DISABLE_PNG_OUTPUT=false`)
+immediately after each `simulate` call, while `dashboard.svg` still has its
+original repo-root-relative icon paths (`static/...`) — that's required for
+icons to actually appear in the PNG. **Don't** post-process the SVGs under
+`simulation_output/*.svg` with `render-svg` after the fact: those copies have
+already had their icon paths rewritten to `../static/...` for browser
+viewing only, so converting them produces PNGs with all icons silently
+missing.
+
+Frames land in `simulation_output/png/`; use that directory in place of
+`arch_png/` in Steps 2-4 below. Note `simulate-24h.sh` can only cover the
+real forecast window (today plus the next several days) — it can't
+fabricate historical or far-future data.
+
+**Option B — cron job (real-time capture, slow)**
+
+Use a cron job to save `dashboard.png` to
+`/workspaces/inky-weather-display/arch_png/` with filenames like
+`dashboard_YYYYMMDD_HH.png` for proper chronological ordering, run over
+real time (e.g. hourly for a day).
+
+If you're converting pre-saved SVGs instead of PNGs directly, use this
+script:
 ```bash
 for file in arch_svg/*.svg; do
     filename=$(basename "$file" .svg)
@@ -21,8 +86,10 @@ done
 ```
 
 ### Step 2: Generate Optimized Palette
+
+`cd` into whichever frame directory Step 1 produced — `simulation_output/png`
+for Option A, or `arch_png` for Option B — then:
 ```bash
-cd /workspaces/inky-weather-display/arch_png
 ffmpeg -framerate 3 -pattern_type glob -i 'dashboard_*.png' -vf "palettegen=max_colors=256:stats_mode=full" -y palette_corrected.png
 ```
 

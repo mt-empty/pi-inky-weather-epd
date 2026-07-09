@@ -95,19 +95,30 @@ for hour in $(seq "$START_HOUR" $((START_HOUR + 23))); do
 
     echo -e "${BLUE}  [${hour_formatted}] ${timestamp}${NC}"
 
-    # Run the application with simulated time
-    # Redirect stdout to capture only the generated SVG
-    if APP_DEV__DISABLE_WEATHER_API_REQUESTS=true ./target/debug/pi-inky-weather-epd simulate "$timestamp" > /dev/null 2>&1; then
+    # Run the application with simulated time. PNG output must be enabled
+    # here (not left to a later render-svg pass) because icon hrefs in the
+    # SVG are relative to the repo root ("static/...") and only resolve
+    # correctly while dashboard.png is generated from the pristine
+    # dashboard.svg at repo root, before it's copied into $OUTPUT_DIR below.
+    # Redirect stdout to capture only the generated SVG/PNG
+    if APP_DEV__DISABLE_WEATHER_API_REQUESTS=true APP_DEV__DISABLE_PNG_OUTPUT=false ./target/debug/pi-inky-weather-epd simulate "$timestamp" > /dev/null 2>&1; then
         # Copy the generated dashboard.svg to the timestamped file
         if [ -f "dashboard.svg" ]; then
             cp "dashboard.svg" "$output_file"
-            # cp "dashboard.png" "${output_file%.svg}.png"
             # Fix icon paths for correct relative path from simulation_output/ directory
+            # (only needed for viewing the SVG directly in a browser; the PNG
+            # below is already rendered correctly)
             sed -i 's|"static/|"../static/|g' "$output_file"
             sed -i "s|'static/|'../static/|g" "$output_file"
             echo -e "${GREEN}       [OK] Generated: $output_file${NC}"
         else
             echo -e "${RED}       [FAIL] dashboard.svg not found${NC}"
+        fi
+        if [ -f "dashboard.png" ]; then
+            mkdir -p "${OUTPUT_DIR}/png"
+            cp "dashboard.png" "${OUTPUT_DIR}/png/dashboard_${current_date}_${hour_formatted}00.png"
+        else
+            echo -e "${RED}       [FAIL] dashboard.png not found${NC}"
         fi
     else
         echo -e "${RED}       [FAIL] Failed to generate dashboard${NC}"
@@ -124,6 +135,7 @@ echo -e "${BLUE}Total dashboards: 24${NC}"
 echo ""
 echo -e "${YELLOW}Tips:${NC}"
 echo -e "  - View SVGs: open ${OUTPUT_DIR}/dashboard_*.svg"
+echo -e "  - PNGs (with icons rendered) are in: ${OUTPUT_DIR}/png/"
 echo -e "  - Create GIF: See misc/gif-generation-commands.md"
 echo -e "  - Clean up: rm -rf ${OUTPUT_DIR}"
 echo ""

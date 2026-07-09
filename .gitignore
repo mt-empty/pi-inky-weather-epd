@@ -34,3 +34,4 @@ tests/output/*
 comparison_output
 *inky*.log
 **/icon-preview-*.svg
+simulation_output/

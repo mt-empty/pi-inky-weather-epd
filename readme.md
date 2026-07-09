@@ -291,7 +291,11 @@ cargo build --features cli
 **How it works:**
 - Automatically fetches fresh weather data before simulation base on your current config
 - Generates 24 hourly dashboards using consistent cached data
-- Output saved to `simulation_output/` directory
+- Output saved to `simulation_output/` directory, including rendered PNGs in `simulation_output/png/`
+
+To turn that 24-hour set straight into a timelapse GIF (optionally for a
+different location), see `./scripts/generate-timelapse-gif.sh` in
+`misc/gif-generation-commands.md`.
 
 
 ### Cross-Compilation for Target Release
