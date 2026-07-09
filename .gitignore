@@ -35,3 +35,4 @@ comparison_output
 *inky*.log
 **/icon-preview-*.svg
 simulation_output/
+!misc/showcase_fixtures/gif/

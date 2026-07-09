@@ -17,6 +17,10 @@ START_DATE="${1:-$DEFAULT_UTC_DATE}"  # Default to current UTC date, can be over
 START_HOUR="${2:-$DEFAULT_UTC_HOUR}"  # Default to current UTC hour (0-23)
 TIMEZONE="${3:-}"                 # Optional IANA timezone (e.g., "America/New_York", "Australia/Melbourne")
                                    # Sets APP_MISC__TIMEZONE; the app no longer reads the TZ env var.
+FIXTURE_DIR="${FIXTURE_DIR:-}"    # Optional: dir with open_meteo_{hourly,daily}_forecast.json.
+                                   # When set, skips the live fetch entirely and simulates
+                                   # against this frozen data instead (deterministic, offline).
+                                   # START_DATE/START_HOUR must fall within the fixture's window.
 
 # Color codes for output
 RED='\033[0;31m'
@@ -57,12 +61,20 @@ if [ -n "$TIMEZONE" ]; then
     echo -e "${BLUE}Timezone set to: $TIMEZONE${NC}"
 fi
 
-# Fetch fresh weather data before simulation
-echo -e "${BLUE}Fetching fresh weather data...${NC}"
-if APP_DEV__DISABLE_WEATHER_API_REQUESTS=false ./target/debug/pi-inky-weather-epd > /dev/null 2>&1; then
-    echo -e "${GREEN}[OK] Weather data cached successfully${NC}"
+if [ -n "$FIXTURE_DIR" ]; then
+    echo -e "${BLUE}Using frozen fixture data from ${FIXTURE_DIR} (no live fetch)${NC}"
+    cache_dir="${APP_MISC__WEATHER_DATA_CACHE_PATH:-./cached_data/}"
+    mkdir -p "$cache_dir"
+    cp "${FIXTURE_DIR}"/*.json "$cache_dir"
+    echo -e "${GREEN}[OK] Fixture data copied to ${cache_dir}${NC}"
 else
-    echo -e "${YELLOW}Warning: Failed to fetch data, will use existing cache if available${NC}"
+    # Fetch fresh weather data before simulation
+    echo -e "${BLUE}Fetching fresh weather data...${NC}"
+    if APP_DEV__DISABLE_WEATHER_API_REQUESTS=false ./target/debug/pi-inky-weather-epd > /dev/null 2>&1; then
+        echo -e "${GREEN}[OK] Weather data cached successfully${NC}"
+    else
+        echo -e "${YELLOW}Warning: Failed to fetch data, will use existing cache if available${NC}"
+    fi
 fi
 echo ""
 

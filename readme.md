@@ -16,7 +16,6 @@
 
 The generation of the image is abstracted away from the hardware, so it can be used on any hardware stack.
 
-Note, the gif and images are a bit outdated, specifically UV icon colour changes depending on the UV gradient.
 
 ## Hardware
 
@@ -294,7 +293,7 @@ cargo build --features cli
 - Output saved to `simulation_output/` directory, including rendered PNGs in `simulation_output/png/`
 
 To turn that 24-hour set straight into a timelapse GIF (optionally for a
-different location), see `./scripts/generate-timelapse-gif.sh` in
+different location, using live API data), see `./scripts/generate-timelapse-gif.sh` in
 `misc/gif-generation-commands.md`.
 
 
