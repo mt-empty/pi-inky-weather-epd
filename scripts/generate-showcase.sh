@@ -54,6 +54,10 @@ echo ""
 export APP_API__PROVIDER=open_meteo
 export APP_API__LATITUDE="$SHOWCASE_LAT"
 export APP_API__LONGITUDE="$SHOWCASE_LON"
+# simulate-24h.sh exports this itself too, but only inside its own child
+# process — the static-screenshot renders below call the binary directly
+# from this script, so it needs its own export of the same value.
+export APP_MISC__TIMEZONE="$SHOWCASE_TZ"
 export FIXTURE_DIR="misc/showcase_fixtures/gif"
 
 ./scripts/simulate-24h.sh "$GIF_DATE" "$GIF_START_HOUR" "$SHOWCASE_TZ"
@@ -80,6 +84,62 @@ ffmpeg -framerate 3 -pattern_type glob -i "$PNG_DIR/dashboard_*.png" \
 echo -e "${GREEN}[OK] GIF saved: misc/timelapse.gif${NC}"
 
 echo ""
+echo -e "${BLUE}=====================================================${NC}"
+echo -e "${BLUE}   Config-Example Screenshots${NC}"
+echo -e "${BLUE}=====================================================${NC}"
+echo ""
+
+CACHE_DIR="${APP_MISC__WEATHER_DATA_CACHE_PATH:-./cached_data/}"
+
+# Renders one simulate frame from a given fixture and copies it to
+# misc/<output_name>, with any additional APP_* env overrides applied only
+# for that render (e.g. a render_options/colours toggle being demonstrated).
+render_example() {
+    local fixture_dir="$1"
+    local timestamp="$2"
+    local output_name="$3"
+    shift 3
+
+    mkdir -p "$CACHE_DIR"
+    cp "${fixture_dir}"/*.json "$CACHE_DIR"
+
+    if env "$@" APP_DEV__DISABLE_WEATHER_API_REQUESTS=true APP_DEV__DISABLE_PNG_OUTPUT=false \
+        ./target/debug/pi-inky-weather-epd simulate "$timestamp" > /dev/null 2>&1; then
+        mv dashboard.png "misc/${output_name}"
+        echo -e "${GREEN}[OK] Generated: misc/${output_name}${NC}"
+    else
+        echo -e "${RED}[FAIL] Failed to generate misc/${output_name}${NC}"
+        exit 1
+    fi
+}
+
+# Default configuration — the gif fixture's opening hour (9am, clear),
+# whose forward-looking 24h graph shows the full day/rain/snow narrative.
+render_example "misc/showcase_fixtures/gif" "2025-10-24T22:00:00Z" "dashboard-default.png"
+
+# Moon-phase toggle demo — a clear night hour, explicitly disabling
+# use_moon_phase_instead_of_clear_night so the plain clear-night icon
+# renders instead of a moon-phase icon (matching the filename).
+render_example "misc/showcase_fixtures/moon-phase" "2025-10-25T11:00:00Z" "dashboard-without-moon-phase.png" \
+    APP_RENDER_OPTIONS__USE_MOON_PHASE_INSTEAD_OF_CLEAR_NIGHT=false
+
+# X-axis-at-zero toggle demo — the blizzard hour (-5C), so the fixed
+# zero-line visibly separates from the chart's bottom edge.
+render_example "misc/showcase_fixtures/gif" "2025-10-25T16:00:00Z" "dashboard-x-axis-at-zero.png" \
+    APP_RENDER_OPTIONS__X_AXIS_ALWAYS_AT_MIN=false
+
+# Dark theme demo — same hour as the default shot, colours overridden.
+render_example "misc/showcase_fixtures/gif" "2025-10-24T22:00:00Z" "dashboard-dark.png" \
+    APP_COLOURS__BACKGROUND_COLOUR=black \
+    APP_COLOURS__TEXT_COLOUR=white \
+    APP_COLOURS__X_AXIS_COLOUR=white \
+    APP_COLOURS__Y_LEFT_AXIS_COLOUR=red \
+    APP_COLOURS__Y_RIGHT_AXIS_COLOUR=blue \
+    APP_COLOURS__ACTUAL_TEMP_COLOUR=red \
+    APP_COLOURS__FEELS_LIKE_COLOUR=green \
+    APP_COLOURS__RAIN_COLOUR=blue
+
+echo ""
 echo -e "${GREEN}=====================================================${NC}"
 echo -e "${GREEN}   Done!${NC}"
 echo -e "${GREEN}=====================================================${NC}"
@@ -87,5 +147,5 @@ echo ""
 echo -e "${YELLOW}Tips:${NC}"
 echo -e "  - Preview: open misc/timelapse.gif"
 echo -e "  - Clean up frames: rm -rf simulation_output"
-echo -e "  - Diff against the previous version before committing: git diff --stat misc/timelapse.gif"
+echo -e "  - Diff against the previous version before committing: git diff --stat misc/timelapse.gif misc/dashboard-*.png"
 echo ""

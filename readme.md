@@ -102,7 +102,7 @@ You can override the default configs located at [./config/](./config/) by creati
 
 ### Configuration Examples
 
-Here are example configurations. Note: some of these images are slightly outdated.
+Here are example configurations.
 
 #### Default Configuration
 
