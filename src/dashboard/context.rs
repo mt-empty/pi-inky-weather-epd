@@ -14,7 +14,7 @@ use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::chart::{CurveType, ElementVisibility, FontStyle};
+use super::chart::{generate_unified_precipitation_svg, CurveType, ElementVisibility, FontStyle};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Context {
@@ -536,8 +536,20 @@ impl<'a> ContextBuilder<'a> {
         );
 
         let svg_result = graph.draw_graph().unwrap();
-        let (temp_curve_data, feel_like_curve_data, rain_curve_data) =
-            Self::extract_curve_data(&svg_result);
+        let (temp_curve_data, feel_like_curve_data, rain_curve_data) = Self::extract_curve_data(
+            &svg_result,
+            &self.context.rain_colour,
+            &self.context.snow_colour,
+            graph.height,
+            self.settings
+                .render_options
+                .precipitation_opacity_min
+                .into_inner(),
+            self.settings
+                .render_options
+                .precipitation_opacity_max
+                .into_inner(),
+        );
         self.context.graph_height = graph.height.to_string();
         self.context.graph_width = graph.width.to_string();
         self.context.actual_temp_curve_data = temp_curve_data;
@@ -623,7 +635,14 @@ impl<'a> ContextBuilder<'a> {
         }
     }
 
-    fn extract_curve_data(svg_result: &[GraphDataPath]) -> (String, String, String) {
+    fn extract_curve_data(
+        svg_result: &[GraphDataPath],
+        rain_colour: &str,
+        snow_colour: &str,
+        graph_height: f32,
+        opacity_min: f32,
+        opacity_max: f32,
+    ) -> (String, String, String) {
         svg_result.iter().fold(
             (String::new(), String::new(), String::new()),
             |(mut temp_acc, mut feel_like_acc, mut rain_acc), path| {
@@ -631,10 +650,14 @@ impl<'a> ContextBuilder<'a> {
                     GraphDataPath::Temp(data) => temp_acc.push_str(data),
                     GraphDataPath::TempFeelLike(data) => feel_like_acc.push_str(data),
                     GraphDataPath::Precipitation(blocks) => {
-                        // Convert rain blocks to SVG with per-hour patterns
-                        rain_acc.push_str(
-                            &HourlyForecastGraph::generate_precipitation_pattern_svg(blocks),
-                        );
+                        rain_acc.push_str(&generate_unified_precipitation_svg(
+                            blocks,
+                            rain_colour,
+                            snow_colour,
+                            graph_height,
+                            opacity_min,
+                            opacity_max,
+                        ));
                     }
                 }
                 (temp_acc, feel_like_acc, rain_acc)

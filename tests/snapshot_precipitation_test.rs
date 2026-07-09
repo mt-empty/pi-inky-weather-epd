@@ -1,17 +1,15 @@
-//! Snapshot tests for precipitation pattern rendering
+//! Snapshot tests for precipitation glyph rendering
 //!
-//! These tests verify that the hourly graph correctly renders precipitation blocks
-//! with the right SVG fill pattern (`rain` or `snow`) and the right `fill-opacity`
-//! based on the chance threshold (< 50% → 25%, ≥ 50% → 35%).
+//! These tests verify that the hourly graph correctly renders precipitation using the
+//! unified SVG approach: inline glyphs (circles for snow, capsule paths for rain) placed
+//! via LCG, clipped to a trapezoid per block, and filled with a per-block linear gradient.
 //!
-//! ## Opacity rules
+//! ## Glyph signatures
 //!
-//! | Condition              | Pattern      | fill-opacity |
-//! |------------------------|--------------|--------------|
-//! | Rain, chance < 50%     | `url(#rain)` | 25%          |
-//! | Rain, chance ≥ 50%     | `url(#rain)` | 35%          |
-//! | Snow, chance < 50%     | `url(#snow)` | 25%          |
-//! | Snow, chance ≥ 50%     | `url(#snow)` | 35%          |
+//! | Type | SVG element                          | fill-opacity |
+//! |------|--------------------------------------|--------------|
+//! | Snow | `<circle … fill-opacity="0.85"/>`    | 0.85         |
+//! | Rain | `<path … fill-opacity="0.8" …/>`     | 0.8          |
 //!
 //! ## Running
 //!
@@ -27,25 +25,17 @@ use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injectio
 use std::fs;
 use std::path::Path;
 
-/// Count occurrences of `fill="url(#<pattern>)" fill-opacity="<opacity>"` pairs in SVG.
-/// Matches the exact attribute order produced by `generate_precipitation_pattern_svg`.
-fn count_pattern_opacity(svg: &str, pattern: &str, opacity: &str) -> usize {
-    let needle = format!(r#"fill="url(#{})" fill-opacity="{}""#, pattern, opacity);
-    svg.matches(&needle).count()
-}
-
 /// Snapshot test: snowy conditions in interior Alaska (mid-day)
 ///
 /// **Fixed Time**: Jan 15, 2026, 21:00:00 UTC = Jan 15, 2026, 12:00 PM AKST
 ///
-/// **Fixture design** (`America/Anchorage`, GMT stored, hours 18–47 are snowy):
+/// **Fixture design** (`America/Anchorage`, hours 18–47 UTC are snowy):
 /// - All 24 hours in the forecast window: `snowfall=5cm`, `precipitation=2mm`, chance=85%
 /// - `is_primarily_snow()` = true for all (`5×1.43=7.15 > 2.0×0.6=1.2`)
 ///
 /// **What This Tests**:
-/// - All 24 blocks render `url(#snow)` (not `url(#rain)`)
-/// - All snow blocks are at 35% opacity (chance=85% ≥ 50%)
-/// - No 25% opacity blocks are present (no low-chance rain hours)
+/// - Snow circle glyphs (`fill-opacity="0.85"`) appear in the graph
+/// - Rain drop glyphs (`fill-opacity="0.8"`) are absent
 /// - `{snow_colour}` template variable is substituted
 #[tokio::test]
 async fn snapshot_open_meteo_alaska_snow() {
@@ -76,26 +66,16 @@ async fn snapshot_open_meteo_alaska_snow() {
         let svg = fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
         assert!(!svg.is_empty() && svg.contains("<svg"));
 
-        // All blocks must use the snow pattern
+        // Snow hours must produce circle glyphs (fill-opacity="0.85")
         assert!(
-            svg.contains("url(#snow)"),
-            "Expected url(#snow) in SVG output — is_primarily_snow() returned false for all hours."
-        );
-        assert!(
-            !svg.contains("url(#rain)"),
-            "Expected no url(#rain) in SVG output — all hours should be snow."
+            svg.contains(r#"fill-opacity="0.85""#),
+            "Expected snow circle glyphs (fill-opacity=\"0.85\") in SVG — is_primarily_snow() may have returned false for all hours."
         );
 
-        // All snow blocks must be at 35% opacity (chance=85% ≥ 50% threshold)
-        let snow_35 = count_pattern_opacity(&svg, "snow", "35%");
-        let snow_25 = count_pattern_opacity(&svg, "snow", "25%");
-        assert_eq!(
-            snow_25, 0,
-            "Expected 0 snow blocks at 25% opacity (all have chance=85%), found {snow_25}"
-        );
-        assert_eq!(
-            snow_35, 24,
-            "Expected all 24 snow blocks at 35% opacity (all hours have chance=85%), found {snow_35}"
+        // No rain drop glyphs (fill-opacity="0.8") should appear for an all-snow forecast
+        assert!(
+            !svg.contains(r#"fill-opacity="0.8""#),
+            "Unexpected rain drop glyphs (fill-opacity=\"0.8\") in SVG — all hours should be snow."
         );
 
         // Template variable must be substituted
@@ -112,22 +92,19 @@ async fn snapshot_open_meteo_alaska_snow() {
     insta::assert_snapshot!(svg_content);
 }
 
-/// Snapshot test: mixed precipitation — rain at two opacity levels and snow in one 24h window
+/// Snapshot test: mixed precipitation — rain and snow in one 24h window
 ///
 /// **Fixed Time**: Feb 1, 2026, 00:00:00 UTC (midnight UTC = start of the fixture window)
 ///
 /// **Fixture design** (GMT timezone, hours 0–23):
-/// - h00–h07: chance 10–45%, no snow   → `url(#rain)` at 25% opacity
-/// - h08–h15: chance 50–90%, no snow   → `url(#rain)` at 35% opacity
-/// - h16–h23: chance 85%, 5cm snow     → `url(#snow)` at 35% opacity
+/// - h00–h07: chance 10–45%, no snow   → rain drop glyphs, low-opacity gradient
+/// - h08–h15: chance 50–90%, no snow   → rain drop glyphs, high-opacity gradient
+/// - h16–h23: chance 85%, 5cm snow     → snow circle glyphs
 ///
 /// **What This Tests**:
-/// - Both `url(#rain)` and `url(#snow)` patterns appear
-/// - Low-chance rain blocks (h00–h07) render at 25% opacity
-/// - High-chance rain blocks (h08–h15) render at 35% opacity
-/// - Snow blocks (h16–h23) render at 35% opacity
-/// - Exact block counts match the fixture (8 per category)
-/// - No `url(#heavy-rain)` or other unexpected patterns appear
+/// - Both snow circles (`fill-opacity="0.85"`) and rain drops (`fill-opacity="0.8"`) appear
+/// - No `url(#heavy-rain)` or other unexpected legacy patterns appear
+/// - Template variables are substituted
 #[tokio::test]
 async fn snapshot_open_meteo_mixed_precip() {
     let mock_server = wiremock_setup::setup_open_meteo_mock(
@@ -152,51 +129,25 @@ async fn snapshot_open_meteo_mixed_precip() {
         let svg = fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
         assert!(!svg.is_empty() && svg.contains("<svg"));
 
-        // Both pattern types must be present
+        // Rain hours must produce drop glyphs
         assert!(
-            svg.contains("url(#rain)"),
-            "Expected url(#rain) in SVG output but it was not found."
-        );
-        assert!(
-            svg.contains("url(#snow)"),
-            "Expected url(#snow) in SVG output but it was not found."
+            svg.contains(r#"fill-opacity="0.8""#),
+            "Expected rain drop glyphs (fill-opacity=\"0.8\") in SVG output but none found."
         );
 
-        // No unexpected patterns
+        // Snow hours must produce circle glyphs
+        assert!(
+            svg.contains(r#"fill-opacity="0.85""#),
+            "Expected snow circle glyphs (fill-opacity=\"0.85\") in SVG output but none found."
+        );
+
+        // No legacy heavy-rain pattern reference
         assert!(
             !svg.contains("url(#heavy-rain)"),
             "Unexpected url(#heavy-rain) found — heavy-rain pattern was removed."
         );
 
-        // h00–h07: 8 rain blocks at 25% opacity (chance 10–45%, all < 50%)
-        let rain_25 = count_pattern_opacity(&svg, "rain", "25%");
-        assert_eq!(
-            rain_25, 8,
-            "Expected 8 rain blocks at 25% opacity (h00–h07, chance < 50%), found {rain_25}"
-        );
-
-        // h08–h15: 8 rain blocks at 35% opacity (chance 50–90%, all ≥ 50%)
-        let rain_35 = count_pattern_opacity(&svg, "rain", "35%");
-        assert_eq!(
-            rain_35, 8,
-            "Expected 8 rain blocks at 35% opacity (h08–h15, chance ≥ 50%), found {rain_35}"
-        );
-
-        // h16–h23: 8 snow blocks at 35% opacity (chance=85% ≥ 50%)
-        let snow_35 = count_pattern_opacity(&svg, "snow", "35%");
-        assert_eq!(
-            snow_35, 8,
-            "Expected 8 snow blocks at 35% opacity (h16–h23), found {snow_35}"
-        );
-
-        // No snow blocks at 25% opacity
-        let snow_25 = count_pattern_opacity(&svg, "snow", "25%");
-        assert_eq!(
-            snow_25, 0,
-            "Expected 0 snow blocks at 25% opacity, found {snow_25}"
-        );
-
-        // Template variable must be substituted
+        // Template variables must be substituted
         assert!(
             !svg.contains("{snow_colour}"),
             "Template variable {{snow_colour}} was not substituted in the SVG output."

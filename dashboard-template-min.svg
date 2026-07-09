@@ -229,6 +229,10 @@
     <!-- Graph for hourly forecast -->
     <svg x="220" y="160" width="560" height="350" viewBox="-50 0 690 300" preserveAspectRatio="xMidYMid meet"
         style="overflow: visible;">
+        <!-- rain curve - Per-hour rain blocks with intensity-based patterns -->
+        <g transform="translate(0, 300) scale(1, -1)">
+            {rain_curve_data}
+        </g>
         <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="2" d="{x_axis_path}" fill="none" />
         <!-- X axis Guidelines -->
         <path stroke="{x_axis_colour}" stroke-linejoin="round" stroke-width="1" d="{x_axis_guideline_path}" fill="none"
@@ -239,16 +243,12 @@
         {y_left_labels}
         <!-- Y right Labels -->
         {y_right_labels}
-        <!-- rain curve - Per-hour rain blocks with intensity-based patterns -->
-        <g transform="translate(0, 300) scale(1, -1)">
-            {rain_curve_data}
-        </g>
         <!-- temp curve -->
         <path stroke="{actual_temp_colour}" stroke-linejoin="round" transform="translate(0, 300) scale(1, -1)"
-            d="{actual_temp_curve_data}" stroke-width="3.0" fill="none" />
+            d="{actual_temp_curve_data}" stroke-width="4.0" fill="none" />
         <!-- feels like temp curve -->
-        <path stroke="{feels_like_colour}" stroke-linejoin="round" stroke-dasharray="5,5"
-            transform="translate(0, 300) scale(1, -1)" d="{feel_like_curve_data}" stroke-width="3.0" fill="none" />
+        <path stroke="{feels_like_colour}" stroke-linejoin="round" stroke-dasharray="12,5"
+            transform="translate(0, 300) scale(1, -1)" d="{feel_like_curve_data}" stroke-width="4.0" fill="none" />
         <defs>
             <linearGradient id="UVGradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%">
                 {uv_gradient}

@@ -58,6 +58,8 @@ x_axis_always_at_min = true                     # Controls x-axis placement when
 use_gust_instead_of_wind = false
 prefer_weather_codes = true                     # Prefer WMO weather codes for icon selection when available (falls back to derived logic)
                                                 # Note: prefer_weather_codes has no effect with bom — BOM does not provide WMO weather codes
+precipitation_opacity_min = 0.40               # Gradient fill opacity at 0% chance (0.0–1.0, must be < max). Recommended: 0.35–0.55
+precipitation_opacity_max = 0.60               # Gradient fill opacity at 100% chance (0.0–1.0, must be > min). Recommended: 0.55–0.75
 
 [misc]
 # timezone = "Australia/Melbourne"  # IANA timezone for displayed times; unset = system timezone
