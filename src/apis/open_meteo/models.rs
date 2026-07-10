@@ -106,6 +106,13 @@ pub struct Hourly {
     pub cloud_cover: Vec<Option<u16>>,
     #[serde(rename = "weather_code")]
     pub weather_code: Option<Vec<u8>>,
+    /// 1 if this hour has daylight, 0 at night — computed by Open-Meteo for
+    /// this exact hour and location, independent of the requested timezone.
+    /// `default` so a cache written before this field existed still
+    /// deserializes (falls back to empty; see `into_domain`'s per-index
+    /// fallback) instead of hard-failing the whole fetch.
+    #[serde(rename = "is_day", default)]
+    pub is_day: Vec<u16>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
@@ -205,7 +212,11 @@ impl OpenMeteoHourlyResponse {
                 let uv_index = hourly_data.uv_index[i].round() as u16;
                 let relative_humidity = hourly_data.relative_humidity_2m[i];
                 let time = hourly_data.time[i];
-                let is_night = response.current.is_day == 0;
+                // Defaults to day (not night) if absent (see `Hourly::is_day`'s
+                // doc comment) — a stale pre-upgrade cache read on a network
+                // failure is the only way this is empty, and it self-corrects
+                // on the next successful fetch.
+                let is_night = hourly_data.is_day.get(i).is_some_and(|&d| d == 0);
                 let cloud_cover = hourly_data.cloud_cover[i];
                 let weather_code = hourly_data
                     .weather_code

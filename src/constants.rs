@@ -46,7 +46,7 @@ pub fn open_meteo_hourly_endpoint(settings: &DashboardSettings) -> Url {
         "{}/v1/forecast?\
         latitude={}&\
         longitude={}&\
-        hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,uv_index,wind_speed_10m,wind_gusts_10m,relative_humidity_2m,snowfall,cloud_cover,weather_code&\
+        hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,uv_index,wind_speed_10m,wind_gusts_10m,relative_humidity_2m,snowfall,cloud_cover,weather_code,is_day&\
         current=is_day&\
         forecast_days=14&\
         timezone=UTC",

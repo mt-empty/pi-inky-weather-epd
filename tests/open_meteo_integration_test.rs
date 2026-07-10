@@ -143,6 +143,129 @@ fn test_open_meteo_array_consistency() {
     assert_eq!(domain[1].wind.speed_kmh, 18);
 }
 
+/// `is_night` comes directly from the hourly `is_day` array now (each hour
+/// has its own real day/night state from Open-Meteo, not a single `current`
+/// snapshot flag copied onto every hour) — verify the per-hour mapping.
+#[test]
+fn test_open_meteo_hourly_is_day_maps_to_is_night_per_hour() {
+    let json = r#"{
+        "latitude": -37.75,
+        "longitude": 144.875,
+        "timezone": "GMT",
+        "current_units": {"time": "iso8601", "interval": "seconds", "is_day": ""},
+        "current": {"time": "2025-10-10T12:00", "interval": 900, "is_day": 1},
+        "hourly_units": {
+            "time": "iso8601",
+            "temperature_2m": "°C",
+            "apparent_temperature": "°C",
+            "precipitation_probability": "%",
+            "precipitation": "mm","snowfall":"cm",
+            "uv_index": "",
+            "wind_speed_10m": "km/h",
+            "wind_gusts_10m": "km/h",
+            "relative_humidity_2m": "%"
+        },
+        "hourly": {
+            "time": ["2025-10-10T00:00", "2025-10-10T06:00", "2025-10-10T12:00"],
+            "temperature_2m": [10.0, 11.0, 20.0],
+            "apparent_temperature": [10.0, 11.0, 20.0],
+            "precipitation_probability": [0, 0, 0],
+            "precipitation": [0.0, 0.0, 0.0],"snowfall":[0.0,0.0,0.0],
+            "uv_index": [0.0, 0.0, 5.0],
+            "wind_speed_10m": [5.0, 5.0, 5.0],
+            "wind_gusts_10m": [10.0, 10.0, 10.0],
+            "relative_humidity_2m": [50, 50, 50],
+            "cloud_cover": [0, 0, 0],
+            "is_day": [0, 0, 1]
+        },
+        "daily_units": {
+            "time": "iso8601", "sunrise": "iso8601", "sunset": "iso8601",
+            "temperature_2m_max": "°C", "temperature_2m_min": "°C",
+            "precipitation_sum": "mm", "precipitation_probability_max": "%","snowfall_sum":"cm"
+        },
+        "daily": {
+            "time": ["2025-10-10"],
+            "sunrise": ["2025-10-10T06:21"],
+            "sunset": ["2025-10-10T19:47"],
+            "temperature_2m_max": [25.0], "temperature_2m_min": [12.0],
+            "precipitation_sum": [0.0], "precipitation_probability_max": [0],"snowfall_sum":[0.0]
+        }
+    }"#;
+
+    let response: OpenMeteoHourlyResponse = serde_json::from_str(json).unwrap();
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain: Vec<HourlyForecast> = response.into_domain(&settings);
+
+    assert_eq!(domain.len(), 3);
+    // Note: `current.is_day` is 1 (day) for all three hours below, but that's
+    // the old snapshot flag this test deliberately ignores -- if `is_night`
+    // were still derived from it, every hour would incorrectly report day.
+    assert!(
+        domain[0].is_night,
+        "is_day=0 (midnight) should map to is_night=true"
+    );
+    assert!(
+        domain[1].is_night,
+        "is_day=0 (6am, before sunrise) should map to is_night=true"
+    );
+    assert!(
+        !domain[2].is_night,
+        "is_day=1 (noon) should map to is_night=false"
+    );
+}
+
+/// A cache written before `is_day` was requested/parsed won't have it in the
+/// stored JSON; `#[serde(default)]` keeps deserialization from hard-failing,
+/// and the per-index fallback should read as day, not night.
+#[test]
+fn test_open_meteo_hourly_missing_is_day_defaults_to_day() {
+    let json = r#"{
+        "latitude": -37.75,
+        "longitude": 144.875,
+        "timezone": "GMT",
+        "current_units": {"time": "iso8601", "interval": "seconds", "is_day": ""},
+        "current": {"time": "2025-10-10T12:00", "interval": 900, "is_day": 0},
+        "hourly_units": {
+            "time": "iso8601",
+            "temperature_2m": "°C",
+            "apparent_temperature": "°C",
+            "precipitation_probability": "%",
+            "precipitation": "mm","snowfall":"cm",
+            "uv_index": "",
+            "wind_speed_10m": "km/h",
+            "wind_gusts_10m": "km/h",
+            "relative_humidity_2m": "%"
+        },
+        "hourly": {
+            "time": ["2025-10-10T00:00"],
+            "temperature_2m": [10.0],
+            "apparent_temperature": [10.0],
+            "precipitation_probability": [0],
+            "precipitation": [0.0],"snowfall":[0.0],
+            "uv_index": [0.0],
+            "wind_speed_10m": [5.0],
+            "wind_gusts_10m": [10.0],
+            "relative_humidity_2m": [50],
+            "cloud_cover": [0]
+        }
+    }"#;
+
+    let response: OpenMeteoHourlyResponse = serde_json::from_str(json).unwrap();
+    assert!(
+        response.hourly.is_day.is_empty(),
+        "missing is_day should default to an empty vec, not fail to parse"
+    );
+
+    let settings = helpers::test_utils::test_settings(|_| {});
+    let domain: Vec<HourlyForecast> = response.into_domain(&settings);
+
+    assert_eq!(domain.len(), 1);
+    assert!(
+        !domain[0].is_night,
+        "a missing is_day entry should default to day, not night"
+    );
+}
+
 /// Test Open-Meteo extreme values are preserved
 #[test]
 fn test_open_meteo_extreme_values() {
