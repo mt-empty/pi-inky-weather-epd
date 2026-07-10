@@ -114,6 +114,10 @@ pub struct HourlyForecastGraph {
     pub y_right_ticks: u16,
     pub x_axis_always_at_min: bool,
     pub text_colour: String,
+    /// Used as the UV gradient bar's colour for zero-UV hours, so it blends
+    /// into the page in any theme instead of a hardcoded white standing out
+    /// against a dark background.
+    pub background_colour: String,
     /// Display timezone for time-dependent labels (e.g. the "tomorrow" day name).
     pub tz: chrono_tz::Tz,
 }
@@ -146,6 +150,7 @@ impl Default for HourlyForecastGraph {
             y_right_ticks: 5,
             x_axis_always_at_min: false,
             text_colour: "black".to_string(),
+            background_colour: "white".to_string(),
             tz: chrono_tz::UTC,
         }
     }
@@ -706,7 +711,7 @@ impl HourlyForecastGraph {
 
         for (i, &uv) in self.uv_data.iter().enumerate() {
             let offset = (i as f32 / 23.0) * 100.0;
-            let colour = UVIndexIcon::from(uv).to_colour();
+            let colour = UVIndexIcon::from(uv).to_colour(&self.background_colour);
             gradient.push_str(&format!(
                 r#"<stop offset="{offset:.2}%" stop-color="{colour}"/>"#
             ));

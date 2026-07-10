@@ -131,14 +131,18 @@ impl From<u16> for UVIndexIcon {
 }
 
 impl UVIndexIcon {
-    pub fn to_colour(self) -> &'static str {
+    /// Colour for the UV gradient bar. `None` (zero UV, i.e. nighttime) uses
+    /// the dashboard's own background colour so it blends into the page in
+    /// any theme, rather than a fixed colour that would stand out against a
+    /// dark background.
+    pub fn to_colour(self, background_colour: &str) -> String {
         match self {
-            Self::None => "white",
-            Self::Low => "green",
-            Self::Moderate => "yellow",
-            Self::High => "orange",
-            Self::VeryHigh => "red",
-            Self::Extreme => "purple",
+            Self::None => background_colour.to_string(),
+            Self::Low => "green".to_string(),
+            Self::Moderate => "yellow".to_string(),
+            Self::High => "orange".to_string(),
+            Self::VeryHigh => "red".to_string(),
+            Self::Extreme => "purple".to_string(),
         }
     }
 }
