@@ -522,6 +522,7 @@ impl<'a> ContextBuilder<'a> {
         let mut graph = HourlyForecastGraph {
             x_axis_always_at_min: self.settings.render_options.x_axis_always_at_min,
             text_colour: self.settings.colours.text_colour.to_string(),
+            background_colour: self.settings.colours.background_colour.to_string(),
             tz: self.settings.misc.timezone,
             ..Default::default()
         };
