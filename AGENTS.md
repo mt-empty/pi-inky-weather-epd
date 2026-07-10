@@ -33,6 +33,16 @@ This file is intentionally concise. Keep project rules here minimal and actionab
   - Provider returns `FetchResult<T>` (data plus optional warning).
 - Preserve stale-data diagnostics by propagating warnings to context builders.
 
+## Backward Compatibility
+
+The binary updates in place on unattended Pi devices, so a newer binary routinely reads state written by an older one.
+
+- Cached API responses: `fetcher.rs::load_cached` falls back to the last raw JSON written to disk on a failed fetch — it can predate any schema change.
+- User config files (`local.toml`/`development.toml`) persist across upgrades and are not regenerated.
+- Additive fields on serde models need `#[serde(default)]` (or `Option`) so old cached JSON without the field still deserializes instead of hard-failing the fetch. A rename/removal needs a real migration, not just an updated fixture.
+- Reads of new/changed fields must tolerate absence — prefer `.get(i)`/`.unwrap_or_default()` over direct indexing on `Vec` fields.
+- Add a test that deserializes JSON (or loads config) with the field missing and asserts the fallback, not just the happy path.
+
 ## Known Pitfalls
 
 - `APP_API_PROVIDER` is wrong; use `APP_API__PROVIDER`.
@@ -50,6 +60,7 @@ This file is intentionally concise. Keep project rules here minimal and actionab
 - Clock abstraction: [clock.rs](src/clock.rs)
 - Provider interfaces and fetcher behavior: [providers/mod.rs](src/providers/mod.rs), [providers/fetcher.rs](src/providers/fetcher.rs)
 - Error priorities and diagnostics: [errors.rs](src/errors.rs)
+- Snapshot maintenance workflow (Copilot custom agent): [.github/agents/snapshot-maintainer.agent.md](.github/agents/snapshot-maintainer.agent.md)
 
 ## When Editing This File
 

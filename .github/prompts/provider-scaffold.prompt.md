@@ -44,6 +44,6 @@ Generate output in this order:
 - A concise acceptance checklist for PR readiness.
 
 Rules:
-- Use project conventions from .github/copilot-instructions.md.
+- Use project conventions from AGENTS.md.
 - Link to existing files rather than duplicating large docs.
 - Keep the scaffold concise and actionable.

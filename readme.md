@@ -221,7 +221,7 @@ When multiple diagnostics occur, the highest priority diagnostic is displayed, l
 - **Panel documentation:** [Waveshare Wiki](https://www.waveshare.com/wiki/7.3inch_e-Paper_HAT_(F)_Manual#Overview)
 - **Open-Meteo API:** [Open-Meteo Weather Forecast API](https://open-meteo.com/en/docs) (default provider)
 - **BOM API:** [Bureau of Meteorology API Documentation](https://github.com/bremor/bureau_of_meteorology/blob/main/api%20doc/API.md) (Australia only)
-- **Icons:** [Custom SVG icons](./static/fill-svg-static/) overhauled from [Meteocons](https://bas.dev/work/meteocons)
+- **Icons:** [Custom SVG icons](./static/fill-svg-static/) complete overhauled of [Meteocons](https://bas.dev/work/meteocons)
 
 ## Contributing
 
