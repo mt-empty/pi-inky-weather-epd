@@ -174,64 +174,20 @@
             },
             {
                 "type": "shell",
-                "label": "cargo-test(open_meteo)",
+                "label": "cargo-test",
                 "command": "cargo",
                 "args": [
+                    "insta",
                     "test"
                 ],
                 "options": {
-                    "cwd": "${workspaceFolder}",
-                    "env": {
-                        "RUN_MODE": "test"
-                    }
+                    "cwd": "${workspaceFolder}"
                 },
                 "problemMatcher": [
                     "$rustc"
                 ],
                 "group": "test"
             },
-            {
-                "type": "shell",
-                "label": "cargo-test(bom only)",
-                "command": "cargo",
-                "args": [
-                    "test",
-                    "--test",
-                    "snapshot_provider_test"
-                ],
-                "options": {
-                    "cwd": "${workspaceFolder}",
-                    "env": {
-                        "RUN_MODE": "test",
-                        "APP_API__PROVIDER": "bom"
-                    }
-                },
-                "problemMatcher": [
-                    "$rustc"
-                ],
-                "group": "test"
-            },
-            {
-                "type": "shell",
-                "label": "cargo-test(open_meteo prefer_weather_codes)",
-                "command": "cargo",
-                "args": [
-                    "test",
-                    "--test",
-                    "snapshot_open_meteo_prefer_codes_test"
-                ],
-                "options": {
-                    "cwd": "${workspaceFolder}",
-                    "env": {
-                        "RUN_MODE": "test",
-                        "APP_RENDER_OPTIONS__PREFER_WEATHER_CODES": "true"
-                    }
-                },
-                "problemMatcher": [
-                    "$rustc"
-                ],
-                "group": "test"
-            }
         ]
     }
 }
