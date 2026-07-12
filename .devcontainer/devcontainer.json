@@ -6,8 +6,7 @@
     "image": "mcr.microsoft.com/devcontainers/rust:2-1-bookworm",
     "remoteUser": "vscode",
     "mounts": [
-        "source=/etc/localtime,target=/etc/localtime,type=bind,consistency=cached",
-        "source=${localEnv:HOME}/.zshrc,target=/home/vscode/.zshrc,type=bind,consistency=cached"
+        "source=/etc/localtime,target=/etc/localtime,type=bind,consistency=cached"
     ],
     "customizations": {
         "vscode": {
