@@ -1,6 +1,6 @@
 use anyhow::Error;
 use serde::Deserialize;
-use std::{fs, path::PathBuf, time::Duration};
+use std::{fmt, fs, path::PathBuf, time::Duration};
 use url::Url;
 
 use crate::configs::settings::DashboardSettings;
@@ -8,6 +8,28 @@ use crate::{errors::DashboardError, logger};
 
 /// Type alias for API-specific error checking function
 pub type ErrorChecker = fn(&str) -> Result<(), DashboardError>;
+
+/// Wraps a `DashboardError` produced by an `ErrorChecker` (a body-level API error, as
+/// opposed to a `reqwest::Error`) to signal to `try_fetch_with_retry` that this is a
+/// transient error worth retrying with backoff, rather than an immediate fallback.
+///
+/// Retryability is decided by HTTP status in `process_successful_response`: a 4xx status
+/// (e.g. Open-Meteo returning 400 for an invalid parameter) indicates a problem with the
+/// request itself that will fail identically on every retry, so those fall back to cached
+/// data immediately instead of being wrapped here. Anything else (5xx, or a 2xx response
+/// whose body still signals an error, e.g. Open-Meteo's "The service is overloaded") is
+/// assumed to be transient and gets wrapped so it flows through the same retry path as
+/// network errors.
+#[derive(Debug)]
+struct TransientApiError(DashboardError);
+
+impl fmt::Display for TransientApiError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl std::error::Error for TransientApiError {}
 
 /// Configuration for retry behavior
 ///
@@ -179,18 +201,40 @@ impl Fetcher {
     /// Process a successful API response
     fn process_successful_response<T: for<'de> Deserialize<'de>>(
         &self,
+        status: reqwest::StatusCode,
         body: String,
         file_path: &PathBuf,
         error_checker: Option<ErrorChecker>,
     ) -> Result<FetchOutcome<T>, Error> {
         logger::debug(format!("Received API response: {} bytes", body.len()));
 
-        // Check for API-specific errors if checker provided
+        // Check for API-specific errors if checker provided.
         if let Some(checker) = error_checker {
             if let Err(dashboard_error) = checker(&body) {
                 use crate::errors::Description;
-                logger::warning(dashboard_error.long_description());
-                return self.fallback(file_path, dashboard_error);
+                logger::detail(format!(
+                    "Raw error details: {}",
+                    dashboard_error.long_description()
+                ));
+
+                // A 4xx status (other than 429, which is handled separately before this
+                // point) means the request itself is the problem - e.g. Open-Meteo
+                // rejecting an invalid parameter. That will fail identically on every
+                // retry, so log it and fall back to cached data immediately instead of
+                // wasting the retry budget.
+                if status.is_client_error() {
+                    logger::warning(format!(
+                        "API request failed: {}",
+                        dashboard_error.short_description()
+                    ));
+                    return self.fallback(file_path, dashboard_error);
+                }
+
+                // Otherwise (5xx, or a 2xx response whose body still signals an error,
+                // e.g. Open-Meteo's "The service is overloaded") treat it as transient
+                // and let `try_fetch_with_retry` retry it with backoff, the same way it
+                // retries network failures, instead of giving up after a single attempt.
+                return Err(TransientApiError(dashboard_error).into());
             }
         }
 
@@ -203,6 +247,14 @@ impl Fetcher {
     /// Handle fetch errors with logging (classify_error logs raw details internally)
     fn handle_fetch_error(&self, error: &reqwest::Error, attempt: usize, max_retries: usize) {
         let dashboard_error = Self::classify_error(error);
+        Self::log_attempt_warning(&dashboard_error, attempt, max_retries);
+    }
+
+    /// Log a short warning for a failed fetch attempt, framed as either the initial
+    /// attempt or a numbered retry. Shared by the network-error path
+    /// (`handle_fetch_error`) and the body-level transient API error path in
+    /// `try_fetch_with_retry`, so both log consistently.
+    fn log_attempt_warning(dashboard_error: &DashboardError, attempt: usize, max_retries: usize) {
         use crate::errors::Description;
 
         if attempt == 0 {
@@ -275,9 +327,10 @@ impl Fetcher {
         config: &RetryConfig,
     ) -> Result<FetchOutcome<T>, Box<dyn std::error::Error + Send + Sync>> {
         let response = self.client.get(endpoint.as_str()).send()?;
+        let status = response.status();
 
         // Check for 429 Too Many Requests with Retry-After header
-        if response.status().as_u16() == 429 {
+        if status.as_u16() == 429 {
             let retry_after = Self::handle_rate_limit_response(&response, attempt, config)?;
             std::thread::sleep(retry_after);
             // Return error to trigger retry
@@ -293,9 +346,12 @@ impl Fetcher {
         }
 
         let body = response.text()?;
-        match self.process_successful_response(body, file_path, error_checker) {
+        match self.process_successful_response(status, body, file_path, error_checker) {
             Ok(outcome) => Ok(outcome),
-            Err(e) => Err(Box::new(std::io::Error::other(e.to_string()))),
+            Err(e) => match e.downcast::<TransientApiError>() {
+                Ok(transient_error) => Err(Box::new(transient_error)),
+                Err(e) => Err(Box::new(std::io::Error::other(e.to_string()))),
+            },
         }
     }
 
@@ -352,6 +408,18 @@ impl Fetcher {
                             // No point of further retries, since the error is not retryable
                             break;
                         }
+                    } else if let Some(transient_error) = e.downcast_ref::<TransientApiError>() {
+                        // Transient application-level error from the response body (e.g.
+                        // Open-Meteo's "The service is overloaded"). Already classified as
+                        // retryable by `process_successful_response` based on HTTP status,
+                        // so just log and keep retrying with backoff, same as a network
+                        // failure.
+                        Self::log_attempt_warning(&transient_error.0, attempt, config.max_retries);
+
+                        if attempt == config.max_retries - 1 {
+                            last_error = Some(e);
+                            break;
+                        }
                     }
 
                     last_error = Some(e);
@@ -375,6 +443,8 @@ impl Fetcher {
             // Try to downcast to reqwest::Error for proper classification
             if let Some(reqwest_err) = e.downcast_ref::<reqwest::Error>() {
                 Ok(Self::classify_error(reqwest_err))
+            } else if let Some(transient_error) = e.downcast_ref::<TransientApiError>() {
+                Ok(transient_error.0.clone())
             } else {
                 Ok(DashboardError::NetworkError {
                     details: e.to_string(),
@@ -397,7 +467,12 @@ impl Fetcher {
     /// # Retry Strategy
     /// - Attempts up to 5 retries with exponential backoff (1s, 2s, 4s, 16s, 32s)
     /// - Respects HTTP 429 rate limit responses with Retry-After header
-    /// - Retries on: timeouts, connection failures, 5xx errors, 429 rate limits
+    /// - Retries on: timeouts, connection failures, 5xx errors, 429 rate limits, and
+    ///   transient body-level API errors (a 2xx/5xx response whose body still signals
+    ///   an error, e.g. Open-Meteo's "The service is overloaded")
+    /// - Does not retry a body-level API error accompanied by a 4xx status (other than
+    ///   429), since that indicates a problem with the request itself that would fail
+    ///   identically on every attempt
     /// - Falls back to cached data if all retries fail
     pub fn fetch_data<T>(
         &self,
