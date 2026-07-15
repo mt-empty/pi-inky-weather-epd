@@ -264,7 +264,7 @@ Before submitting, please make sure the following is done:
 cargo test
 
 # Run only the BOM dashboard snapshot test
-cargo test --test snapshot_provider_test snapshot_bom_dashboard
+cargo test --test snapshot_test provider::bom_dashboard
 
 # Review snapshot changes (uses insta crate)
 cargo insta review
