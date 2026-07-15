@@ -109,3 +109,50 @@ impl fmt::Display for GeohashError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dashboard_error_variants_have_correct_priority() {
+        let api_error = DashboardError::ApiError {
+            details: "test".to_string(),
+        };
+        assert_eq!(api_error.priority(), DiagnosticPriority::High);
+
+        let network_error = DashboardError::NetworkError {
+            details: "test".to_string(),
+        };
+        assert_eq!(network_error.priority(), DiagnosticPriority::Medium);
+
+        let incomplete_error = DashboardError::IncompleteData {
+            details: "test".to_string(),
+        };
+        assert_eq!(incomplete_error.priority(), DiagnosticPriority::Low);
+    }
+
+    #[test]
+    fn dashboard_error_descriptions() {
+        let network_error = DashboardError::NetworkError {
+            details: "Connection failed".to_string(),
+        };
+        assert_eq!(
+            network_error.short_description(),
+            "API unreachable -> Stale Data"
+        );
+        assert!(network_error.long_description().contains("unable to reach"));
+        assert!(network_error
+            .long_description()
+            .contains("Connection failed"));
+
+        let api_error = DashboardError::ApiError {
+            details: "HTTP 500".to_string(),
+        };
+        assert_eq!(api_error.short_description(), "API error -> Stale Data");
+        assert!(api_error
+            .long_description()
+            .contains("API returned an error"));
+        assert!(api_error.long_description().contains("HTTP 500"));
+    }
+}

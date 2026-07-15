@@ -89,7 +89,7 @@ impl Fetcher {
     }
 
     /// Classify reqwest error to appropriate DashboardError using idiomatic error inspection
-    pub fn classify_error(error: &reqwest::Error) -> DashboardError {
+    fn classify_error(error: &reqwest::Error) -> DashboardError {
         logger::detail(format!("Raw error details: {:?}", error));
 
         // Check for HTTP status codes first (4xx/5xx)
@@ -158,7 +158,7 @@ impl Fetcher {
     }
 
     /// Check if an error is retryable (transient network issues, rate limits, server errors)
-    pub fn is_error_retryable(error: &reqwest::Error) -> bool {
+    fn is_error_retryable(error: &reqwest::Error) -> bool {
         // Network connectivity issues are retryable
         if error.is_timeout() || error.is_connect() {
             return true;
@@ -180,7 +180,7 @@ impl Fetcher {
     }
 
     /// Parse Retry-After header value (seconds as integer or HTTP-date)
-    pub fn parse_retry_after(value: &str) -> Option<Duration> {
+    fn parse_retry_after(value: &str) -> Option<Duration> {
         // Try parsing as integer seconds first
         if let Ok(seconds) = value.trim().parse::<u64>() {
             return Some(Duration::from_secs(seconds));
@@ -512,6 +512,328 @@ impl Fetcher {
                 Ok(FetchOutcome::Fresh(cached))
             }
             false => self.try_fetch_with_retry(&endpoint, &file_path, error_checker, &config),
+        }
+    }
+}
+
+/// Tests for error classification, Retry-After parsing, and retryability
+/// decisions. `wiremock` is a dev-dependency, so tests that need a real
+/// `reqwest::Error` (which has no public constructor) get one from an actual
+/// failed request against a local mock server, same as the wiring tests in
+/// `tests/fetcher_test.rs`.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    async fn setup_timeout_mock() -> MockServer {
+        let mock_server = MockServer::start().await;
+        Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/timeout"))
+            .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_secs(5)))
+            .mount(&mock_server)
+            .await;
+        mock_server
+    }
+
+    async fn setup_404_mock() -> MockServer {
+        let mock_server = MockServer::start().await;
+        Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/not-found"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&mock_server)
+            .await;
+        mock_server
+    }
+
+    async fn setup_500_mock() -> MockServer {
+        let mock_server = MockServer::start().await;
+        Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/server-error"))
+            .respond_with(ResponseTemplate::new(500))
+            .mount(&mock_server)
+            .await;
+        mock_server
+    }
+
+    async fn setup_429_mock() -> MockServer {
+        let mock_server = MockServer::start().await;
+        Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/rate-limited"))
+            .respond_with(ResponseTemplate::new(429))
+            .mount(&mock_server)
+            .await;
+        mock_server
+    }
+
+    async fn setup_400_mock() -> MockServer {
+        let mock_server = MockServer::start().await;
+        Mock::given(wiremock::matchers::method("GET"))
+            .and(wiremock::matchers::path("/bad-request"))
+            .respond_with(ResponseTemplate::new(400))
+            .mount(&mock_server)
+            .await;
+        mock_server
+    }
+
+    mod parse_retry_after {
+        use super::*;
+
+        #[test]
+        fn integer_seconds() {
+            assert_eq!(
+                Fetcher::parse_retry_after("60"),
+                Some(Duration::from_secs(60))
+            );
+            assert_eq!(
+                Fetcher::parse_retry_after("120"),
+                Some(Duration::from_secs(120))
+            );
+            assert_eq!(
+                Fetcher::parse_retry_after("  30  "),
+                Some(Duration::from_secs(30))
+            ); // with whitespace
+        }
+
+        #[test]
+        fn http_date() {
+            // Uses a date in the future relative to test execution.
+            let future_date = chrono::Utc::now() + chrono::Duration::seconds(90);
+            let rfc2822 = future_date.to_rfc2822();
+
+            let result = Fetcher::parse_retry_after(&rfc2822);
+            assert!(result.is_some());
+            let seconds = result.unwrap();
+            // Should be around 90 seconds, allow some tolerance for test execution time
+            assert!(
+                (85..=95).contains(&seconds.as_secs()),
+                "expected ~90 seconds, got {}",
+                seconds.as_secs()
+            );
+        }
+
+        #[test]
+        fn past_date_returns_none() {
+            let past_date = chrono::Utc::now() - chrono::Duration::seconds(60);
+            let rfc2822 = past_date.to_rfc2822();
+            assert_eq!(Fetcher::parse_retry_after(&rfc2822), None);
+        }
+
+        #[test]
+        fn invalid_format_returns_none() {
+            assert_eq!(Fetcher::parse_retry_after("invalid"), None);
+            assert_eq!(Fetcher::parse_retry_after(""), None);
+            assert_eq!(Fetcher::parse_retry_after("not-a-number"), None);
+        }
+    }
+
+    mod classify_error {
+        use super::*;
+
+        #[tokio::test]
+        async fn timeout() {
+            let mock_server = setup_timeout_mock().await;
+            let url = format!("{}/timeout", mock_server.uri());
+
+            let dashboard_error = tokio::task::spawn_blocking(move || {
+                let client = reqwest::blocking::Client::new();
+                let result = client.get(&url).timeout(Duration::from_millis(100)).send();
+
+                assert!(result.is_err());
+                let error = result.unwrap_err();
+                assert!(error.is_timeout());
+
+                Fetcher::classify_error(&error)
+            })
+            .await
+            .unwrap();
+
+            match dashboard_error {
+                DashboardError::NetworkError { details } => {
+                    assert!(details.contains("timeout") || details.contains("Timeout"));
+                }
+                _ => panic!("expected NetworkError for timeout, got {dashboard_error:?}"),
+            }
+        }
+
+        #[test]
+        fn connection_failed() {
+            let client = reqwest::blocking::Client::new();
+            let url = "http://localhost:59999/nonexistent"; // port unlikely to be in use
+
+            let result = client.get(url).send();
+            assert!(result.is_err());
+            let error = result.unwrap_err();
+
+            let dashboard_error = Fetcher::classify_error(&error);
+            match dashboard_error {
+                DashboardError::NetworkError { .. } => {}
+                _ => {
+                    panic!("expected NetworkError for connection failure, got {dashboard_error:?}")
+                }
+            }
+        }
+
+        #[tokio::test]
+        async fn http_404() {
+            let mock_server = setup_404_mock().await;
+            let url = format!("{}/not-found", mock_server.uri());
+
+            let dashboard_error = tokio::task::spawn_blocking(move || {
+                let client = reqwest::blocking::Client::new();
+                let response = client.get(&url).send().unwrap();
+                let error = response.error_for_status().unwrap_err();
+                assert_eq!(error.status().unwrap().as_u16(), 404);
+                Fetcher::classify_error(&error)
+            })
+            .await
+            .unwrap();
+
+            match dashboard_error {
+                DashboardError::ApiError { details } => assert!(details.contains("404")),
+                _ => panic!("expected ApiError for 404, got {dashboard_error:?}"),
+            }
+        }
+
+        #[tokio::test]
+        async fn http_500() {
+            let mock_server = setup_500_mock().await;
+            let url = format!("{}/server-error", mock_server.uri());
+
+            let dashboard_error = tokio::task::spawn_blocking(move || {
+                let client = reqwest::blocking::Client::new();
+                let response = client.get(&url).send().unwrap();
+                let error = response.error_for_status().unwrap_err();
+                assert_eq!(error.status().unwrap().as_u16(), 500);
+                Fetcher::classify_error(&error)
+            })
+            .await
+            .unwrap();
+
+            match dashboard_error {
+                DashboardError::ApiError { details } => assert!(details.contains("500")),
+                _ => panic!("expected ApiError for 500, got {dashboard_error:?}"),
+            }
+        }
+
+        #[tokio::test]
+        async fn http_429() {
+            let mock_server = setup_429_mock().await;
+            let url = format!("{}/rate-limited", mock_server.uri());
+
+            let dashboard_error = tokio::task::spawn_blocking(move || {
+                let client = reqwest::blocking::Client::new();
+                let response = client.get(&url).send().unwrap();
+                let error = response.error_for_status().unwrap_err();
+                assert_eq!(error.status().unwrap().as_u16(), 429);
+                Fetcher::classify_error(&error)
+            })
+            .await
+            .unwrap();
+
+            match dashboard_error {
+                DashboardError::ApiError { details } => assert!(details.contains("429")),
+                _ => panic!("expected ApiError for 429, got {dashboard_error:?}"),
+            }
+        }
+    }
+
+    mod is_error_retryable {
+        use super::*;
+
+        #[tokio::test]
+        async fn timeout_is_retryable() {
+            let mock_server = setup_timeout_mock().await;
+            let url = format!("{}/timeout", mock_server.uri());
+
+            tokio::task::spawn_blocking(move || {
+                let client = reqwest::blocking::Client::new();
+                let result = client.get(&url).timeout(Duration::from_millis(100)).send();
+
+                if let Err(error) = result {
+                    assert!(Fetcher::is_error_retryable(&error));
+                }
+            })
+            .await
+            .unwrap();
+        }
+
+        #[test]
+        fn connection_failure_is_retryable() {
+            let client = reqwest::blocking::Client::new();
+            let url = "http://localhost:59999/nonexistent";
+            let result = client.get(url).send();
+            if let Err(error) = result {
+                assert!(Fetcher::is_error_retryable(&error));
+            }
+        }
+
+        #[tokio::test]
+        async fn http_500_is_retryable() {
+            let mock_server = setup_500_mock().await;
+            let url = format!("{}/server-error", mock_server.uri());
+
+            tokio::task::spawn_blocking(move || {
+                let client = reqwest::blocking::Client::new();
+                if let Ok(response) = client.get(&url).send() {
+                    if let Err(error) = response.error_for_status() {
+                        assert!(Fetcher::is_error_retryable(&error));
+                    }
+                }
+            })
+            .await
+            .unwrap();
+        }
+
+        #[tokio::test]
+        async fn http_429_is_retryable() {
+            let mock_server = setup_429_mock().await;
+            let url = format!("{}/rate-limited", mock_server.uri());
+
+            tokio::task::spawn_blocking(move || {
+                let client = reqwest::blocking::Client::new();
+                if let Ok(response) = client.get(&url).send() {
+                    if let Err(error) = response.error_for_status() {
+                        assert!(Fetcher::is_error_retryable(&error));
+                    }
+                }
+            })
+            .await
+            .unwrap();
+        }
+
+        #[tokio::test]
+        async fn http_404_is_not_retryable() {
+            let mock_server = setup_404_mock().await;
+            let url = format!("{}/not-found", mock_server.uri());
+
+            tokio::task::spawn_blocking(move || {
+                let client = reqwest::blocking::Client::new();
+                if let Ok(response) = client.get(&url).send() {
+                    if let Err(error) = response.error_for_status() {
+                        assert!(!Fetcher::is_error_retryable(&error));
+                    }
+                }
+            })
+            .await
+            .unwrap();
+        }
+
+        #[tokio::test]
+        async fn http_400_is_not_retryable() {
+            let mock_server = setup_400_mock().await;
+            let url = format!("{}/bad-request", mock_server.uri());
+
+            tokio::task::spawn_blocking(move || {
+                let client = reqwest::blocking::Client::new();
+                if let Ok(response) = client.get(&url).send() {
+                    if let Err(error) = response.error_for_status() {
+                        assert!(!Fetcher::is_error_retryable(&error));
+                    }
+                }
+            })
+            .await
+            .unwrap();
         }
     }
 }
