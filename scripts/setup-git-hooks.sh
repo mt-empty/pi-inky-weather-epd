@@ -31,7 +31,7 @@ echo "Running cargo fmt on staged Rust files..."
 
 while IFS= read -r file; do
     if [ -f "$file" ]; then
-        rustfmt "$file"
+        rustfmt --edition 2021 "$file"
     fi
 done <<< "$staged_rs_files"
 
