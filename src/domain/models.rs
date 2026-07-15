@@ -178,7 +178,10 @@ impl Precipitation {
     pub fn median(&self) -> f32 {
         let min = self.amount_min.unwrap_or(0);
         let max = self.amount_max.unwrap_or(min);
-        (min + max) as f32 / 2.0
+        // Widen to f32 before adding: `min + max` in u16 arithmetic overflows
+        // (panics in debug, silently wraps in release) once both are above
+        // ~32768, even though each is individually a valid u16.
+        (min as f32 + max as f32) / 2.0
     }
 
     /// Best estimate of precipitation amount in mm.
@@ -339,6 +342,7 @@ impl DailyForecast {
 mod tests {
     use super::*;
     use crate::configs::settings::DashboardSettings;
+    use proptest::prelude::*;
 
     // Nested modules accumulate here as further conversion/formatting test
     // files are migrated (see docs/test-suite-migration-plan.md Phase 2).
@@ -535,6 +539,120 @@ mod tests {
                     domain_forecasts[i].time > domain_forecasts[i - 1].time,
                     "order should be preserved after conversion"
                 );
+            }
+        }
+    }
+
+    /// `from_bom` only has fixed example fixtures to exercise it (see
+    /// `bom_conversion` above); these fuzz the full space of a single API
+    /// entry — extreme temperatures, mismatched min/max, absent optional
+    /// fields — to confirm it never panics, independent of any specific
+    /// expected output.
+    mod bom_conversion_fuzzing {
+        use super::*;
+        use crate::apis::bom::models::{
+            Astronomical as BomAstronomical, DailyEntry, HourlyForecast as BomHourlyForecast,
+            HourlyUV, Rain, RainAmount, RelativeHumidity, Temperature as BomTemperature,
+            Wind as BomWind,
+        };
+
+        /// A timestamp strategy bounded to roughly year 1900-3000 in Unix
+        /// seconds — comfortably inside chrono's representable range, so
+        /// `DateTime::from_timestamp` is always `Some`.
+        fn any_datetime() -> impl Strategy<Value = DateTime<Utc>> {
+            (-2_208_988_800i64..32_503_680_000i64)
+                .prop_map(|secs| DateTime::from_timestamp(secs, 0).unwrap())
+        }
+
+        fn any_bom_temperature() -> impl Strategy<Value = BomTemperature> {
+            (
+                any::<f32>(),
+                prop_oneof![Just(TemperatureUnit::C), Just(TemperatureUnit::F)],
+            )
+                .prop_map(|(value, unit)| BomTemperature { value, unit })
+        }
+
+        prop_compose! {
+            fn any_rain()(
+                min in any::<Option<u16>>(),
+                max in any::<Option<u16>>(),
+                chance in any::<Option<u16>>(),
+            ) -> Rain {
+                Rain { amount: RainAmount { min, max }, chance }
+            }
+        }
+
+        prop_compose! {
+            fn any_bom_wind()(
+                speed_kilometre in any::<u16>(),
+                gust_speed_kilometre in any::<u16>(),
+            ) -> BomWind {
+                BomWind { speed_kilometre, gust_speed_kilometre }
+            }
+        }
+
+        prop_compose! {
+            fn any_hourly_forecast()(
+                rain in any_rain(),
+                temp in any_bom_temperature(),
+                temp_feels_like in any_bom_temperature(),
+                wind in any_bom_wind(),
+                relative_humidity in any::<u16>(),
+                uv in proptest::option::of(any::<u16>()),
+                time in any_datetime(),
+                is_night in any::<bool>(),
+            ) -> BomHourlyForecast {
+                BomHourlyForecast {
+                    rain,
+                    temp,
+                    temp_feels_like,
+                    wind,
+                    relative_humidity: RelativeHumidity(relative_humidity),
+                    uv: uv.map(HourlyUV),
+                    time,
+                    is_night,
+                }
+            }
+        }
+
+        prop_compose! {
+            fn any_astronomical()(
+                sunrise_time in proptest::option::of(any_datetime()),
+                sunset_time in proptest::option::of(any_datetime()),
+            ) -> BomAstronomical {
+                BomAstronomical { sunrise_time, sunset_time }
+            }
+        }
+
+        prop_compose! {
+            fn any_daily_entry()(
+                rain in proptest::option::of(any_rain()),
+                astronomical in proptest::option::of(any_astronomical()),
+                date in proptest::option::of(any_datetime()),
+                temp_max in proptest::option::of(any_bom_temperature()),
+                temp_min in proptest::option::of(any_bom_temperature()),
+            ) -> DailyEntry {
+                DailyEntry {
+                    rain,
+                    astronomical,
+                    date,
+                    temp_max,
+                    temp_min,
+                }
+            }
+        }
+
+        proptest! {
+            #[test]
+            fn from_bom_hourly_never_panics(bom in any_hourly_forecast()) {
+                let settings = DashboardSettings::load_test_config().unwrap();
+                let _ = HourlyForecast::from_bom(bom, &settings);
+            }
+
+            #[test]
+            fn from_bom_daily_never_panics(bom in any_daily_entry()) {
+                let settings = DashboardSettings::load_test_config().unwrap();
+                let _ = DailyForecast::from_bom(bom, &settings);
             }
         }
     }
@@ -960,6 +1078,114 @@ mod tests {
         }
     }
 
+    /// `into_domain` only has fixed example fixtures to exercise it (see
+    /// `open_meteo_conversion` above); these fuzz whole responses — arbitrary
+    /// entry counts and extreme per-field values, all parallel arrays kept
+    /// the same length (the one invariant a real deserialized response always
+    /// has) — to confirm it never panics. `latitude`/`longitude`/`timezone`/
+    /// `*_units` aren't read by `into_domain` at all, so they're left at
+    /// their `Default` rather than fuzzed.
+    mod open_meteo_conversion_fuzzing {
+        use super::*;
+        use crate::apis::open_meteo::models::{
+            Daily, Hourly, OpenMeteoDailyResponse, OpenMeteoHourlyResponse,
+        };
+
+        fn any_datetime() -> impl Strategy<Value = DateTime<Utc>> {
+            (-2_208_988_800i64..32_503_680_000i64)
+                .prop_map(|secs| DateTime::from_timestamp(secs, 0).unwrap())
+        }
+
+        fn any_naive_date() -> impl Strategy<Value = NaiveDate> {
+            any_datetime().prop_map(|dt| dt.date_naive())
+        }
+
+        fn any_naive_datetime() -> impl Strategy<Value = NaiveDateTime> {
+            any_datetime().prop_map(|dt| dt.naive_utc())
+        }
+
+        prop_compose! {
+            /// Binds `count` first, then generates every parallel array at
+            /// exactly that length — mirroring the one invariant a real
+            /// deserialized response always has (all arrays the same size).
+            fn any_hourly()(count in 0usize..8)(
+                time in proptest::collection::vec(any_datetime(), count),
+                temperature_2m in proptest::collection::vec(any::<f32>(), count),
+                apparent_temperature in proptest::collection::vec(any::<f32>(), count),
+                precipitation_probability in proptest::collection::vec(any::<u16>(), count),
+                precipitation in proptest::collection::vec(any::<f32>(), count),
+                snowfall in proptest::collection::vec(any::<f32>(), count),
+                uv_index in proptest::collection::vec(any::<f32>(), count),
+                wind_speed_10m in proptest::collection::vec(any::<f32>(), count),
+                wind_gusts_10m in proptest::collection::vec(any::<f32>(), count),
+                relative_humidity_2m in proptest::collection::vec(any::<u16>(), count),
+                cloud_cover in proptest::collection::vec(proptest::option::of(any::<u16>()), count),
+                is_day in proptest::collection::vec(any::<u16>(), count),
+                weather_code in proptest::option::of(proptest::collection::vec(any::<u8>(), count)),
+            ) -> Hourly {
+                Hourly {
+                    time,
+                    temperature_2m,
+                    apparent_temperature,
+                    precipitation_probability,
+                    precipitation,
+                    snowfall,
+                    uv_index,
+                    wind_speed_10m,
+                    wind_gusts_10m,
+                    relative_humidity_2m,
+                    cloud_cover,
+                    weather_code,
+                    is_day,
+                }
+            }
+        }
+
+        prop_compose! {
+            fn any_daily()(count in 0usize..8)(
+                time in proptest::collection::vec(any_naive_date(), count),
+                sunrise in proptest::collection::vec(any_naive_datetime(), count),
+                sunset in proptest::collection::vec(any_naive_datetime(), count),
+                temperature_2m_max in proptest::collection::vec(any::<f32>(), count),
+                temperature_2m_min in proptest::collection::vec(any::<f32>(), count),
+                precipitation_sum in proptest::collection::vec(any::<f32>(), count),
+                precipitation_probability_max in proptest::collection::vec(any::<u16>(), count),
+                snowfall_sum in proptest::collection::vec(any::<f32>(), count),
+                cloud_cover_mean in proptest::collection::vec(proptest::option::of(any::<u16>()), count),
+                weather_code in proptest::option::of(proptest::collection::vec(any::<u8>(), count)),
+            ) -> Daily {
+                Daily {
+                    time,
+                    sunrise,
+                    sunset,
+                    temperature_2m_max,
+                    temperature_2m_min,
+                    precipitation_sum,
+                    precipitation_probability_max,
+                    snowfall_sum,
+                    cloud_cover_mean,
+                    weather_code,
+                }
+            }
+        }
+
+        proptest! {
+            #[test]
+            fn into_domain_hourly_never_panics(hourly in any_hourly()) {
+                let response = OpenMeteoHourlyResponse { hourly, ..Default::default() };
+                let settings = DashboardSettings::load_test_config().unwrap();
+                let _ = response.into_domain(&settings);
+            }
+
+            #[test]
+            fn into_domain_daily_never_panics(daily in any_daily()) {
+                let response = OpenMeteoDailyResponse { daily, ..Default::default() };
+                let settings = DashboardSettings::load_test_config().unwrap();
+                let _ = response.into_domain(&settings);
+            }
+        }
+    }
+
     /// Australia (Melbourne/Sydney) DST: starts first Sunday in October,
     /// 2:00 AM -> 3:00 AM (AEST -> AEDT); ends first Sunday in April,
     /// 3:00 AM -> 2:00 AM (AEDT -> AEST). Verifies API responses convert to
@@ -1154,6 +1380,23 @@ mod tests {
                 );
             }
         }
+
+        proptest! {
+            /// For the same input speed, km/h (identity) is never smaller than mph,
+            /// and mph is never smaller than knots — the three conversion factors
+            /// (1.0, 0.621371, 0.539957) are strictly ordered, so this holds
+            /// regardless of the exact digits, unlike an assertion that
+            /// re-derives the factors inside the test.
+            #[test]
+            fn kmh_ge_mph_ge_knots_for_any_speed(speed_kmh in any::<u16>()) {
+                let kmh = Wind::convert_speed(speed_kmh, WindSpeedUnit::KmH);
+                let mph = Wind::convert_speed(speed_kmh, WindSpeedUnit::Mph);
+                let knots = Wind::convert_speed(speed_kmh, WindSpeedUnit::Knots);
+
+                prop_assert!(kmh >= mph, "kmh ({kmh}) < mph ({mph}) for {speed_kmh}");
+                prop_assert!(mph >= knots, "mph ({mph}) < knots ({knots}) for {speed_kmh}");
+            }
+        }
     }
 
     /// `is_primarily_snow()` determines whether precipitation is primarily
@@ -1269,6 +1512,57 @@ mod tests {
         fn has_snow_false_with_zero_snowfall() {
             let precip = Precipitation::new_with_snowfall(Some(50), Some(5), Some(10), Some(0));
             assert!(!precip.has_snow());
+        }
+
+        proptest! {
+            /// `is_primarily_snow` reads `snowfall_amount` first and returns
+            /// `false` immediately when it's zero or absent, before `amount()`
+            /// (built from `amount_min`/`amount_max`) is even computed — and
+            /// `chance` never enters the calculation at all. Holds for any
+            /// combination of the other three fields, not just the fixed
+            /// examples above.
+            #[test]
+            fn zero_or_absent_snowfall_is_never_primarily_snow(
+                chance in any::<Option<u16>>(),
+                amount_min in any::<Option<u16>>(),
+                amount_max in any::<Option<u16>>(),
+                snowfall_is_absent in any::<bool>(),
+            ) {
+                let precip = Precipitation {
+                    chance,
+                    amount_min,
+                    amount_max,
+                    snowfall_amount: if snowfall_is_absent { None } else { Some(0) },
+                };
+                prop_assert!(!precip.is_primarily_snow());
+            }
+        }
+    }
+
+    /// `amount()` estimates a single precipitation figure from `amount_min`/
+    /// `amount_max`; when both are present it should never report a value
+    /// outside the range the two bounds describe.
+    mod precipitation_amount_bounds {
+        use super::*;
+
+        proptest! {
+            #[test]
+            fn amount_is_within_min_max_when_both_present(
+                amount_min in any::<u16>(),
+                amount_max in any::<u16>(),
+            ) {
+                // Nothing enforces amount_min <= amount_max at the type level,
+                // so this deliberately doesn't assume that ordering either.
+                let precip = Precipitation::new(None, Some(amount_min), Some(amount_max));
+                let amount = precip.amount();
+                let lower = amount_min.min(amount_max) as f32;
+                let upper = amount_min.max(amount_max) as f32;
+
+                prop_assert!(
+                    amount >= lower && amount <= upper,
+                    "amount {amount} out of [{lower}, {upper}] for min={amount_min}, max={amount_max}"
+                );
+            }
         }
     }
 }

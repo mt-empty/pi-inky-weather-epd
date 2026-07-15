@@ -370,8 +370,21 @@ pub fn is_valid_date_format(format: &str) -> Result<(), ValidationError> {
     // Test the format by formatting the longest possible date
     // Wednesday (9 chars) + September (9 chars) = longest day + month combination
     use chrono::{TimeZone, Utc};
+    use std::fmt::Write;
     let longest_date = Utc.with_ymd_and_hms(2025, 9, 17, 12, 0, 0).unwrap(); // Wednesday, 17 September 2025
-    let formatted = longest_date.format(trimmed).to_string();
+
+    // Write into a buffer instead of calling `.to_string()`: chrono's
+    // `DelayedFormat::fmt` can return `Err` for certain malformed specifiers
+    // (e.g. an unterminated "%{"), and `ToString::to_string()` assumes
+    // `Display::fmt` never fails — it panics instead of propagating the
+    // error, which would otherwise crash config loading instead of cleanly
+    // rejecting the format.
+    let mut formatted = String::new();
+    if write!(formatted, "{}", longest_date.format(trimmed)).is_err() {
+        return Err(ValidationError::new(
+            "Date format contains an invalid or unsupported specifier",
+        ));
+    }
 
     // Check output length
     if formatted.len() > MAX_DATE_FORMAT_OUTPUT_LENGTH {
@@ -572,6 +585,23 @@ mod tests {
             let format = "%A, %-d %B %Y";
             assert!(is_valid_date_format(format).is_ok());
             assert_eq!(format_longest_date(format), "Sunday, 28 September 2025");
+        }
+    }
+
+    mod fuzzing {
+        use super::*;
+        use proptest::prelude::*;
+
+        proptest! {
+            /// `format` is user-controlled config, not API data, but it still
+            /// reaches chrono's `strftime`-style formatter with no prior
+            /// sanitization beyond the empty/whitespace check — arbitrary
+            /// strings (unicode, unmatched `%` sequences, huge inputs) should
+            /// never panic, only return `Ok`/`Err`.
+            #[test]
+            fn never_panics_on_arbitrary_input(format in ".*") {
+                let _ = is_valid_date_format(&format);
+            }
         }
     }
 }
