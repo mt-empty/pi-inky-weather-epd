@@ -69,7 +69,7 @@ mod provider {
     /// cargo test --test snapshot_test provider::
     /// ```
     #[tokio::test]
-    async fn snapshot_open_meteo_dashboard() {
+    async fn open_meteo_dashboard() {
         // Start wiremock server with fixture data
         let mock_server = wiremock_setup::setup_open_meteo_mock(
             "tests/fixtures/open_meteo_hourly_forecast.json",
@@ -120,7 +120,7 @@ mod provider {
     /// - Hourly graph starts from the correct hour
     /// - Sunrise/sunset times are properly associated with the right date
     #[tokio::test]
-    async fn snapshot_open_meteo_midnight_boundary() {
+    async fn open_meteo_midnight_boundary() {
         let mock_server = wiremock_setup::setup_open_meteo_mock(
             "tests/fixtures/open_meteo_hourly_forecast.json",
             "tests/fixtures/open_meteo_daily_forecast.json",
@@ -150,7 +150,7 @@ mod provider {
         insta::assert_snapshot!(svg_content);
     }
 
-    /// Test Open-Meteo at end of day (late evening edge case)
+    /// Test Open-Meteo at local midnight (just after day rollover)
     ///
     /// **Fixed Time**: Oct 25, 2025, 13:00:00 UTC = Oct 26, 2025, 12:00 AM Melbourne (AEDT)
     ///
@@ -160,7 +160,7 @@ mod provider {
     /// - Yesterday's data is not incorrectly shown as today
     /// - Daily forecasts align with local calendar days
     #[tokio::test]
-    async fn snapshot_open_meteo_end_of_day() {
+    async fn open_meteo_local_midnight() {
         let mock_server = wiremock_setup::setup_open_meteo_mock(
             "tests/fixtures/open_meteo_hourly_forecast.json",
             "tests/fixtures/open_meteo_daily_forecast.json",
@@ -200,7 +200,7 @@ mod provider {
     /// - Hour labels in graph start from 3 AM
     /// - No hour is skipped or duplicated in the 24-hour window
     #[tokio::test]
-    async fn snapshot_open_meteo_early_morning() {
+    async fn open_meteo_early_morning() {
         let mock_server = wiremock_setup::setup_open_meteo_mock(
             "tests/fixtures/open_meteo_hourly_forecast.json",
             "tests/fixtures/open_meteo_daily_forecast.json",
@@ -258,7 +258,7 @@ mod provider {
     /// cargo insta review
     /// ```
     #[tokio::test]
-    async fn snapshot_bom_dashboard() {
+    async fn bom_dashboard() {
         // Start wiremock server with BOM fixture data
         let mock_server = wiremock_setup::setup_bom_mock(
             "tests/fixtures/bom_daily_forecast.json",
@@ -306,7 +306,7 @@ mod provider {
     /// **Edge Case**: Midnight UTC boundary for BOM provider.
     /// Verifies BOM-specific parsing handles date transitions correctly.
     #[tokio::test]
-    async fn snapshot_bom_midnight_boundary() {
+    async fn bom_midnight_boundary() {
         let mock_server = wiremock_setup::setup_bom_mock(
             "tests/fixtures/bom_daily_forecast.json",
             "tests/fixtures/bom_hourly_forecast.json",
@@ -345,7 +345,7 @@ mod provider {
     /// **Edge Case**: Tests BOM provider at local midnight.
     /// Verifies daily forecast alignment with Australian calendar days.
     #[tokio::test]
-    async fn snapshot_bom_local_midnight() {
+    async fn bom_local_midnight() {
         let mock_server = wiremock_setup::setup_bom_mock(
             "tests/fixtures/bom_daily_forecast.json",
             "tests/fixtures/bom_hourly_forecast.json",
@@ -387,7 +387,7 @@ mod provider {
     /// - Wind speed conversion (knots to km/h) is accurate
     /// - Current conditions reflect early morning state
     #[tokio::test]
-    async fn snapshot_bom_early_morning() {
+    async fn bom_early_morning() {
         let mock_server = wiremock_setup::setup_bom_mock(
             "tests/fixtures/bom_daily_forecast.json",
             "tests/fixtures/bom_hourly_forecast.json",
@@ -429,7 +429,7 @@ mod provider {
     /// This is 1 hour before the UTC midnight boundary. The daily forecast should show days
     /// aligned with the local (NY) calendar.
     #[tokio::test]
-    async fn snapshot_open_meteo_ny_6pm_before_gmt_boundary() {
+    async fn open_meteo_ny_6pm_before_gmt_boundary() {
         let mock_server = wiremock_setup::setup_open_meteo_mock(
             "tests/fixtures/ny_6pm_before_gmt/open_meteo_hourly_forecast.json",
             "tests/fixtures/ny_6pm_before_gmt/open_meteo_daily_forecast.json",
@@ -482,7 +482,7 @@ mod provider {
     /// **Note**: To fix the incomplete data warning, API request needs `past_days=1` parameter
     /// to include Dec 28 in the fixture.
     #[tokio::test]
-    async fn snapshot_open_meteo_ny_7pm_after_gmt_boundary() {
+    async fn open_meteo_ny_7pm_after_gmt_boundary() {
         let mock_server = wiremock_setup::setup_open_meteo_mock(
             "tests/fixtures/ny_7pm_after_gmt/open_meteo_hourly_forecast.json",
             "tests/fixtures/ny_7pm_after_gmt/open_meteo_daily_forecast.json",
@@ -550,7 +550,7 @@ mod precipitation {
     /// - Rain drop glyphs (`fill-opacity="0.8"`) are absent
     /// - `{snow_colour}` template variable is substituted
     #[tokio::test]
-    async fn snapshot_open_meteo_alaska_snow() {
+    async fn open_meteo_alaska_snow() {
         let mock_server = wiremock_setup::setup_open_meteo_mock(
             "tests/fixtures/alaska_snow/open_meteo_hourly_forecast.json",
             "tests/fixtures/alaska_snow/open_meteo_daily_forecast.json",
@@ -620,7 +620,7 @@ mod precipitation {
     /// - No `url(#heavy-rain)` or other unexpected legacy patterns appear
     /// - Template variables are substituted
     #[tokio::test]
-    async fn snapshot_open_meteo_mixed_precip() {
+    async fn open_meteo_mixed_precip() {
         let mock_server = wiremock_setup::setup_open_meteo_mock(
             "tests/fixtures/mixed_precip/open_meteo_hourly_forecast.json",
             "tests/fixtures/mixed_precip/open_meteo_daily_forecast.json",
@@ -747,7 +747,7 @@ mod prefer_codes {
 
     /// Oct 25 2025, 01:00 UTC = Oct 25 2025, 12:00 Melbourne (AEDT) – noon
     #[tokio::test]
-    async fn snapshot_open_meteo_dashboard_prefer_codes() {
+    async fn open_meteo_dashboard() {
         let svg = run_prefer_codes_snapshot(
             "2025-10-25T01:00:00Z",
             "tests/output/snapshot_open_meteo_dashboard_prefer_codes.svg",
@@ -758,7 +758,7 @@ mod prefer_codes {
 
     /// Oct 26 2025, 00:00 UTC = Oct 26 2025, 11:00 Melbourne (AEDT) – midnight boundary
     #[tokio::test]
-    async fn snapshot_open_meteo_midnight_boundary_prefer_codes() {
+    async fn open_meteo_midnight_boundary() {
         let svg = run_prefer_codes_snapshot(
             "2025-10-26T00:00:00Z",
             "tests/output/snapshot_open_meteo_midnight_boundary_prefer_codes.svg",
@@ -767,9 +767,9 @@ mod prefer_codes {
         insta::assert_snapshot!(svg);
     }
 
-    /// Oct 25 2025, 13:00 UTC = Oct 26 2025, 00:00 Melbourne (AEDT) – end of day
+    /// Oct 25 2025, 13:00 UTC = Oct 26 2025, 00:00 Melbourne (AEDT) – local midnight
     #[tokio::test]
-    async fn snapshot_open_meteo_end_of_day_prefer_codes() {
+    async fn open_meteo_local_midnight() {
         let svg = run_prefer_codes_snapshot(
             "2025-10-25T13:00:00Z",
             "tests/output/snapshot_open_meteo_end_of_day_prefer_codes.svg",
@@ -780,7 +780,7 @@ mod prefer_codes {
 
     /// Oct 25 2025, 16:00 UTC = Oct 26 2025, 03:00 Melbourne (AEDT) – early morning
     #[tokio::test]
-    async fn snapshot_open_meteo_early_morning_prefer_codes() {
+    async fn open_meteo_early_morning() {
         let svg = run_prefer_codes_snapshot(
             "2025-10-25T16:00:00Z",
             "tests/output/snapshot_open_meteo_early_morning_prefer_codes.svg",
