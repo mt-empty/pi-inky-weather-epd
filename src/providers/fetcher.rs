@@ -637,10 +637,7 @@ mod tests {
 
             let dashboard_error = tokio::task::spawn_blocking(move || {
                 let client = reqwest::blocking::Client::new();
-                let result = client
-                    .get(&url)
-                    .timeout(Duration::from_millis(100))
-                    .send();
+                let result = client.get(&url).timeout(Duration::from_millis(100)).send();
 
                 assert!(result.is_err());
                 let error = result.unwrap_err();
@@ -671,7 +668,9 @@ mod tests {
             let dashboard_error = Fetcher::classify_error(&error);
             match dashboard_error {
                 DashboardError::NetworkError { .. } => {}
-                _ => panic!("expected NetworkError for connection failure, got {dashboard_error:?}"),
+                _ => {
+                    panic!("expected NetworkError for connection failure, got {dashboard_error:?}")
+                }
             }
         }
 
@@ -749,10 +748,7 @@ mod tests {
 
             tokio::task::spawn_blocking(move || {
                 let client = reqwest::blocking::Client::new();
-                let result = client
-                    .get(&url)
-                    .timeout(Duration::from_millis(100))
-                    .send();
+                let result = client.get(&url).timeout(Duration::from_millis(100)).send();
 
                 if let Err(error) = result {
                     assert!(Fetcher::is_error_retryable(&error));
