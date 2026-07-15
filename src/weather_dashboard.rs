@@ -149,12 +149,22 @@ pub fn generate_weather_dashboard(settings: &DashboardSettings) -> Result<(), Er
 ///
 /// # Examples
 ///
-/// ```ignore
-/// use pi_inky_weather_epd::clock::FixedClock;
+/// `no_run`: this reads `settings.misc.template_path` from disk and fetches
+/// live weather data, so the example is compiled and type-checked by
+/// `cargo test` but not executed.
 ///
+/// ```no_run
+/// # fn main() -> anyhow::Result<()> {
+/// use pi_inky_weather_epd::clock::FixedClock;
+/// use pi_inky_weather_epd::configs::settings::DashboardSettings;
+/// use pi_inky_weather_epd::weather_dashboard::generate_weather_dashboard_injection;
+///
+/// let settings = DashboardSettings::load()?;
 /// let output_svg_name = std::path::Path::new("output/weather_dashboard.svg");
-/// let clock = FixedClock::from_rfc3339("2025-10-09T22:00:00Z").unwrap();
+/// let clock = FixedClock::from_rfc3339("2025-10-09T22:00:00Z")?;
 /// generate_weather_dashboard_injection(&settings, &clock, output_svg_name)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn generate_weather_dashboard_injection(
     settings: &DashboardSettings,

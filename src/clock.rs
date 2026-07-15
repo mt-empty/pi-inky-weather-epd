@@ -15,16 +15,24 @@ use chrono_tz::Tz;
 ///
 /// Using the system clock in production:
 ///
-/// ```ignore
+/// ```
+/// use pi_inky_weather_epd::clock::{Clock, SystemClock};
+///
 /// let clock = SystemClock;
 /// let now = clock.now_local(chrono_tz::Australia::Melbourne);
+/// assert!(now.timestamp() > 0);
 /// ```
 ///
 /// Using a fixed clock in tests:
 ///
-/// ```ignore
-/// let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 10, 9, 22, 0, 0).unwrap());
+/// ```
+/// use chrono::{TimeZone, Utc};
+/// use pi_inky_weather_epd::clock::{Clock, FixedClock};
+///
+/// let fixed_time = Utc.with_ymd_and_hms(2025, 10, 9, 22, 0, 0).unwrap();
+/// let clock = FixedClock::new(fixed_time);
 /// let now = clock.now_local(chrono_tz::Australia::Melbourne);
+/// assert_eq!(now.with_timezone(&Utc), fixed_time);
 /// ```
 pub trait Clock {
     /// Returns the current UTC time
@@ -66,13 +74,14 @@ impl FixedClock {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
     /// use chrono::{TimeZone, Utc};
+    /// use pi_inky_weather_epd::clock::{Clock, FixedClock};
     ///
     /// // Create a clock fixed at 10 PM UTC on Oct 9, 2025
-    /// let clock = FixedClock::new(
-    ///     Utc.with_ymd_and_hms(2025, 10, 9, 22, 0, 0).unwrap()
-    /// );
+    /// let fixed_time = Utc.with_ymd_and_hms(2025, 10, 9, 22, 0, 0).unwrap();
+    /// let clock = FixedClock::new(fixed_time);
+    /// assert_eq!(clock.now_utc(), fixed_time);
     /// ```
     pub fn new(fixed_time: DateTime<Utc>) -> Self {
         Self { fixed_time }
@@ -91,8 +100,11 @@ impl FixedClock {
     ///
     /// # Examples
     ///
-    /// ```ignore
+    /// ```
+    /// use pi_inky_weather_epd::clock::{Clock, FixedClock};
+    ///
     /// let clock = FixedClock::from_rfc3339("2025-10-09T22:00:00Z").unwrap();
+    /// assert_eq!(clock.now_utc().to_rfc3339(), "2025-10-09T22:00:00+00:00");
     /// ```
     pub fn from_rfc3339(timestamp: &str) -> Result<Self, chrono::ParseError> {
         let fixed_time = DateTime::parse_from_rfc3339(timestamp)?.with_timezone(&Utc);
