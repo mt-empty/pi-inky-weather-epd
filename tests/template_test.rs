@@ -6,7 +6,7 @@ use std::fs;
 /// Validates that the base SVG template file is valid
 ///
 /// This test ensures the template file can be parsed as valid SVG.
-/// It doesn't test rendering - see snapshot_provider_test.rs for E2E tests.
+/// It doesn't test rendering - see tests/snapshot_test.rs for E2E tests.
 #[test]
 fn base_template_svg_ok() {
     let settings = test_utils::test_settings(|_| {});
