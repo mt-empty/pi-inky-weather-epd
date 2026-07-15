@@ -283,7 +283,7 @@ pub struct DailyForecast {
 impl HourlyForecast {
     /// Maps a BOM API hourly entry into the domain model, applying the
     /// configured temperature unit.
-    pub fn from_bom(
+    pub(crate) fn from_bom(
         bom: crate::apis::bom::models::HourlyForecast,
         settings: &crate::configs::settings::DashboardSettings,
     ) -> Self {
@@ -310,7 +310,7 @@ impl HourlyForecast {
 impl DailyForecast {
     /// Maps a BOM API daily entry into the domain model, applying the
     /// configured temperature unit and display timezone.
-    pub fn from_bom(
+    pub(crate) fn from_bom(
         bom: crate::apis::bom::models::DailyEntry,
         settings: &crate::configs::settings::DashboardSettings,
     ) -> Self {

@@ -165,7 +165,7 @@ pub struct Daily {
 impl OpenMeteoHourlyResponse {
     /// Maps the API response into domain models, applying the configured
     /// temperature unit.
-    pub fn into_domain(
+    pub(crate) fn into_domain(
         self,
         settings: &crate::configs::settings::DashboardSettings,
     ) -> Vec<crate::domain::models::HourlyForecast> {
@@ -283,7 +283,7 @@ fn convert_location_local_to_display(
 impl OpenMeteoDailyResponse {
     /// Maps the API response into domain models, applying the configured
     /// temperature unit.
-    pub fn into_domain(
+    pub(crate) fn into_domain(
         self,
         settings: &crate::configs::settings::DashboardSettings,
     ) -> Vec<crate::domain::models::DailyForecast> {
