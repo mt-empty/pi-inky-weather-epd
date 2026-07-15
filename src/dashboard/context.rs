@@ -886,3 +886,584 @@ impl<'a> ContextBuilder<'a> {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::clock::FixedClock;
+    use crate::domain::models::{Astronomical, Temperature};
+
+    /// Regression test for Issue #16: forecast date names were computed from
+    /// UTC timestamps, so converting to local time could shift the date to
+    /// the previous/next day and leave day 7 unpopulated ("NA").
+    mod issue_16_seventh_day_regression {
+        use super::*;
+
+        /// 7 days of mock forecast data starting from `start_date` (local calendar days).
+        fn mock_daily_forecast(start_date: NaiveDate, num_days: usize) -> Vec<DailyForecast> {
+            (0..num_days)
+                .map(|i| {
+                    let date = start_date + chrono::Days::new(i as u64);
+                    let naive_datetime = date.and_hms_opt(6, 30, 0).unwrap();
+                    DailyForecast {
+                        date: Some(date),
+                        temp_max: Some(Temperature::celsius(20.0 + i as f32)),
+                        temp_min: Some(Temperature::celsius(10.0 + i as f32)),
+                        precipitation: None,
+                        astronomical: Some(Astronomical {
+                            sunrise_time: Some(naive_datetime),
+                            sunset_time: Some(naive_datetime),
+                        }),
+                        cloud_cover: None,
+                        weather_code: None,
+                    }
+                })
+                .collect()
+        }
+
+        /// Clock: Oct 26, 2025, 9:00 AM Melbourne (UTC+11) = Oct 25, 2025, 22:00 UTC.
+        /// Forecast data: 7 days starting from Oct 26 (today) as NaiveDate values.
+        /// day_index 0 = today (Oct 26, sunrise/sunset only); day_index 1-6 fill
+        /// day2-day7 with temp/icon data from Oct 27-Nov 1.
+        #[test]
+        fn all_seven_days_are_populated() {
+            let clock = FixedClock::from_rfc3339("2025-10-25T22:00:00Z")
+                .expect("failed to create fixed clock");
+            let start_date = NaiveDate::from_ymd_opt(2025, 10, 26).unwrap();
+            let daily_forecast_data = mock_daily_forecast(start_date, 7);
+
+            let settings = DashboardSettings::load_test_config().unwrap();
+            let mut builder = ContextBuilder::new(&settings, &clock);
+            builder.with_daily_forecast_data(daily_forecast_data, &clock);
+            let context = &builder.context;
+
+            assert_eq!(context.day2_name, "Mon", "day 2 should be Monday (Oct 27)");
+            assert_eq!(context.day2_mintemp, "11");
+            assert_eq!(context.day2_maxtemp, "21");
+
+            assert_eq!(context.day3_name, "Tue", "day 3 should be Tuesday (Oct 28)");
+            assert_eq!(context.day3_mintemp, "12");
+            assert_eq!(context.day3_maxtemp, "22");
+
+            assert_eq!(
+                context.day4_name, "Wed",
+                "day 4 should be Wednesday (Oct 29)"
+            );
+            assert_eq!(context.day4_mintemp, "13");
+            assert_eq!(context.day4_maxtemp, "23");
+
+            assert_eq!(
+                context.day5_name, "Thu",
+                "day 5 should be Thursday (Oct 30)"
+            );
+            assert_eq!(context.day5_mintemp, "14");
+            assert_eq!(context.day5_maxtemp, "24");
+
+            assert_eq!(context.day6_name, "Fri", "day 6 should be Friday (Oct 31)");
+            assert_eq!(context.day6_mintemp, "15");
+            assert_eq!(context.day6_maxtemp, "25");
+
+            assert_eq!(context.day7_name, "Sat", "day 7 should be Saturday (Nov 1)");
+            assert_eq!(context.day7_mintemp, "16");
+            assert_eq!(context.day7_maxtemp, "26");
+
+            assert_ne!(
+                context.day7_name, "NA",
+                "day 7 name is 'NA' - timezone bug is present"
+            );
+        }
+    }
+
+    /// Tests for the multi-error priority system: when multiple errors/warnings
+    /// occur, the highest priority error is displayed
+    /// (ApiError > NetworkError > IncompleteData, per `DashboardError::priority`).
+    mod error_priority_display {
+        use super::*;
+        use crate::dashboard::chart::ElementVisibility;
+        use chrono::{TimeZone, Utc};
+
+        /// `ContextBuilder::new` requires a clock, but only reads it when
+        /// `dev.enable_debug_logs` is true (off by default in test config) —
+        /// tests below that don't otherwise need a clock use this placeholder.
+        fn placeholder_clock() -> FixedClock {
+            FixedClock::new(Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap())
+        }
+
+        #[test]
+        fn single_validation_error_displays() {
+            let settings = DashboardSettings::load_test_config().unwrap();
+            let clock = placeholder_clock();
+            let mut builder = ContextBuilder::new(&settings, &clock);
+
+            builder.with_validation_error(DashboardError::IncompleteData {
+                details: "Only 5 days available".to_string(),
+            });
+
+            let context = builder.context;
+            assert_eq!(context.diagnostic_message, "Incomplete Data");
+            assert_eq!(
+                context.diagnostic_visibility,
+                ElementVisibility::Visible.to_string()
+            );
+            assert!(context.diagnostic_icons_svg.contains("code-yellow.svg"));
+        }
+
+        #[test]
+        fn single_api_warning_displays() {
+            let settings = DashboardSettings::load_test_config().unwrap();
+            let clock = placeholder_clock();
+            let mut builder = ContextBuilder::new(&settings, &clock);
+
+            builder.with_warning(DashboardError::NetworkError {
+                details: "Using cached data".to_string(),
+            });
+
+            let context = builder.context;
+            assert_eq!(context.diagnostic_message, "API unreachable -> Stale Data");
+            assert_eq!(
+                context.diagnostic_visibility,
+                ElementVisibility::Visible.to_string()
+            );
+            assert!(context.diagnostic_icons_svg.contains("code-orange.svg"));
+        }
+
+        #[test]
+        fn high_priority_api_error_overrides_low_priority_incomplete_data() {
+            let settings = DashboardSettings::load_test_config().unwrap();
+            let clock = placeholder_clock();
+            let mut builder = ContextBuilder::new(&settings, &clock);
+
+            builder.with_validation_error(DashboardError::IncompleteData {
+                details: "Only 5 days available".to_string(),
+            });
+            builder.with_warning(DashboardError::ApiError {
+                details: "Server returned error 500".to_string(),
+            });
+
+            let context = builder.context;
+
+            assert_eq!(context.diagnostic_message, "API error -> Stale Data");
+            assert!(
+                context.diagnostic_icons_svg.contains("code-red.svg"),
+                "expected red icon for ApiError in cascading SVG"
+            );
+            assert_eq!(
+                context.diagnostic_visibility,
+                ElementVisibility::Visible.to_string()
+            );
+        }
+
+        #[test]
+        fn medium_priority_overrides_low_priority() {
+            let settings = DashboardSettings::load_test_config().unwrap();
+            let clock = placeholder_clock();
+            let mut builder = ContextBuilder::new(&settings, &clock);
+
+            builder.with_validation_error(DashboardError::IncompleteData {
+                details: "Only 5 days available".to_string(),
+            });
+            builder.with_warning(DashboardError::NetworkError {
+                details: "Using cached data".to_string(),
+            });
+
+            let context = builder.context;
+
+            assert_eq!(context.diagnostic_message, "API unreachable -> Stale Data");
+            assert!(
+                context.diagnostic_icons_svg.contains("code-orange.svg"),
+                "expected orange icon for NetworkError in cascading SVG"
+            );
+        }
+
+        #[test]
+        fn order_doesnt_matter_highest_priority_wins() {
+            let clock = placeholder_clock();
+            let settings1 = DashboardSettings::load_test_config().unwrap();
+            let mut builder1 = ContextBuilder::new(&settings1, &clock);
+            let settings2 = DashboardSettings::load_test_config().unwrap();
+            let mut builder2 = ContextBuilder::new(&settings2, &clock);
+
+            builder1.with_validation_error(DashboardError::IncompleteData {
+                details: "Issue 1".to_string(),
+            });
+            builder1.with_warning(DashboardError::ApiError {
+                details: "Issue 2".to_string(),
+            });
+
+            builder2.with_warning(DashboardError::ApiError {
+                details: "Issue 2".to_string(),
+            });
+            builder2.with_validation_error(DashboardError::IncompleteData {
+                details: "Issue 1".to_string(),
+            });
+
+            assert_eq!(
+                builder1.context.diagnostic_message,
+                builder2.context.diagnostic_message
+            );
+            assert_eq!(
+                builder1.context.diagnostic_icons_svg,
+                builder2.context.diagnostic_icons_svg
+            );
+            assert!(builder1
+                .context
+                .diagnostic_icons_svg
+                .contains("code-red.svg"));
+        }
+
+        #[test]
+        fn multiple_errors_same_priority_shows_first() {
+            let settings = DashboardSettings::load_test_config().unwrap();
+            let clock = placeholder_clock();
+            let mut builder = ContextBuilder::new(&settings, &clock);
+
+            builder.with_validation_error(DashboardError::IncompleteData {
+                details: "Issue 1".to_string(),
+            });
+            builder.with_validation_error(DashboardError::IncompleteData {
+                details: "Issue 2".to_string(),
+            });
+
+            let context = builder.context;
+
+            assert_eq!(context.diagnostic_message, "Incomplete Data");
+            assert!(context.diagnostic_icons_svg.contains("code-yellow.svg"));
+        }
+
+        /// Real-world scenario: API is unreachable (medium priority), so cached
+        /// data is used, and that cached data happens to be incomplete (low
+        /// priority) — the higher-priority API warning should win.
+        #[test]
+        fn realistic_scenario_api_stale_and_incomplete_data() {
+            let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 10, 15, 10, 0, 0).unwrap());
+            let settings = DashboardSettings::load_test_config().unwrap();
+            let mut builder = ContextBuilder::new(&settings, &clock);
+
+            builder.with_warning(DashboardError::NetworkError {
+                details: "Could not reach API server".to_string(),
+            });
+
+            let incomplete_daily_data: Vec<DailyForecast> = vec![]; // only 3 days instead of 7
+            builder.with_daily_forecast_data(incomplete_daily_data, &clock);
+
+            let context = builder.context;
+
+            assert_eq!(context.diagnostic_message, "API unreachable -> Stale Data");
+            assert!(context.diagnostic_icons_svg.contains("code-orange.svg"));
+        }
+
+        #[test]
+        fn no_errors_hides_warning_display() {
+            let settings = DashboardSettings::load_test_config().unwrap();
+            let clock = placeholder_clock();
+            let builder = ContextBuilder::new(&settings, &clock);
+            let context = builder.context;
+
+            assert_eq!(
+                context.diagnostic_visibility,
+                ElementVisibility::Hidden.to_string()
+            );
+        }
+
+        #[test]
+        fn cascading_icons_svg_generated_for_multiple_errors() {
+            let settings = DashboardSettings::load_test_config().unwrap();
+            let clock = placeholder_clock();
+            let mut builder = ContextBuilder::new(&settings, &clock);
+
+            builder.with_warning(DashboardError::NetworkError {
+                details: "Network issue".to_string(),
+            });
+            builder.with_validation_error(DashboardError::IncompleteData {
+                details: "Missing days".to_string(),
+            });
+            builder.with_warning(DashboardError::ApiError {
+                details: "Server error".to_string(),
+            });
+
+            let context = builder.context;
+
+            assert_eq!(context.diagnostic_message, "API error -> Stale Data");
+            assert!(context.diagnostic_icons_svg.contains("code-red.svg"));
+            assert!(context.diagnostic_icons_svg.contains("code-orange.svg"));
+            assert!(context.diagnostic_icons_svg.contains("code-yellow.svg"));
+
+            let image_count = context.diagnostic_icons_svg.matches("<image").count();
+            assert_eq!(image_count, 3, "should have 3 image tags for 3 diagnostics");
+        }
+
+        /// Icons should appear in reverse-priority order in the SVG markup
+        /// (lowest priority first) so the lowest priority renders in back and
+        /// the highest priority renders last, appearing in front.
+        #[test]
+        fn cascading_icons_are_sorted_by_priority() {
+            let settings = DashboardSettings::load_test_config().unwrap();
+            let clock = placeholder_clock();
+            let mut builder = ContextBuilder::new(&settings, &clock);
+
+            builder.with_validation_error(DashboardError::IncompleteData {
+                details: "Issue 1".to_string(),
+            });
+            builder.with_warning(DashboardError::NetworkError {
+                details: "Issue 2".to_string(),
+            });
+            builder.with_warning(DashboardError::ApiError {
+                details: "Issue 3".to_string(),
+            });
+
+            let context = builder.context;
+            let svg = &context.diagnostic_icons_svg;
+            let red_pos = svg.find("code-red.svg").unwrap();
+            let orange_pos = svg.find("code-orange.svg").unwrap();
+            let yellow_pos = svg.find("code-yellow.svg").unwrap();
+
+            assert!(
+                yellow_pos < orange_pos,
+                "yellow should render before orange"
+            );
+            assert!(orange_pos < red_pos, "orange should render before red");
+        }
+
+        #[test]
+        fn single_error_shows_one_icon() {
+            let settings = DashboardSettings::load_test_config().unwrap();
+            let clock = placeholder_clock();
+            let mut builder = ContextBuilder::new(&settings, &clock);
+
+            builder.with_validation_error(DashboardError::IncompleteData {
+                details: "Only issue".to_string(),
+            });
+
+            let context = builder.context;
+            let image_count = context.diagnostic_icons_svg.matches("<image").count();
+            assert_eq!(image_count, 1, "should have 1 image tag for 1 diagnostic");
+            assert!(context.diagnostic_icons_svg.contains("code-yellow.svg"));
+        }
+    }
+
+    /// `with_daily_forecast_data` in a negative-UTC-offset timezone (New York,
+    /// EST/UTC-5): verifies noon-UTC forecast timestamps map to the correct
+    /// local date without shifting to the previous day.
+    mod new_york_timezone_daily_forecast {
+        use super::*;
+        use crate::configs::settings::TemperatureUnit;
+        use crate::domain::models::{Astronomical, Precipitation};
+        use chrono::{NaiveDateTime, TimeZone};
+
+        fn temp_c(value: f32) -> Temperature {
+            Temperature::new(value, TemperatureUnit::C)
+        }
+
+        fn ny_test_settings() -> DashboardSettings {
+            let mut settings = DashboardSettings::load_test_config().unwrap();
+            settings.misc.timezone = chrono_tz::America::New_York;
+            settings
+        }
+
+        /// Current time: Dec 17, 2025 at 10:00 AM EST.
+        #[test]
+        fn with_daily_forecast_data_new_york_est() {
+            let settings = ny_test_settings();
+            let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 12, 17, 15, 0, 0).unwrap());
+
+            // Dec 17-23, 2025: Wed, Thu, Fri, Sat, Sun, Mon, Tue
+            let daily_forecasts = vec![
+                DailyForecast {
+                    date: Some(NaiveDate::from_ymd_opt(2025, 12, 17).unwrap()),
+                    temp_max: Some(temp_c(9.9)),
+                    temp_min: Some(temp_c(-2.8)),
+                    precipitation: Some(Precipitation::new(Some(10), None, Some(0))),
+                    astronomical: Some(Astronomical {
+                        // 12:19 UTC = 7:19 AM EST, 21:33 UTC = 4:33 PM EST
+                        sunrise_time: Some(
+                            NaiveDateTime::parse_from_str(
+                                "2025-12-17 07:19:00",
+                                "%Y-%m-%d %H:%M:%S",
+                            )
+                            .unwrap(),
+                        ),
+                        sunset_time: Some(
+                            NaiveDateTime::parse_from_str(
+                                "2025-12-17 16:33:00",
+                                "%Y-%m-%d %H:%M:%S",
+                            )
+                            .unwrap(),
+                        ),
+                    }),
+                    cloud_cover: None,
+                    weather_code: None,
+                },
+                DailyForecast {
+                    date: Some(NaiveDate::from_ymd_opt(2025, 12, 18).unwrap()),
+                    temp_max: Some(temp_c(10.3)),
+                    temp_min: Some(temp_c(-1.2)),
+                    precipitation: Some(Precipitation::new(Some(30), None, Some(1))),
+                    astronomical: None,
+                    cloud_cover: None,
+                    weather_code: None,
+                },
+                DailyForecast {
+                    date: Some(NaiveDate::from_ymd_opt(2025, 12, 19).unwrap()),
+                    temp_max: Some(temp_c(11.5)),
+                    temp_min: Some(temp_c(1.9)),
+                    precipitation: Some(Precipitation::new(Some(50), None, Some(2))),
+                    astronomical: None,
+                    cloud_cover: None,
+                    weather_code: None,
+                },
+                DailyForecast {
+                    date: Some(NaiveDate::from_ymd_opt(2025, 12, 20).unwrap()),
+                    temp_max: Some(temp_c(2.2)),
+                    temp_min: Some(temp_c(-1.1)),
+                    precipitation: None,
+                    astronomical: None,
+                    cloud_cover: None,
+                    weather_code: None,
+                },
+                DailyForecast {
+                    date: Some(NaiveDate::from_ymd_opt(2025, 12, 21).unwrap()),
+                    temp_max: Some(temp_c(7.2)),
+                    temp_min: Some(temp_c(1.7)),
+                    precipitation: None,
+                    astronomical: None,
+                    cloud_cover: None,
+                    weather_code: None,
+                },
+                DailyForecast {
+                    date: Some(NaiveDate::from_ymd_opt(2025, 12, 22).unwrap()),
+                    temp_max: Some(temp_c(5.0)),
+                    temp_min: Some(temp_c(-1.5)),
+                    precipitation: None,
+                    astronomical: None,
+                    cloud_cover: None,
+                    weather_code: None,
+                },
+                DailyForecast {
+                    date: Some(NaiveDate::from_ymd_opt(2025, 12, 23).unwrap()),
+                    temp_max: Some(temp_c(1.3)),
+                    temp_min: Some(temp_c(-3.0)),
+                    precipitation: None,
+                    astronomical: None,
+                    cloud_cover: None,
+                    weather_code: None,
+                },
+            ];
+
+            let mut builder = ContextBuilder::new(&settings, &clock);
+            builder.with_daily_forecast_data(daily_forecasts, &clock);
+            let context = builder.context;
+
+            // Dec 18-23: Thu, Fri, Sat, Sun, Mon, Tue
+            assert_eq!(context.day2_name, "Thu");
+            assert_eq!(context.day3_name, "Fri");
+            assert_eq!(context.day4_name, "Sat");
+            assert_eq!(context.day5_name, "Sun");
+            assert_eq!(context.day6_name, "Mon");
+            assert_eq!(context.day7_name, "Tue");
+
+            // Day 0 (today, Dec 17) - only sunrise/sunset used
+            assert_eq!(context.sunrise_time, "07:19");
+            assert_eq!(context.sunset_time, "16:33");
+
+            assert_eq!(context.day2_maxtemp, "10"); // 10.3°C → 10
+            assert_eq!(context.day2_mintemp, "-1"); // -1.2°C → -1
+            assert_eq!(context.day3_maxtemp, "12"); // 11.5°C → 12
+            assert_eq!(context.day3_mintemp, "2"); // 1.9°C → 2
+            assert_eq!(context.day4_maxtemp, "2"); // 2.2°C → 2
+            assert_eq!(context.day4_mintemp, "-1"); // -1.1°C → -1
+            assert_eq!(context.day5_maxtemp, "7"); // 7.2°C → 7
+            assert_eq!(context.day5_mintemp, "2"); // 1.7°C → 2
+            assert_eq!(context.day6_maxtemp, "5"); // 5.0°C → 5
+            assert_eq!(context.day6_mintemp, "-2"); // -1.5°C → -2
+            assert_eq!(context.day7_maxtemp, "1"); // 1.3°C → 1
+            assert_eq!(context.day7_mintemp, "-3"); // -3.0°C → -3
+        }
+
+        /// Critical case: 2025-12-17T12:00:00Z → 2025-12-17T07:00:00-05:00
+        /// (same day) — noon UTC timestamps must not shift the date in EST.
+        #[test]
+        fn noon_utc_prevents_date_shift_in_est() {
+            let settings = ny_test_settings();
+            // Fixed clock: Dec 17, 2025 at 2:00 AM EST (early morning)
+            let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 12, 17, 7, 0, 0).unwrap());
+
+            let daily_forecasts = vec![
+                (17, 10.0, -3.0),
+                (18, 11.0, -2.0),
+                (19, 12.0, -1.0),
+                (20, 13.0, 0.0),
+                (21, 14.0, 1.0),
+                (22, 15.0, 2.0),
+                (23, 16.0, 3.0),
+            ]
+            .into_iter()
+            .map(|(day, temp_max, temp_min)| DailyForecast {
+                date: Some(NaiveDate::from_ymd_opt(2025, 12, day).unwrap()),
+                temp_max: Some(temp_c(temp_max)),
+                temp_min: Some(temp_c(temp_min)),
+                precipitation: None,
+                astronomical: None,
+                cloud_cover: None,
+                weather_code: None,
+            })
+            .collect();
+
+            let mut builder = ContextBuilder::new(&settings, &clock);
+            builder.with_daily_forecast_data(daily_forecasts, &clock);
+            let context = builder.context;
+
+            // All days should be correctly assigned despite early morning test time
+            assert_eq!(context.day2_name, "Thu");
+            assert_eq!(context.day2_maxtemp, "11"); // Dec 18 data goes to day2
+            assert_eq!(context.day3_maxtemp, "12"); // Dec 19 data goes to day3
+            assert_eq!(context.day4_maxtemp, "13"); // Dec 20 data goes to day4
+            assert_eq!(context.day5_maxtemp, "14"); // Dec 21 data goes to day5
+            assert_eq!(context.day6_maxtemp, "15"); // Dec 22 data goes to day6
+            assert_eq!(context.day7_maxtemp, "16"); // Dec 23 data goes to day7
+        }
+
+        #[test]
+        fn skips_past_dates() {
+            let settings = ny_test_settings();
+            // Fixed clock: Dec 19, 2025 at 10:00 AM EST
+            let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 12, 19, 15, 0, 0).unwrap());
+
+            // Includes past dates (Dec 17, 18) which should be skipped
+            let daily_forecasts = vec![
+                (17, 10.0, -3.0),
+                (18, 11.0, -2.0),
+                (19, 12.0, -1.0),
+                (20, 13.0, 0.0),
+                (21, 14.0, 1.0),
+                (22, 15.0, 2.0),
+                (23, 16.0, 3.0),
+                (24, 17.0, 4.0),
+                (25, 18.0, 5.0),
+            ]
+            .into_iter()
+            .map(|(day, temp_max, temp_min)| DailyForecast {
+                date: Some(NaiveDate::from_ymd_opt(2025, 12, day).unwrap()),
+                temp_max: Some(temp_c(temp_max)),
+                temp_min: Some(temp_c(temp_min)),
+                precipitation: None,
+                astronomical: None,
+                cloud_cover: None,
+                weather_code: None,
+            })
+            .collect();
+
+            let mut builder = ContextBuilder::new(&settings, &clock);
+            builder.with_daily_forecast_data(daily_forecasts, &clock);
+            let context = builder.context;
+
+            // Dec 19 is today (day 0), so day2 should be Dec 20 (Sat)
+            assert_eq!(context.day2_name, "Sat");
+            assert_eq!(context.day2_maxtemp, "13"); // Dec 20 → day2
+            assert_eq!(context.day3_maxtemp, "14"); // Dec 21 → day3
+            assert_eq!(context.day4_maxtemp, "15"); // Dec 22 → day4
+            assert_eq!(context.day5_maxtemp, "16"); // Dec 23 → day5
+            assert_eq!(context.day6_maxtemp, "17"); // Dec 24 → day6
+            assert_eq!(context.day7_maxtemp, "18"); // Dec 25 → day7
+        }
+    }
+}

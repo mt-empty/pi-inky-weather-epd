@@ -181,3 +181,110 @@ pub struct ErrorDetail {
     // pub status: String,
     pub detail: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    /// The fixture's first hourly entry, pinned so a field-mapping regression
+    /// (e.g. a serde rename mismatch silently defaulting a value) is caught
+    /// instead of only checking the value falls in a plausible range.
+    #[test]
+    fn hourly_fixture_deserializes_first_entry_exactly() {
+        let json = fs::read_to_string("tests/fixtures/bom_hourly_forecast.json")
+            .expect("failed to read BOM hourly forecast fixture");
+        let response: HourlyForecastResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+
+        let first = &response.data[0];
+        assert_eq!(first.temp.value, 17.0);
+        assert_eq!(first.temp_feels_like.value, 15.0);
+        assert_eq!(first.wind.speed_kilometre, 9);
+        assert_eq!(first.wind.gust_speed_kilometre, 19);
+        assert_eq!(first.relative_humidity.0, 64);
+        assert_eq!(first.uv.unwrap().0, 0);
+        assert_eq!(first.rain.chance, Some(30));
+        assert_eq!(first.rain.amount.min, Some(0));
+        assert_eq!(first.rain.amount.max, Some(1));
+        assert_eq!(
+            first.time,
+            "2025-10-25T11:00:00Z".parse::<DateTime<Utc>>().unwrap()
+        );
+        assert!(first.is_night);
+    }
+
+    /// The fixture's first daily entry, pinned the same way as the hourly test above.
+    #[test]
+    fn daily_fixture_deserializes_first_entry_exactly() {
+        let json = fs::read_to_string("tests/fixtures/bom_daily_forecast.json")
+            .expect("failed to read BOM daily forecast fixture");
+        let response: DailyForecastResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+
+        let first = &response.data[0];
+        assert_eq!(first.temp_max.unwrap().value, 20.0);
+        assert!(first.temp_min.is_none());
+        let rain = first.rain.as_ref().unwrap();
+        assert_eq!(rain.chance, Some(60));
+        assert_eq!(rain.amount.min, Some(0));
+        assert_eq!(rain.amount.max, Some(2));
+        let astronomical = first.astronomical.unwrap();
+        assert!(astronomical.sunrise_time.is_some());
+        assert!(astronomical.sunset_time.is_some());
+    }
+
+    #[test]
+    fn hourly_fixture_fields_are_within_domain_bounds() {
+        let json = fs::read_to_string("tests/fixtures/bom_hourly_forecast.json")
+            .expect("failed to read BOM hourly forecast fixture");
+        let response: HourlyForecastResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+
+        assert_eq!(response.data.len(), 73);
+        for forecast in &response.data {
+            assert!(forecast.temp.value.is_finite());
+            assert!(forecast.temp_feels_like.value.is_finite());
+            if let Some(chance) = forecast.rain.chance {
+                assert!(chance <= 100, "rain chance should be <= 100%");
+            }
+        }
+    }
+
+    #[test]
+    fn daily_fixture_fields_are_within_domain_bounds() {
+        let json = fs::read_to_string("tests/fixtures/bom_daily_forecast.json")
+            .expect("failed to read BOM daily forecast fixture");
+        let response: DailyForecastResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+
+        assert_eq!(response.data.len(), 8);
+        for entry in &response.data {
+            if let Some(temp_max) = &entry.temp_max {
+                assert!(temp_max.value.is_finite());
+            }
+            if let Some(temp_min) = &entry.temp_min {
+                assert!(temp_min.value.is_finite());
+            }
+            if let Some(chance) = entry.rain.as_ref().and_then(|r| r.chance) {
+                assert!(chance <= 100, "rain chance should be <= 100%");
+            }
+        }
+    }
+
+    #[test]
+    fn hourly_fixture_is_chronologically_ordered() {
+        let json = fs::read_to_string("tests/fixtures/bom_hourly_forecast.json")
+            .expect("failed to read BOM hourly forecast fixture");
+        let response: HourlyForecastResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+
+        assert!(response.data.len() > 1);
+        for i in 1..response.data.len() {
+            assert!(
+                response.data[i].time > response.data[i - 1].time,
+                "hourly forecasts should be in chronological order"
+            );
+        }
+    }
+}

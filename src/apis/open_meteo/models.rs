@@ -450,3 +450,198 @@ where
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    /// The fixture's first hourly entry, pinned so a field-mapping regression
+    /// (e.g. a serde rename mismatch silently defaulting a value) is caught
+    /// instead of only checking the value falls in a plausible range.
+    #[test]
+    fn hourly_fixture_deserializes_first_entry_exactly() {
+        let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+            .expect("failed to read Open-Meteo hourly forecast fixture");
+        let response: OpenMeteoHourlyResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+
+        assert_eq!(response.latitude, -37.75);
+        assert_eq!(response.longitude, 144.875);
+        assert_eq!(response.hourly.time.len(), 168);
+        assert_eq!(response.hourly.temperature_2m[0], 15.5);
+        assert_eq!(response.hourly.apparent_temperature[0], 14.3);
+        assert_eq!(response.hourly.precipitation_probability[0], 0);
+        assert_eq!(response.hourly.precipitation[0], 0.0);
+        assert_eq!(response.hourly.uv_index[0], 4.6);
+        assert_eq!(response.hourly.wind_speed_10m[0], 4.1);
+        assert_eq!(response.hourly.wind_gusts_10m[0], 14.0);
+        assert_eq!(response.hourly.relative_humidity_2m[0], 61);
+        assert_eq!(response.hourly.cloud_cover[0], Some(1));
+        assert_eq!(response.hourly.snowfall[0], 0.0);
+        assert_eq!(response.hourly.weather_code.as_ref().unwrap()[0], 3);
+    }
+
+    /// The fixture's first daily entry, pinned the same way as the hourly test above.
+    #[test]
+    fn daily_fixture_deserializes_first_entry_exactly() {
+        let json = fs::read_to_string("tests/fixtures/open_meteo_daily_forecast.json")
+            .expect("failed to read Open-Meteo daily forecast fixture");
+        let response: OpenMeteoDailyResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+
+        assert_eq!(response.daily.time.len(), 7);
+        assert_eq!(response.daily.temperature_2m_max[0], 18.5);
+        assert_eq!(response.daily.temperature_2m_min[0], 13.1);
+        assert_eq!(response.daily.precipitation_sum[0], 6.6);
+        assert_eq!(response.daily.precipitation_probability_max[0], 93);
+        assert_eq!(response.daily.cloud_cover_mean[0], Some(88));
+        assert_eq!(response.daily.snowfall_sum[0], 0.0);
+        assert_eq!(response.daily.weather_code.as_ref().unwrap()[0], 53);
+    }
+
+    #[test]
+    fn hourly_snowfall_array_present_and_aligned() {
+        let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+            .expect("failed to read Open-Meteo hourly forecast fixture");
+        let response: OpenMeteoHourlyResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+
+        assert_eq!(response.hourly.snowfall.len(), response.hourly.time.len());
+        assert!(
+            response.hourly.snowfall.iter().any(|&s| s > 0.0),
+            "fixture should contain at least some snowfall data"
+        );
+    }
+
+    #[test]
+    fn daily_snowfall_sum_present_and_aligned() {
+        let json = fs::read_to_string("tests/fixtures/open_meteo_daily_forecast.json")
+            .expect("failed to read Open-Meteo daily forecast fixture");
+        let response: OpenMeteoDailyResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+
+        assert_eq!(response.daily.snowfall_sum.len(), response.daily.time.len());
+        assert!(
+            response.daily.snowfall_sum.iter().any(|&s| s > 0.0),
+            "fixture should contain at least some daily snowfall data"
+        );
+    }
+
+    #[test]
+    fn hourly_fixture_fields_are_within_domain_bounds() {
+        let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+            .expect("failed to read Open-Meteo hourly forecast fixture");
+        let response: OpenMeteoHourlyResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+        let hourly = &response.hourly;
+
+        for i in 0..hourly.time.len() {
+            assert!(hourly.temperature_2m[i] > -50.0 && hourly.temperature_2m[i] < 60.0);
+            assert!(hourly.apparent_temperature[i].is_finite());
+            assert!(hourly.precipitation_probability[i] <= 100);
+            assert!((0.0..500.0).contains(&hourly.precipitation[i]));
+            assert!((0.0..20.0).contains(&hourly.uv_index[i]));
+            assert!((0.0..500.0).contains(&hourly.wind_speed_10m[i]));
+            assert!(hourly.relative_humidity_2m[i] <= 100);
+        }
+    }
+
+    #[test]
+    fn daily_fixture_fields_are_within_domain_bounds() {
+        let json = fs::read_to_string("tests/fixtures/open_meteo_daily_forecast.json")
+            .expect("failed to read Open-Meteo daily forecast fixture");
+        let response: OpenMeteoDailyResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+        let daily = &response.daily;
+
+        for i in 0..daily.time.len() {
+            let temp_max = daily.temperature_2m_max[i];
+            let temp_min = daily.temperature_2m_min[i];
+            assert!(temp_max > -50.0 && temp_max < 60.0);
+            assert!(temp_min > -50.0 && temp_min < 60.0);
+            assert!(temp_max >= temp_min);
+            assert!((0.0..500.0).contains(&daily.precipitation_sum[i]));
+            assert!(daily.precipitation_probability_max[i] <= 100);
+        }
+    }
+
+    #[test]
+    fn hourly_fixture_is_chronologically_ordered() {
+        let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+            .expect("failed to read Open-Meteo hourly forecast fixture");
+        let response: OpenMeteoHourlyResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+        let hourly = &response.hourly;
+
+        assert!(hourly.time.len() > 1);
+        for i in 1..hourly.time.len() {
+            assert!(hourly.time[i] > hourly.time[i - 1]);
+        }
+    }
+
+    #[test]
+    fn daily_fixture_is_chronologically_ordered() {
+        let json = fs::read_to_string("tests/fixtures/open_meteo_daily_forecast.json")
+            .expect("failed to read Open-Meteo daily forecast fixture");
+        let response: OpenMeteoDailyResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+        let daily = &response.daily;
+
+        assert!(daily.time.len() > 1);
+        for i in 1..daily.time.len() {
+            assert!(daily.time[i] > daily.time[i - 1]);
+        }
+    }
+
+    #[test]
+    fn coordinates_are_within_valid_range() {
+        let json = fs::read_to_string("tests/fixtures/open_meteo_hourly_forecast.json")
+            .expect("failed to read Open-Meteo hourly forecast fixture");
+        let response: OpenMeteoHourlyResponse =
+            serde_json::from_str(&json).expect("fixture should deserialize");
+
+        assert!(response.latitude >= -90.0 && response.latitude <= 90.0);
+        assert!(response.longitude >= -180.0 && response.longitude <= 180.0);
+    }
+
+    /// Verifies date-to-day-name conversion works correctly for the daily response
+    #[test]
+    fn daily_dates_deserialize_correctly() {
+        use chrono::{Datelike, Weekday};
+
+        let json = r#"{
+            "latitude":-37.75,
+            "longitude":144.875,
+            "timezone":"GMT",
+            "timezone_abbreviation":"GMT",
+            "current_units":{"time":"iso8601","interval":"seconds","is_day":""},
+            "current":{"time":"2025-10-25T12:00","interval":900,"is_day":1},
+            "hourly_units":{"time":"iso8601","temperature_2m":"°C","apparent_temperature":"°C","precipitation_probability":"%","precipitation":"mm","snowfall":"cm","uv_index":"","wind_speed_10m":"km/h","wind_gusts_10m":"km/h","relative_humidity_2m":"%"},
+            "hourly":{"time":["2025-10-25T12:00"],"temperature_2m":[20.0],"apparent_temperature":[18.0],"precipitation_probability":[10],"precipitation":[0.0],"snowfall":[0.0],"uv_index":[5.0],"wind_speed_10m":[15.0],"wind_gusts_10m":[25.0],"relative_humidity_2m":[50],"cloud_cover":[30]},
+            "daily_units":{"time":"iso8601","sunrise":"iso8601","sunset":"iso8601","temperature_2m_max":"°C","temperature_2m_min":"°C","precipitation_sum":"mm","precipitation_probability_max":"%","snowfall_sum":"cm"},
+            "daily":{"time":["2025-10-25","2025-10-26","2025-10-27","2025-10-28","2025-10-29","2025-10-30","2025-10-31"],"sunrise":["2025-10-25T19:00","2025-10-26T19:00","2025-10-27T19:00","2025-10-28T19:00","2025-10-29T19:00","2025-10-30T19:00","2025-10-31T19:00"],"sunset":["2025-10-25T09:00","2025-10-26T09:00","2025-10-27T09:00","2025-10-28T09:00","2025-10-29T09:00","2025-10-30T09:00","2025-10-31T09:00"],"temperature_2m_max":[22.0,23.0,24.0,25.0,26.0,27.0,28.0],"temperature_2m_min":[12.0,13.0,14.0,15.0,16.0,17.0,18.0],"precipitation_sum":[0.0,1.0,2.0,0.0,0.0,0.0,0.0],"precipitation_probability_max":[10,30,50,20,10,5,0],"snowfall_sum":[0.0,0.0,0.0,0.0,0.0,0.0,0.0],"cloud_cover_mean":[20,45,65,25,10,8,5]}
+        }"#;
+
+        let response: OpenMeteoDailyResponse =
+            serde_json::from_str(json).expect("inline fixture should deserialize");
+
+        // October 25, 2025 is a Saturday
+        let expected_days = [
+            (Weekday::Sat, "2025-10-25"),
+            (Weekday::Sun, "2025-10-26"),
+            (Weekday::Mon, "2025-10-27"),
+            (Weekday::Tue, "2025-10-28"),
+            (Weekday::Wed, "2025-10-29"),
+            (Weekday::Thu, "2025-10-30"),
+            (Weekday::Fri, "2025-10-31"),
+        ];
+
+        assert_eq!(response.daily.time.len(), 7);
+        for (i, (expected_weekday, expected_date_str)) in expected_days.iter().enumerate() {
+            let date = response.daily.time[i];
+            assert_eq!(&date.format("%Y-%m-%d").to_string(), expected_date_str);
+            assert_eq!(&date.weekday(), expected_weekday);
+        }
+    }
+}

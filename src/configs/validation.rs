@@ -385,3 +385,193 @@ pub fn is_valid_date_format(format: &str) -> Result<(), ValidationError> {
 
     Ok(())
 }
+
+/// Tests for the configurable date format feature: verifies that users can
+/// configure the date display format using strftime format strings.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{TimeZone, Utc};
+
+    /// Formats a fixed date (Saturday, December 6, 2025) with the given format string.
+    fn format_test_date(format: &str) -> String {
+        let test_date = Utc.with_ymd_and_hms(2025, 12, 6, 10, 30, 0).unwrap();
+        test_date.format(format).to_string()
+    }
+
+    /// Formats the longest possible date (Sunday, 28 September 2025 —
+    /// longest day + month name combination).
+    fn format_longest_date(format: &str) -> String {
+        let test_date = Utc.with_ymd_and_hms(2025, 9, 28, 10, 30, 0).unwrap();
+        test_date.format(format).to_string()
+    }
+
+    mod regional_formats {
+        use super::*;
+
+        #[test]
+        fn australian_day_month_year() {
+            let format = "%d/%m/%Y";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "06/12/2025");
+        }
+
+        #[test]
+        fn american_month_day_year() {
+            let format = "%m/%d/%Y";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "12/06/2025");
+        }
+
+        #[test]
+        fn japanese_year_month_day() {
+            let format = "%Y/%m/%d";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "2025/12/06");
+        }
+
+        #[test]
+        fn iso8601() {
+            let format = "%Y-%m-%d";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "2025-12-06");
+        }
+    }
+
+    mod separator_styles {
+        use super::*;
+
+        #[test]
+        fn slash_separator() {
+            let format = "%d/%m/%Y";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "06/12/2025");
+        }
+
+        #[test]
+        fn dot_separator() {
+            // German style: DD.MM.YYYY
+            let format = "%d.%m.%Y";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "06.12.2025");
+        }
+
+        #[test]
+        fn hyphen_separator() {
+            let format = "%d-%m-%Y";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "06-12-2025");
+        }
+
+        #[test]
+        fn space_separator() {
+            let format = "%d %m %Y";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "06 12 2025");
+        }
+    }
+
+    mod written_language_styles {
+        use super::*;
+
+        #[test]
+        fn long_full_weekday_day_full_month() {
+            let format = "%A, %-d %B %Y";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "Saturday, 6 December 2025");
+        }
+
+        #[test]
+        fn long_full_month_day_year() {
+            // US written style: December 6, 2025
+            let format = "%B %-d, %Y";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "December 6, 2025");
+        }
+
+        #[test]
+        fn short_abbreviated_weekday_day_month() {
+            let format = "%a, %-d %b %Y";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "Sat, 6 Dec 2025");
+        }
+
+        #[test]
+        fn short_day_abbreviated_month() {
+            let format = "%-d %b";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "6 Dec");
+        }
+
+        #[test]
+        fn short_abbreviated_month_day() {
+            let format = "%b %-d";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "Dec 6");
+        }
+
+        #[test]
+        fn current_default_format() {
+            // Saturday, 06 December (no year)
+            let format = "%A, %d %B";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "Saturday, 06 December");
+        }
+    }
+
+    mod edge_cases {
+        use super::*;
+
+        #[test]
+        fn short_year() {
+            let format = "%d/%m/%y";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "06/12/25");
+        }
+
+        #[test]
+        fn weekday_only() {
+            let format = "%A";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "Saturday");
+        }
+
+        #[test]
+        fn custom_text_mixed_with_date() {
+            let format = "Today is %A";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_test_date(format), "Today is Saturday");
+        }
+    }
+
+    mod validation_errors {
+        use super::*;
+
+        #[test]
+        fn empty_string_is_invalid() {
+            assert!(is_valid_date_format("").is_err());
+        }
+
+        #[test]
+        fn whitespace_only_is_invalid() {
+            assert!(is_valid_date_format("   ").is_err());
+        }
+
+        /// A format that produces excessively long output should be rejected
+        /// to prevent display issues on the e-paper.
+        #[test]
+        fn output_too_long_is_invalid() {
+            let long_format = "%A, %B %-d, %Y - %A, %B %-d, %Y - %A, %B %-d, %Y";
+            assert!(is_valid_date_format(long_format).is_err());
+        }
+
+        #[test]
+        fn longest_reasonable_date_is_valid() {
+            // Sunday, 28 September 2025 — longest day + month name combination,
+            // a reasonable max length.
+            let format = "%A, %-d %B %Y";
+            assert!(is_valid_date_format(format).is_ok());
+            assert_eq!(format_longest_date(format), "Sunday, 28 September 2025");
+        }
+    }
+}
