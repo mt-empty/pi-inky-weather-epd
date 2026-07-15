@@ -294,6 +294,11 @@ impl DashboardSettings {
     /// environment variables so results are deterministic regardless of the
     /// invoking shell. Tests mutate the returned settings and pass them
     /// directly into the code under test (see `tests/helpers/test_utils.rs`).
+    ///
+    /// Stays `pub` rather than `pub(crate)`: `tests/helpers/test_utils.rs`
+    /// compiles as a separate crate and needs to call this from the
+    /// wiremock/snapshot integration tests that legitimately remain in
+    /// `tests/` (see docs/test-suite-review.md).
     pub fn load_test_config() -> Result<Self, ConfigError> {
         Self::load_from_sources(ConfigLayer::Test, /* include_user_and_env */ false)
     }
