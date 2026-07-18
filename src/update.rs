@@ -318,3 +318,42 @@ pub fn read_last_update_status() -> Option<String> {
     let base_dir = base_dir_path().ok()?;
     read_update_status_from_dir(&base_dir)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn release(tag_name: &str) -> GithubRelease {
+        GithubRelease {
+            tag_name: tag_name.to_string(),
+        }
+    }
+
+    #[test]
+    fn v_prefixed_tag_parses() {
+        let version = parse_latest_version(&release("v1.2.3")).unwrap();
+        assert_eq!(version, Version::new(1, 2, 3));
+    }
+
+    #[test]
+    fn tag_without_v_prefix_parses() {
+        let version = parse_latest_version(&release("1.2.3")).unwrap();
+        assert_eq!(version, Version::new(1, 2, 3));
+    }
+
+    #[test]
+    fn pre_release_tag_parses() {
+        let version = parse_latest_version(&release("v1.2.3-beta.1")).unwrap();
+        assert_eq!(version.pre.as_str(), "beta.1");
+    }
+
+    #[test]
+    fn malformed_tag_is_an_error() {
+        assert!(parse_latest_version(&release("not-a-version")).is_err());
+    }
+
+    #[test]
+    fn empty_tag_is_an_error() {
+        assert!(parse_latest_version(&release("")).is_err());
+    }
+}

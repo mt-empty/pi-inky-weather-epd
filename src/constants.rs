@@ -90,3 +90,89 @@ pub fn open_meteo_daily_endpoint(settings: &DashboardSettings) -> Url {
 pub fn not_available_icon_path(settings: &DashboardSettings) -> PathBuf {
     settings.misc.svg_icons_directory.join("not-available.svg")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::configs::settings::{Latitude, Longitude};
+
+    fn settings_with_coords(lat: f64, lon: f64) -> DashboardSettings {
+        let mut settings = DashboardSettings::load_test_config().unwrap();
+        settings.api.latitude = Latitude::try_new(lat).unwrap();
+        settings.api.longitude = Longitude::try_new(lon).unwrap();
+        settings
+    }
+
+    #[test]
+    fn daily_forecast_endpoint_has_expected_path() {
+        let settings = settings_with_coords(-37.8136, 144.9631);
+        let url = daily_forecast_endpoint(&settings);
+        assert_eq!(url.host_str(), Some("api.weather.bom.gov.au"));
+        let segments: Vec<&str> = url.path_segments().unwrap().collect();
+        assert_eq!(segments[0], "v1");
+        assert_eq!(segments[1], "locations");
+        assert_eq!(segments[3], "forecasts");
+        assert_eq!(segments[4], "daily");
+    }
+
+    #[test]
+    fn hourly_forecast_endpoint_has_expected_path() {
+        let settings = settings_with_coords(-37.8136, 144.9631);
+        let url = hourly_forecast_endpoint(&settings);
+        let segments: Vec<&str> = url.path_segments().unwrap().collect();
+        assert_eq!(segments[3], "forecasts");
+        assert_eq!(segments[4], "hourly");
+    }
+
+    #[test]
+    fn bom_endpoints_embed_the_geohash_for_the_coordinates() {
+        let settings = settings_with_coords(-37.8136, 144.9631);
+        let url = daily_forecast_endpoint(&settings);
+        let segments: Vec<&str> = url.path_segments().unwrap().collect();
+        // Same coordinate/geohash relationship pinned in utils::tests::encode_tests,
+        // via the real `encode` function this endpoint builder calls.
+        assert_eq!(
+            segments[2],
+            crate::utils::encode(settings.api.longitude, settings.api.latitude, 6).unwrap()
+        );
+    }
+
+    #[test]
+    fn open_meteo_hourly_endpoint_has_expected_host_and_query() {
+        let settings = settings_with_coords(-37.8136, 144.9631);
+        let url = open_meteo_hourly_endpoint(&settings);
+        assert_eq!(url.host_str(), Some("api.open-meteo.com"));
+        assert_eq!(url.path(), "/v1/forecast");
+        let query = url.query().unwrap();
+        assert!(query.contains("latitude=-37.8136"));
+        assert!(query.contains("longitude=144.9631"));
+        assert!(query.contains("timezone=UTC"));
+        assert!(query.contains("hourly=temperature_2m"));
+    }
+
+    #[test]
+    fn open_meteo_daily_endpoint_uses_auto_timezone_and_past_days() {
+        let settings = settings_with_coords(-37.8136, 144.9631);
+        let url = open_meteo_daily_endpoint(&settings);
+        let query = url.query().unwrap();
+        assert!(query.contains("timezone=auto"));
+        assert!(query.contains("past_days=1"));
+        assert!(query.contains("daily=sunrise"));
+    }
+
+    #[test]
+    fn open_meteo_base_url_trailing_slash_does_not_produce_double_slash() {
+        let mut settings = settings_with_coords(-37.8136, 144.9631);
+        settings.api.open_meteo_base_url = Url::parse("https://api.open-meteo.com/").unwrap();
+        let url = open_meteo_hourly_endpoint(&settings);
+        assert_eq!(url.path(), "/v1/forecast");
+    }
+
+    #[test]
+    fn not_available_icon_path_joins_svg_directory() {
+        let settings = DashboardSettings::load_test_config().unwrap();
+        let path = not_available_icon_path(&settings);
+        assert_eq!(path.file_name().unwrap(), "not-available.svg");
+        assert!(path.starts_with(&settings.misc.svg_icons_directory));
+    }
+}

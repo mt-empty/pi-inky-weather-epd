@@ -27,6 +27,15 @@ impl<'a> IconContext<'a> {
     }
 }
 
+/// Shared fixture date for tests building an `IconContext`. Unused by most
+/// tests (moon-phase selection is the only thing that reads `today`, and
+/// `use_moon_phase_instead_of_clear_night` is `false` in `config/test.toml`)
+/// but kept in one place so it can't drift between test modules.
+#[cfg(test)]
+pub(crate) fn placeholder_today() -> NaiveDate {
+    NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()
+}
+
 #[derive(Debug, Display, Copy, Clone)]
 pub enum PrecipitationChanceName {
     #[strum(to_string = "clear")]
@@ -199,5 +208,131 @@ impl Icon for HumidityIconName {
 impl Icon for UVIndexIcon {
     fn icon_name(&self, _ctx: &IconContext) -> String {
         self.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::configs::settings::DashboardSettings;
+
+    mod uv_index_icon_boundaries {
+        use super::*;
+
+        #[test]
+        fn zero_is_none() {
+            assert!(matches!(UVIndexIcon::from(0), UVIndexIcon::None));
+        }
+
+        #[test]
+        fn one_is_low() {
+            assert!(matches!(UVIndexIcon::from(1), UVIndexIcon::Low));
+        }
+
+        #[test]
+        fn two_is_still_low() {
+            assert!(matches!(UVIndexIcon::from(2), UVIndexIcon::Low));
+        }
+
+        #[test]
+        fn three_is_moderate() {
+            assert!(matches!(UVIndexIcon::from(3), UVIndexIcon::Moderate));
+        }
+
+        #[test]
+        fn five_is_still_moderate() {
+            assert!(matches!(UVIndexIcon::from(5), UVIndexIcon::Moderate));
+        }
+
+        #[test]
+        fn six_is_high() {
+            assert!(matches!(UVIndexIcon::from(6), UVIndexIcon::High));
+        }
+
+        #[test]
+        fn seven_is_still_high() {
+            assert!(matches!(UVIndexIcon::from(7), UVIndexIcon::High));
+        }
+
+        #[test]
+        fn eight_is_very_high() {
+            assert!(matches!(UVIndexIcon::from(8), UVIndexIcon::VeryHigh));
+        }
+
+        #[test]
+        fn ten_is_still_very_high() {
+            assert!(matches!(UVIndexIcon::from(10), UVIndexIcon::VeryHigh));
+        }
+
+        #[test]
+        fn eleven_is_extreme() {
+            assert!(matches!(UVIndexIcon::from(11), UVIndexIcon::Extreme));
+        }
+
+        #[test]
+        fn large_value_is_still_extreme() {
+            assert!(matches!(UVIndexIcon::from(u16::MAX), UVIndexIcon::Extreme));
+        }
+    }
+
+    #[test]
+    fn uv_index_none_colour_falls_back_to_background() {
+        assert_eq!(UVIndexIcon::None.to_colour("dark-blue"), "dark-blue");
+    }
+
+    #[test]
+    fn uv_index_colours_by_variant() {
+        assert_eq!(UVIndexIcon::Low.to_colour("bg"), "green");
+        assert_eq!(UVIndexIcon::Moderate.to_colour("bg"), "yellow");
+        assert_eq!(UVIndexIcon::High.to_colour("bg"), "orange");
+        assert_eq!(UVIndexIcon::VeryHigh.to_colour("bg"), "red");
+        assert_eq!(UVIndexIcon::Extreme.to_colour("bg"), "purple");
+    }
+
+    mod humidity_icon_name_boundaries {
+        use super::*;
+
+        #[test]
+        fn forty_is_plain_humidity() {
+            assert!(matches!(
+                HumidityIconName::from(40),
+                HumidityIconName::Humidity
+            ));
+        }
+
+        #[test]
+        fn forty_one_is_humidity_plus() {
+            assert!(matches!(
+                HumidityIconName::from(41),
+                HumidityIconName::HumidityPlus
+            ));
+        }
+
+        #[test]
+        fn seventy_is_still_humidity_plus() {
+            assert!(matches!(
+                HumidityIconName::from(70),
+                HumidityIconName::HumidityPlus
+            ));
+        }
+
+        #[test]
+        fn seventy_one_is_humidity_plus_plus() {
+            assert!(matches!(
+                HumidityIconName::from(71),
+                HumidityIconName::HumidityPlusPlus
+            ));
+        }
+    }
+
+    #[test]
+    fn icon_path_joins_svg_directory_with_icon_name() {
+        let settings = DashboardSettings::load_test_config().unwrap();
+        let ctx = IconContext::from_settings(&settings, placeholder_today());
+
+        let path = SunPositionIconName::Sunrise.icon_path(&ctx);
+
+        assert!(path.ends_with("sunrise.svg"));
+        assert!(path.starts_with(&ctx.svg_icons_directory.to_string_lossy().to_string()));
     }
 }

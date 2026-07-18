@@ -81,6 +81,35 @@ mod cli {
 
         Ok(())
     }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn valid_rfc3339_parses_to_utc() {
+            let dt = parse_rfc3339("2025-12-26T09:00:00Z").unwrap();
+            assert_eq!(dt.to_rfc3339(), "2025-12-26T09:00:00+00:00");
+        }
+
+        #[test]
+        fn offset_timestamp_converts_to_utc() {
+            let dt = parse_rfc3339("2025-12-26T09:00:00+05:00").unwrap();
+            assert_eq!(dt.to_rfc3339(), "2025-12-26T04:00:00+00:00");
+        }
+
+        #[test]
+        fn malformed_timestamp_is_an_error_with_helpful_message() {
+            let err = parse_rfc3339("not-a-timestamp").unwrap_err();
+            assert!(err.contains("Invalid RFC3339 timestamp"));
+            assert!(err.contains("2025-12-26T09:00:00Z"));
+        }
+
+        #[test]
+        fn empty_string_is_an_error() {
+            assert!(parse_rfc3339("").is_err());
+        }
+    }
 }
 
 #[cfg(feature = "cli")]

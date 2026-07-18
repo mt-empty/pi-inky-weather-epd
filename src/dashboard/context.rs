@@ -199,6 +199,25 @@ impl Context {
     }
 }
 
+/// Picks which of "today"'s and "tomorrow"'s max value governs the table
+/// display, treating "no data in that window" as absent rather than a
+/// fallback zero. Mirrors the pre-existing tie-breaking rule (ties, and
+/// today having no data, both favor tomorrow — shown in italics).
+///
+/// Returns `(value, is_from_tomorrow)`, or `None` if neither window has data.
+fn pick_today_or_tomorrow_max<V: PartialOrd>(
+    today: Option<V>,
+    tomorrow: Option<V>,
+) -> Option<(V, bool)> {
+    match (today, tomorrow) {
+        (Some(t), Some(tm)) if t > tm => Some((t, false)),
+        (Some(_), Some(tm)) => Some((tm, true)),
+        (Some(t), None) => Some((t, false)),
+        (None, Some(tm)) => Some((tm, true)),
+        (None, None) => None,
+    }
+}
+
 pub struct ContextBuilder<'a> {
     settings: &'a DashboardSettings,
     icon_ctx: IconContext<'a>,
@@ -713,7 +732,7 @@ impl<'a> ContextBuilder<'a> {
                 let chance = forecast.precipitation.chance.unwrap_or(0);
                 let precip_mm = forecast.precipitation.amount();
                 let is_snow = forecast.precipitation.is_primarily_snow();
-                let pattern = HourlyForecastGraph::select_precipitation_pattern(chance as f32, is_snow);
+                let pattern = HourlyForecastGraph::select_precipitation_pattern(is_snow);
                 logger::debug(format!(
                     "h{:02}: temp={:>5.1}° feels={:>5.1}° precip={:>3}% {:>5.2}mm  uv={:>2}  snow={:<5}  → {}",
                     x,
@@ -818,41 +837,47 @@ impl<'a> ContextBuilder<'a> {
             .wind
             .speed(self.settings.render_options.use_gust_instead_of_wind));
 
-        // Convert wind speed to configured unit
-        let max_wind_today_converted = crate::domain::models::Wind::convert_speed(
-            max_wind_today,
-            self.settings.render_options.wind_speed_unit,
-        );
-        let max_wind_tomorrow_converted = crate::domain::models::Wind::convert_speed(
-            max_wind_tomorrow,
-            self.settings.render_options.wind_speed_unit,
-        );
-
-        if max_wind_today > max_wind_tomorrow {
-            self.context.max_gust_speed = max_wind_today_converted.to_string();
-        } else {
-            self.context.max_gust_speed = max_wind_tomorrow_converted.to_string();
-            self.context.max_gust_speed_font_style = FontStyle::Italic.to_string();
+        match pick_today_or_tomorrow_max(max_wind_today, max_wind_tomorrow) {
+            Some((value, is_tomorrow)) => {
+                let converted = crate::domain::models::Wind::convert_speed(
+                    value,
+                    self.settings.render_options.wind_speed_unit,
+                );
+                self.context.max_gust_speed = converted.to_string();
+                if is_tomorrow {
+                    self.context.max_gust_speed_font_style = FontStyle::Italic.to_string();
+                }
+            }
+            None => self.context.max_gust_speed = NOT_AVAILABLE.to_string(),
         }
 
         let (max_uv_index_today, max_uv_index_tomorrow) =
             max_in_today_and_tomorrow!(|item| item.uv_index);
 
-        if max_uv_index_today > max_uv_index_tomorrow {
-            self.context.max_uv_index = max_uv_index_today.to_string();
-        } else {
-            self.context.max_uv_index = max_uv_index_tomorrow.to_string();
-            self.context.max_uv_index_font_style = FontStyle::Italic.to_string();
+        match pick_today_or_tomorrow_max(max_uv_index_today, max_uv_index_tomorrow) {
+            Some((value, is_tomorrow)) => {
+                self.context.max_uv_index = value.to_string();
+                if is_tomorrow {
+                    self.context.max_uv_index_font_style = FontStyle::Italic.to_string();
+                }
+            }
+            None => self.context.max_uv_index = NOT_AVAILABLE.to_string(),
         }
 
         let (max_relative_humidity_today, max_relative_humidity_tomorrow) =
             max_in_today_and_tomorrow!(|item| item.relative_humidity);
 
-        if max_relative_humidity_today > max_relative_humidity_tomorrow {
-            self.context.max_relative_humidity = max_relative_humidity_today.to_string();
-        } else {
-            self.context.max_relative_humidity = max_relative_humidity_tomorrow.to_string();
-            self.context.max_relative_humidity_font_style = FontStyle::Italic.to_string();
+        match pick_today_or_tomorrow_max(
+            max_relative_humidity_today,
+            max_relative_humidity_tomorrow,
+        ) {
+            Some((value, is_tomorrow)) => {
+                self.context.max_relative_humidity = value.to_string();
+                if is_tomorrow {
+                    self.context.max_relative_humidity_font_style = FontStyle::Italic.to_string();
+                }
+            }
+            None => self.context.max_relative_humidity = NOT_AVAILABLE.to_string(),
         }
     }
 
@@ -892,6 +917,55 @@ mod tests {
     use super::*;
     use crate::clock::FixedClock;
     use crate::domain::models::{Astronomical, Temperature};
+
+    mod pick_today_or_tomorrow_max_tests {
+        use super::*;
+
+        #[test]
+        fn today_greater_than_tomorrow_picks_today() {
+            assert_eq!(
+                pick_today_or_tomorrow_max(Some(10), Some(5)),
+                Some((10, false))
+            );
+        }
+
+        #[test]
+        fn tomorrow_greater_than_today_picks_tomorrow() {
+            assert_eq!(
+                pick_today_or_tomorrow_max(Some(5), Some(10)),
+                Some((10, true))
+            );
+        }
+
+        #[test]
+        fn tie_favors_tomorrow() {
+            assert_eq!(
+                pick_today_or_tomorrow_max(Some(7), Some(7)),
+                Some((7, true))
+            );
+        }
+
+        #[test]
+        fn only_today_has_data() {
+            assert_eq!(
+                pick_today_or_tomorrow_max(Some(3), None::<u16>),
+                Some((3, false))
+            );
+        }
+
+        #[test]
+        fn only_tomorrow_has_data() {
+            assert_eq!(
+                pick_today_or_tomorrow_max(None::<u16>, Some(3)),
+                Some((3, true))
+            );
+        }
+
+        #[test]
+        fn neither_has_data() {
+            assert_eq!(pick_today_or_tomorrow_max(None::<u16>, None::<u16>), None);
+        }
+    }
 
     /// Regression test for Issue #16: forecast date names were computed from
     /// UTC timestamps, so converting to local time could shift the date to

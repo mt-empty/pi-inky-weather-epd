@@ -96,3 +96,31 @@ impl WeatherProvider for OpenMeteoProvider {
         "open_meteo_"
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn malformed_body_is_ok() {
+        assert!(check_open_meteo_error("not json at all").is_ok());
+    }
+
+    #[test]
+    fn error_false_is_ok() {
+        let body = r#"{"error": false, "reason": ""}"#;
+        assert!(check_open_meteo_error(body).is_ok());
+    }
+
+    #[test]
+    fn error_true_becomes_api_error_with_reason() {
+        let body = r#"{"error": true, "reason": "Latitude must be in range of -90 to 90"}"#;
+        let err = check_open_meteo_error(body).unwrap_err();
+        match err {
+            DashboardError::ApiError { details } => {
+                assert_eq!(details, "Latitude must be in range of -90 to 90")
+            }
+            other => panic!("expected ApiError, got {other:?}"),
+        }
+    }
+}

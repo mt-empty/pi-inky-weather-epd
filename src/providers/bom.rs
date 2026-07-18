@@ -140,3 +140,47 @@ impl WeatherProvider for BomProvider {
         "bom_"
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn malformed_body_is_ok() {
+        assert!(check_bom_error("not json at all").is_ok());
+    }
+
+    #[test]
+    fn non_error_shaped_json_is_ok() {
+        assert!(check_bom_error(r#"{"data": []}"#).is_ok());
+    }
+
+    #[test]
+    fn empty_errors_array_is_ok() {
+        assert!(check_bom_error(r#"{"errors": []}"#).is_ok());
+    }
+
+    #[test]
+    fn single_error_becomes_its_own_detail_message() {
+        let body = r#"{"errors": [{"detail": "Invalid geohash"}]}"#;
+        let err = check_bom_error(body).unwrap_err();
+        match err {
+            DashboardError::ApiError { details } => assert_eq!(details, "Invalid geohash"),
+            other => panic!("expected ApiError, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn multiple_errors_are_combined_and_numbered() {
+        let body = r#"{"errors": [{"detail": "Invalid geohash"}, {"detail": "Rate limited"}]}"#;
+        let err = check_bom_error(body).unwrap_err();
+        match err {
+            DashboardError::ApiError { details } => {
+                assert!(details.contains("BOM API returned 2 errors"));
+                assert!(details.contains("1. Invalid geohash"));
+                assert!(details.contains("2. Rate limited"));
+            }
+            other => panic!("expected ApiError, got {other:?}"),
+        }
+    }
+}
