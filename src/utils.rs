@@ -395,6 +395,7 @@ mod tests {
 
     mod encode_tests {
         use super::*;
+        use proptest::prelude::*;
 
         #[test]
         fn known_coordinate_produces_expected_geohash() {
@@ -433,6 +434,20 @@ mod tests {
             let lon = Longitude::try_new(-122.0).unwrap();
             let hash = encode(lon, lat, 9).unwrap();
             assert_eq!(hash.len(), 9);
+        }
+
+        proptest! {
+            #[test]
+            fn output_length_always_equals_requested_length(
+                lon in -180.0f64..=180.0,
+                lat in -90.0f64..=90.0,
+                len in 1usize..=12,
+            ) {
+                let lon = Longitude::try_new(lon).unwrap();
+                let lat = Latitude::try_new(lat).unwrap();
+                let hash = encode(lon, lat, len).unwrap();
+                prop_assert_eq!(hash.len(), len);
+            }
         }
     }
 }
