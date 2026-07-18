@@ -1436,62 +1436,11 @@ mod tests {
         }
 
         #[test]
-        fn just_above_threshold_is_snow() {
-            // 4.5cm snow → 6.435mm water, total = 10mm → 64.35%
-            let precip = Precipitation::new_with_snowfall(Some(75), Some(9), Some(11), Some(45));
-            assert!(precip.is_primarily_snow());
-        }
-
-        #[test]
-        fn just_below_threshold_is_not_snow() {
-            // 4cm snow = ~5.72mm water, total = 10mm -> 57.2% snow
-            let precip = Precipitation::new_with_snowfall(Some(75), Some(9), Some(11), Some(40));
-            assert!(!precip.is_primarily_snow());
-        }
-
-        #[test]
-        fn no_snowfall_field_returns_false() {
-            let precip = Precipitation::new(Some(80), Some(10), Some(20));
-            assert!(!precip.is_primarily_snow());
-        }
-
-        #[test]
-        fn zero_snowfall_returns_false() {
-            let precip = Precipitation::new_with_snowfall(Some(60), Some(5), Some(10), Some(0));
-            assert!(!precip.is_primarily_snow());
-        }
-
-        #[test]
-        fn all_snow_no_rain() {
-            // 14.3cm snow × 1.43 = 20.4mm water, total = 10mm -> 204%
-            let precip = Precipitation::new_with_snowfall(Some(90), Some(9), Some(11), Some(143));
-            assert!(precip.is_primarily_snow());
-        }
-
-        #[test]
-        fn light_snow_with_heavy_rain_is_not_primarily_snow() {
-            // 1cm snow = ~1.43mm water, total = 20mm -> 7.15% snow
-            let precip = Precipitation::new_with_snowfall(Some(85), Some(18), Some(22), Some(10));
-            assert!(!precip.is_primarily_snow());
-        }
-
-        #[test]
-        fn winter_storm_scenario_is_snow() {
-            // 20cm snow × 1.43 = 28.6mm water, total = 15mm -> 190%
-            let precip = Precipitation::new_with_snowfall(Some(95), Some(14), Some(16), Some(200));
-            assert!(precip.is_primarily_snow());
-        }
-
-        #[test]
-        fn mixed_precipitation_scenario_is_not_snow() {
-            // 3cm snow = ~4.29mm water, total = 12mm -> 35.75% snow
-            let precip = Precipitation::new_with_snowfall(Some(80), Some(11), Some(13), Some(30));
-            assert!(!precip.is_primarily_snow());
-        }
-
-        #[test]
-        fn light_flurries_scenario_is_snow() {
-            // 1cm snow = ~1.43mm water, total = 1mm -> 143% snow (all snow)
+        fn zero_minimum_amount_with_snow_present_is_still_evaluated() {
+            // amount_min = 0 is a real shape (e.g. a hypothetical no-rain lower
+            // bound), distinct from the zero/absent *snowfall* case the proptest
+            // above covers. amount() = median(0, 1) = 0.5mm; 1cm snow = 1.43mm
+            // water equivalent -> 286% of precip_mm, well above the 60% cutoff.
             let precip = Precipitation::new_with_snowfall(Some(40), Some(0), Some(1), Some(10));
             assert!(precip.is_primarily_snow());
         }

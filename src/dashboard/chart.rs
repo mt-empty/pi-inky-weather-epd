@@ -720,12 +720,10 @@ impl HourlyForecastGraph {
         gradient
     }
 
-    /// Select precipitation pattern based on chance percentage and whether the hour is
-    /// primarily snow (pre-computed from `Precipitation::is_primarily_snow()`).
-    pub(crate) fn select_precipitation_pattern(
-        _chance: f32,
-        is_snow: bool,
-    ) -> PrecipitationPattern {
+    /// Select precipitation pattern based on whether the hour is primarily
+    /// snow (pre-computed from `Precipitation::is_primarily_snow()`).
+    /// TODO: consider adding precipitation chance as a parameter to allow for more nuanced pattern selection (e.g., light snow vs. heavy snow).
+    pub(crate) fn select_precipitation_pattern(is_snow: bool) -> PrecipitationPattern {
         if is_snow {
             PrecipitationPattern::Snow
         } else {
@@ -791,7 +789,7 @@ impl HourlyForecastGraph {
                         // Get original precipitation chance percentage and snow flag for pattern selection
                         let precip_chance = precipitation_data.points[i].chance;
                         let is_snow = precipitation_data.points[i].is_primarily_snow;
-                        let pattern = Self::select_precipitation_pattern(precip_chance, is_snow);
+                        let pattern = Self::select_precipitation_pattern(is_snow);
 
                         // Interpolated block: top-left -> bottom-left -> bottom-right -> top-right
                         // Bottom edge tapers from current.y to next.y, smoothly blending between hours.
@@ -871,5 +869,154 @@ impl HourlyForecastGraph {
             }
         }
         Ok(data_path)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod lcg_next_tests {
+        use super::*;
+
+        #[test]
+        fn fixed_seed_produces_fixed_output() {
+            // Regression pin: same seed must always advance to the same next
+            // state, since precipitation glyph placement replays this sequence.
+            assert_eq!(lcg_next(2654435761), 5483256377420526700);
+        }
+
+        #[test]
+        fn different_seeds_produce_different_output() {
+            assert_ne!(lcg_next(1), lcg_next(2));
+        }
+
+        #[test]
+        fn is_a_pure_function_of_seed() {
+            let seed = 123456789;
+            assert_eq!(lcg_next(seed), lcg_next(seed));
+        }
+    }
+
+    mod select_precipitation_pattern_tests {
+        use super::*;
+
+        #[test]
+        fn snow_flag_selects_snow_pattern() {
+            assert!(matches!(
+                HourlyForecastGraph::select_precipitation_pattern(true),
+                PrecipitationPattern::Snow
+            ));
+        }
+
+        #[test]
+        fn non_snow_flag_selects_rain_pattern() {
+            assert!(matches!(
+                HourlyForecastGraph::select_precipitation_pattern(false),
+                PrecipitationPattern::Rain
+            ));
+        }
+    }
+
+    mod initialize_x_y_bounds_tests {
+        use super::*;
+
+        #[test]
+        fn empty_curves_leave_bounds_at_infinities() {
+            let mut graph = HourlyForecastGraph {
+                curves: vec![
+                    CurveType::ActualTemp(GraphData {
+                        points: vec![],
+                        smooth: true,
+                    }),
+                    CurveType::TempFeelLike(GraphData {
+                        points: vec![],
+                        smooth: true,
+                    }),
+                ],
+                ..Default::default()
+            };
+            graph.initialize_x_y_bounds();
+            // min/max fold over an empty iterator with NAN seed stays NAN,
+            // then min()/max() against the +/-INFINITY defaults keep those defaults.
+            assert_eq!(graph.min_y, f32::INFINITY);
+            assert_eq!(graph.max_y, -f32::INFINITY);
+            assert_eq!(graph.starting_x, 0.0);
+            assert_eq!(graph.ending_x, 0.0);
+        }
+
+        #[test]
+        fn single_point_sets_min_and_max_to_that_point() {
+            let mut graph = HourlyForecastGraph {
+                curves: vec![CurveType::ActualTemp(GraphData {
+                    points: vec![Point { x: 5.0, y: 10.0 }],
+                    smooth: true,
+                })],
+                ..Default::default()
+            };
+            graph.initialize_x_y_bounds();
+            assert_eq!(graph.min_y, 10.0);
+            assert_eq!(graph.max_y, 10.0);
+            assert_eq!(graph.starting_x, 5.0);
+            assert_eq!(graph.ending_x, 5.0);
+        }
+
+        #[test]
+        fn y_bounds_fold_across_curves_but_x_bounds_do_not() {
+            // The two curves deliberately span *different* x-ranges (0.0-1.0
+            // vs. 2.0-5.0) so this test can actually distinguish "x-bounds
+            // overwritten by whichever curve is processed last" from
+            // "x-bounds folded via min/max across curves" the way min_y/max_y
+            // already are — with matching ranges, both behaviors would
+            // produce the same result and the test couldn't tell them apart.
+            let mut graph = HourlyForecastGraph {
+                curves: vec![
+                    CurveType::ActualTemp(GraphData {
+                        points: vec![Point { x: 0.0, y: -5.0 }, Point { x: 1.0, y: 3.0 }],
+                        smooth: true,
+                    }),
+                    CurveType::TempFeelLike(GraphData {
+                        points: vec![Point { x: 2.0, y: -8.0 }, Point { x: 5.0, y: 7.0 }],
+                        smooth: true,
+                    }),
+                ],
+                ..Default::default()
+            };
+            graph.initialize_x_y_bounds();
+            assert_eq!(graph.min_y, -8.0);
+            assert_eq!(graph.max_y, 7.0);
+            // starting_x/ending_x are overwritten per-curve (not folded), so
+            // the final values come from TempFeelLike — the last curve
+            // processed — not the overall min/max (0.0/5.0) across both.
+            assert_eq!(graph.starting_x, 2.0);
+            assert_eq!(graph.ending_x, 5.0);
+        }
+
+        #[test]
+        fn precipitation_curve_only_updates_x_bounds() {
+            let mut graph = HourlyForecastGraph {
+                curves: vec![CurveType::PrecipitationChance(PrecipitationData {
+                    points: vec![
+                        PrecipitationPoint {
+                            x: 2.0,
+                            chance: 10.0,
+                            is_primarily_snow: false,
+                        },
+                        PrecipitationPoint {
+                            x: 8.0,
+                            chance: 90.0,
+                            is_primarily_snow: true,
+                        },
+                    ],
+                })],
+                ..Default::default()
+            };
+            graph.initialize_x_y_bounds();
+            assert_eq!(graph.starting_x, 2.0);
+            assert_eq!(graph.ending_x, 8.0);
+            // y bounds untouched by a precipitation-only curve
+            assert_eq!(graph.min_y, f32::INFINITY);
+            assert_eq!(graph.max_y, -f32::INFINITY);
+        }
     }
 }

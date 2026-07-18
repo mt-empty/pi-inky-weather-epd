@@ -130,6 +130,11 @@ mod tests {
             details: "test".to_string(),
         };
         assert_eq!(incomplete_error.priority(), DiagnosticPriority::Low);
+
+        let update_failed = DashboardError::UpdateFailed {
+            details: "test".to_string(),
+        };
+        assert_eq!(update_failed.priority(), DiagnosticPriority::Low);
     }
 
     #[test]
@@ -154,5 +159,63 @@ mod tests {
             .long_description()
             .contains("API returned an error"));
         assert!(api_error.long_description().contains("HTTP 500"));
+
+        let incomplete_error = DashboardError::IncompleteData {
+            details: "missing hourly entries".to_string(),
+        };
+        assert_eq!(incomplete_error.short_description(), "Incomplete Data");
+        assert!(incomplete_error
+            .long_description()
+            .contains("Received Incomplete data"));
+        assert!(incomplete_error
+            .long_description()
+            .contains("missing hourly entries"));
+
+        let update_failed = DashboardError::UpdateFailed {
+            details: "checksum mismatch".to_string(),
+        };
+        assert_eq!(update_failed.short_description(), "Update Failed");
+        assert!(update_failed
+            .long_description()
+            .contains("failed to update"));
+        assert!(update_failed
+            .long_description()
+            .contains("checksum mismatch"));
+    }
+
+    #[test]
+    fn dashboard_error_icon_names_match_variant() {
+        use crate::configs::settings::DashboardSettings;
+        use crate::weather::icons::placeholder_today;
+
+        let settings = DashboardSettings::load_test_config().unwrap();
+        let ctx = IconContext::from_settings(&settings, placeholder_today());
+        let details = "test".to_string();
+
+        let cases: [(DashboardError, &str); 4] = [
+            (
+                DashboardError::NetworkError {
+                    details: details.clone(),
+                },
+                "code-orange.svg",
+            ),
+            (
+                DashboardError::ApiError {
+                    details: details.clone(),
+                },
+                "code-red.svg",
+            ),
+            (
+                DashboardError::IncompleteData {
+                    details: details.clone(),
+                },
+                "code-yellow.svg",
+            ),
+            (DashboardError::UpdateFailed { details }, "code-green.svg"),
+        ];
+
+        for (error, expected_icon) in cases {
+            assert_eq!(error.icon_name(&ctx), expected_icon, "for {error:?}");
+        }
     }
 }

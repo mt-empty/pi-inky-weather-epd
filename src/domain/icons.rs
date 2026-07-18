@@ -241,13 +241,8 @@ mod tests {
     use super::*;
     use crate::configs::settings::DashboardSettings;
     use crate::domain::models::Temperature;
+    use crate::weather::icons::placeholder_today;
     use chrono::{NaiveDate, Utc};
-
-    /// Arbitrary date for `IconContext::today` — unused by most tests below
-    /// since `use_moon_phase_instead_of_clear_night` is `false` in `config/test.toml`.
-    fn placeholder_today() -> NaiveDate {
-        NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()
-    }
 
     mod cloud_cover {
         use super::*;

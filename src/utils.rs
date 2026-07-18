@@ -136,18 +136,19 @@ where
 ///
 /// # Returns
 ///
-/// * `V` - The maximum value between the specified dates.
+/// * `None` if no item falls in `[start_date, end_date)` — distinct from "the
+///   maximum value present is zero" — so callers can render "no data"
+///   instead of a misleading `0`.
 pub fn find_max_item_between_dates<T, V, TZ: TimeZone>(
     data: &[T],
     start_date: &DateTime<TZ>,
     end_date: &DateTime<TZ>,
     get_value: impl Fn(&T) -> V,
     get_time: impl Fn(&T) -> DateTime<TZ>,
-) -> V
+) -> Option<V>
 where
-    V: PartialOrd + Copy + Default,
+    V: PartialOrd + Copy,
 {
-    // Use V::default() as the initial value for finding the maximum, it should be fine for numeric types here since they are all positive
     data.iter()
         .filter_map(|item| {
             let date = &get_time(item);
@@ -157,7 +158,10 @@ where
                 None
             }
         })
-        .fold(V::default(), |acc, x| if x > acc { x } else { acc })
+        .fold(None, |acc, x| match acc {
+            Some(acc) if acc > x => Some(acc),
+            _ => Some(x),
+        })
 }
 
 // Below code was adopted from Geohash crate
@@ -230,3 +234,205 @@ pub fn encode(lon_x: Longitude, lat_y: Latitude, len: usize) -> Result<String, G
 }
 
 // Finish Geohash crate code
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+
+    struct Point {
+        time: DateTime<Utc>,
+        value: f64,
+    }
+
+    fn points(pairs: &[(&str, f64)]) -> Vec<Point> {
+        pairs
+            .iter()
+            .map(|(t, v)| Point {
+                time: t.parse().unwrap(),
+                value: *v,
+            })
+            .collect()
+    }
+
+    mod total_between_dates_tests {
+        use super::*;
+
+        #[test]
+        fn empty_data_sums_to_zero() {
+            let data: Vec<Point> = Vec::new();
+            let start = "2024-01-01T00:00:00Z".parse().unwrap();
+            let end = "2024-01-02T00:00:00Z".parse().unwrap();
+            let total = total_between_dates(&data, &start, &end, |p| p.value, |p| p.time);
+            assert_eq!(total, 0.0);
+        }
+
+        #[test]
+        fn single_item_in_range_is_included() {
+            let data = points(&[("2024-01-01T12:00:00Z", 5.0)]);
+            let start = "2024-01-01T00:00:00Z".parse().unwrap();
+            let end = "2024-01-02T00:00:00Z".parse().unwrap();
+            let total = total_between_dates(&data, &start, &end, |p| p.value, |p| p.time);
+            assert_eq!(total, 5.0);
+        }
+
+        #[test]
+        fn sums_multiple_items_in_range() {
+            let data = points(&[
+                ("2024-01-01T01:00:00Z", 1.0),
+                ("2024-01-01T02:00:00Z", 2.0),
+                ("2024-01-01T03:00:00Z", 3.0),
+            ]);
+            let start = "2024-01-01T00:00:00Z".parse().unwrap();
+            let end = "2024-01-02T00:00:00Z".parse().unwrap();
+            let total = total_between_dates(&data, &start, &end, |p| p.value, |p| p.time);
+            assert_eq!(total, 6.0);
+        }
+
+        #[test]
+        fn start_date_is_inclusive_end_date_is_exclusive() {
+            let data = points(&[
+                ("2024-01-01T00:00:00Z", 10.0),  // == start, included
+                ("2024-01-02T00:00:00Z", 100.0), // == end, excluded
+            ]);
+            let start = "2024-01-01T00:00:00Z".parse().unwrap();
+            let end = "2024-01-02T00:00:00Z".parse().unwrap();
+            let total = total_between_dates(&data, &start, &end, |p| p.value, |p| p.time);
+            assert_eq!(total, 10.0);
+        }
+    }
+
+    mod find_max_item_between_dates_tests {
+        use super::*;
+
+        #[test]
+        fn empty_data_returns_none() {
+            let data: Vec<Point> = Vec::new();
+            let start = "2024-01-01T00:00:00Z".parse().unwrap();
+            let end = "2024-01-02T00:00:00Z".parse().unwrap();
+            let max = find_max_item_between_dates(&data, &start, &end, |p| p.value, |p| p.time);
+            // `None`, not `0.0` — "no data in range" is distinct from "the max
+            // value present happens to be zero" (see src/utils.rs's doc comment).
+            assert_eq!(max, None);
+        }
+
+        #[test]
+        fn single_item_in_range_is_the_max() {
+            let data = points(&[("2024-01-01T12:00:00Z", 5.0)]);
+            let start = "2024-01-01T00:00:00Z".parse().unwrap();
+            let end = "2024-01-02T00:00:00Z".parse().unwrap();
+            let max = find_max_item_between_dates(&data, &start, &end, |p| p.value, |p| p.time);
+            assert_eq!(max, Some(5.0));
+        }
+
+        #[test]
+        fn finds_max_among_multiple_items() {
+            let data = points(&[
+                ("2024-01-01T01:00:00Z", 3.0),
+                ("2024-01-01T02:00:00Z", 9.0),
+                ("2024-01-01T03:00:00Z", 4.0),
+            ]);
+            let start = "2024-01-01T00:00:00Z".parse().unwrap();
+            let end = "2024-01-02T00:00:00Z".parse().unwrap();
+            let max = find_max_item_between_dates(&data, &start, &end, |p| p.value, |p| p.time);
+            assert_eq!(max, Some(9.0));
+        }
+
+        #[test]
+        fn end_date_is_exclusive() {
+            let data = points(&[("2024-01-02T00:00:00Z", 100.0)]);
+            let start = "2024-01-01T00:00:00Z".parse().unwrap();
+            let end = "2024-01-02T00:00:00Z".parse().unwrap();
+            let max = find_max_item_between_dates(&data, &start, &end, |p| p.value, |p| p.time);
+            assert_eq!(max, None); // out of range -> no data, not a fallback zero
+        }
+
+        #[test]
+        fn all_negative_values_report_the_actual_max_not_zero() {
+            // Regression: the previous `V::default()`-seeded fold reported 0
+            // as the max whenever every real value was negative, since
+            // nothing ever exceeded the zero seed. Not reachable through
+            // today's callers (wind speed / UV / humidity are all
+            // non-negative), but the function is generic — this pins the
+            // fold itself, independent of what callers happen to pass.
+            let data = points(&[
+                ("2024-01-01T01:00:00Z", -10.0),
+                ("2024-01-01T02:00:00Z", -3.0),
+                ("2024-01-01T03:00:00Z", -7.0),
+            ]);
+            let start = "2024-01-01T00:00:00Z".parse().unwrap();
+            let end = "2024-01-02T00:00:00Z".parse().unwrap();
+            let max = find_max_item_between_dates(&data, &start, &end, |p| p.value, |p| p.time);
+            assert_eq!(max, Some(-3.0));
+        }
+    }
+
+    mod spread_and_interleave {
+        use super::*;
+
+        #[test]
+        fn spread_zero_is_zero() {
+            assert_eq!(spread(0), 0);
+        }
+
+        #[test]
+        fn spread_deposits_bits_into_even_positions() {
+            // 0b11 -> bits land at positions 0 and 2 (0b101 = 5)
+            assert_eq!(spread(0b11), 0b101);
+        }
+
+        #[test]
+        fn interleave_combines_x_into_even_and_y_into_odd_bits() {
+            // x=0b1 (bit 0) -> even position 0; y=0b1 (bit 0) -> odd position 1
+            assert_eq!(interleave(0b1, 0b1), 0b11);
+        }
+
+        #[test]
+        fn interleave_zero_and_zero_is_zero() {
+            assert_eq!(interleave(0, 0), 0);
+        }
+    }
+
+    mod encode_tests {
+        use super::*;
+
+        #[test]
+        fn known_coordinate_produces_expected_geohash() {
+            // Sydney Opera House, well-known reference coordinate.
+            let lat = Latitude::try_new(-33.8568).unwrap();
+            let lon = Longitude::try_new(151.2153).unwrap();
+            let hash = encode(lon, lat, 6).unwrap();
+            assert_eq!(hash, "r3gx2u");
+        }
+
+        #[test]
+        fn zero_zero_produces_expected_geohash() {
+            let lat = Latitude::try_new(0.0).unwrap();
+            let lon = Longitude::try_new(0.0).unwrap();
+            let hash = encode(lon, lat, 5).unwrap();
+            assert_eq!(hash, "s0000");
+        }
+
+        #[test]
+        fn length_zero_is_invalid() {
+            let lat = Latitude::try_new(0.0).unwrap();
+            let lon = Longitude::try_new(0.0).unwrap();
+            assert!(encode(lon, lat, 0).is_err());
+        }
+
+        #[test]
+        fn length_above_twelve_is_invalid() {
+            let lat = Latitude::try_new(0.0).unwrap();
+            let lon = Longitude::try_new(0.0).unwrap();
+            assert!(encode(lon, lat, 13).is_err());
+        }
+
+        #[test]
+        fn output_length_matches_requested_length() {
+            let lat = Latitude::try_new(45.0).unwrap();
+            let lon = Longitude::try_new(-122.0).unwrap();
+            let hash = encode(lon, lat, 9).unwrap();
+            assert_eq!(hash.len(), 9);
+        }
+    }
+}

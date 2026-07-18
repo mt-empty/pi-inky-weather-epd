@@ -98,3 +98,9 @@ jobs:
       # No TZ needed: the display timezone comes from config/test.toml.
       - name: Run tests
         run: cross test --target=${{ env.TARGET }}
+
+      # Default features exclude the CLI (see Cargo.toml: `default = []`), so
+      # the simulate/render-svg subcommands and their tests only compile and
+      # run under this separate `cli`-featured invocation.
+      - name: Run tests (cli feature)
+        run: cross test --target=${{ env.TARGET }} --features cli
