@@ -4,7 +4,7 @@ This document records the exact commands used to generate the high-quality timel
 
 ## Which script do I want?
 
-- **`scripts/generate-showcase.sh`** — regenerates the actual `misc/timelapse.gif` tracked in this repo, from frozen fixture data in `misc/showcase_fixtures/`. Deterministic, offline, no API call. This is what you run after a rendering change. See `misc/readme.md`.
+- **`scripts/generate-showcase.sh`** — regenerates the actual `misc/timelapse.gif` tracked in this repo, from frozen fixture data in `misc/showcase_fixtures/`. Deterministic, offline, no API call. This is what you run after a rendering change. See `misc/showcase-assets.md`.
 - **`scripts/generate-timelapse-gif.sh`** (below) — ad-hoc GIF from *live* API data, optionally for any lat/lon. Useful for previewing what a specific real location looks like; output isn't meant to be committed as-is since it isn't reproducible.
 
 ## Quick Start (live data)
