@@ -44,7 +44,13 @@ snow_colour = "blue"    # Fill colour of the snow forecast area; snowflakes are 
 [render_options]
 temp_unit = "C"                                 # Options: C, F
 wind_speed_unit = "km/h"                        # Options: km/h, mph, knots
-language = "en"                                # Options: en, fr, de, es, ja
+language = "en"                                # Options:
+#   en - English
+#   fr - French
+#   de - German
+#   es - Spanish
+#   ja - Japanese, romanized (e.g. "Doyobi", not 土曜日) — the display font
+#        has no Japanese script glyphs, so labels/dates use romaji, not kanji/kana
 # Date format using strftime specifiers. Examples:
 #   "%A, %d %B"      -> Saturday, 06 December (default)
 #   "%B %-d, %Y"     -> December 6, 2025 (US style)

@@ -111,9 +111,20 @@ The dashboard supports multiple interface languages for compact UI labels and da
 ```toml
 [render_options]
 # Supported in Phase 1:
-# en, fr, de, es, ja
+# en - English
+# fr - French
+# de - German
+# es - Spanish
+# ja - Japanese (e.g. "土曜日")
 language = "en"
 ```
+
+Example renders for each supported language:
+[en](./misc/languages/dashboard-en.png) ·
+[fr](./misc/languages/dashboard-fr.png) ·
+[de](./misc/languages/dashboard-de.png) ·
+[es](./misc/languages/dashboard-es.png) ·
+[ja](./misc/languages/dashboard-ja.png)
 
 #### Default Configuration
 

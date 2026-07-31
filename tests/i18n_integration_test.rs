@@ -144,10 +144,10 @@ async fn japanese_language_override_localizes_rendered_dashboard() {
     .expect("Task panicked");
 
     // Labels
-    assert!(svg_content.contains("Shihyo"));
-    assert!(svg_content.contains("Ima"));
+    assert!(svg_content.contains("指標"));
+    assert!(svg_content.contains("今"));
     // Date header: Saturday 25 October in Japanese (%A, %d %B)
-    assert!(svg_content.contains("Doyobi, 25 Jugatsu"));
-    // Tomorrow chart marker: 2025-10-26 is Sunday = Nichiyobi
-    assert!(svg_content.contains("Nichiyobi"));
+    assert!(svg_content.contains("土曜日, 25 10月"));
+    // Tomorrow chart marker: 2025-10-26 is Sunday = 日曜日
+    assert!(svg_content.contains("日曜日"));
 }

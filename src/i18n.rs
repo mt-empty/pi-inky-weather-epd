@@ -30,7 +30,6 @@ pub enum TranslationKey {
     Now,
     Max,
     Hours24,
-    Tomorrow,
 }
 
 pub fn translate(key: TranslationKey, language_code: &str) -> &'static str {
@@ -41,35 +40,30 @@ pub fn translate(key: TranslationKey, language_code: &str) -> &'static str {
         (Language::En, TranslationKey::Now) => "Now",
         (Language::En, TranslationKey::Max) => "Max",
         (Language::En, TranslationKey::Hours24) => "24h",
-        (Language::En, TranslationKey::Tomorrow) => "Tomorrow",
         (Language::Fr, TranslationKey::Feels) => "Ress.",
         (Language::Fr, TranslationKey::Like) => "comme",
         (Language::Fr, TranslationKey::Metric) => "Mesure",
         (Language::Fr, TranslationKey::Now) => "Maint.",
         (Language::Fr, TranslationKey::Max) => "Max",
         (Language::Fr, TranslationKey::Hours24) => "24h",
-        (Language::Fr, TranslationKey::Tomorrow) => "Demain",
         (Language::De, TranslationKey::Feels) => "Gef.",
         (Language::De, TranslationKey::Like) => "wie",
         (Language::De, TranslationKey::Metric) => "Wert",
         (Language::De, TranslationKey::Now) => "Jetzt",
         (Language::De, TranslationKey::Max) => "Max",
         (Language::De, TranslationKey::Hours24) => "24h",
-        (Language::De, TranslationKey::Tomorrow) => "Morgen",
         (Language::Es, TranslationKey::Feels) => "Se",
         (Language::Es, TranslationKey::Like) => "siente",
         (Language::Es, TranslationKey::Metric) => "Medida",
         (Language::Es, TranslationKey::Now) => "Ahora",
         (Language::Es, TranslationKey::Max) => "Max",
         (Language::Es, TranslationKey::Hours24) => "24h",
-        (Language::Es, TranslationKey::Tomorrow) => "Mañana",
-        (Language::Ja, TranslationKey::Feels) => "Taikan",
-        (Language::Ja, TranslationKey::Like) => "ondo",
-        (Language::Ja, TranslationKey::Metric) => "Shihyo",
-        (Language::Ja, TranslationKey::Now) => "Ima",
-        (Language::Ja, TranslationKey::Max) => "Saidai",
+        (Language::Ja, TranslationKey::Feels) => "体感",
+        (Language::Ja, TranslationKey::Like) => "温度",
+        (Language::Ja, TranslationKey::Metric) => "指標",
+        (Language::Ja, TranslationKey::Now) => "今",
+        (Language::Ja, TranslationKey::Max) => "最大",
         (Language::Ja, TranslationKey::Hours24) => "24h",
-        (Language::Ja, TranslationKey::Tomorrow) => "Ashita",
     }
 }
 
@@ -112,13 +106,13 @@ pub fn weekday_short(weekday: Weekday, language_code: &str) -> &'static str {
             Weekday::Sun => "Dom",
         },
         Language::Ja => match weekday {
-            Weekday::Mon => "Getsu",
-            Weekday::Tue => "Ka",
-            Weekday::Wed => "Sui",
-            Weekday::Thu => "Moku",
-            Weekday::Fri => "Kin",
-            Weekday::Sat => "Do",
-            Weekday::Sun => "Nichi",
+            Weekday::Mon => "月",
+            Weekday::Tue => "火",
+            Weekday::Wed => "水",
+            Weekday::Thu => "木",
+            Weekday::Fri => "金",
+            Weekday::Sat => "土",
+            Weekday::Sun => "日",
         },
     }
 }
@@ -162,14 +156,27 @@ pub fn weekday_long(weekday: Weekday, language_code: &str) -> &'static str {
             Weekday::Sun => "Domingo",
         },
         Language::Ja => match weekday {
-            Weekday::Mon => "Getsuyobi",
-            Weekday::Tue => "Kayobi",
-            Weekday::Wed => "Suiyobi",
-            Weekday::Thu => "Mokuyobi",
-            Weekday::Fri => "Kinyobi",
-            Weekday::Sat => "Doyobi",
-            Weekday::Sun => "Nichiyobi",
+            Weekday::Mon => "月曜日",
+            Weekday::Tue => "火曜日",
+            Weekday::Wed => "水曜日",
+            Weekday::Thu => "木曜日",
+            Weekday::Fri => "金曜日",
+            Weekday::Sat => "土曜日",
+            Weekday::Sun => "日曜日",
         },
+    }
+}
+
+/// Returns the long weekday name if it fits within `max_len` bytes, otherwise
+/// falls back to the short abbreviation. Guards fixed-width display slots
+/// (e.g. a rotated chart label) against translations longer than the
+/// hand-picked English/French/Spanish abbreviations happen to be.
+pub fn weekday_fitting(weekday: Weekday, language_code: &str, max_len: usize) -> &'static str {
+    let long_name = weekday_long(weekday, language_code);
+    if long_name.len() <= max_len {
+        long_name
+    } else {
+        weekday_short(weekday, language_code)
     }
 }
 
@@ -236,18 +243,18 @@ pub fn month_short(month: u32, language_code: &str) -> &'static str {
             _ => "",
         },
         Language::Ja => match month {
-            1 => "Ichi",
-            2 => "Ni",
-            3 => "San",
-            4 => "Shi",
-            5 => "Go",
-            6 => "Roku",
-            7 => "Shichi",
-            8 => "Hachi",
-            9 => "Ku",
-            10 => "Ju",
-            11 => "Juichi",
-            12 => "Juni",
+            1 => "1月",
+            2 => "2月",
+            3 => "3月",
+            4 => "4月",
+            5 => "5月",
+            6 => "6月",
+            7 => "7月",
+            8 => "8月",
+            9 => "9月",
+            10 => "10月",
+            11 => "11月",
+            12 => "12月",
             _ => "",
         },
     }
@@ -316,18 +323,18 @@ pub fn month_long(month: u32, language_code: &str) -> &'static str {
             _ => "",
         },
         Language::Ja => match month {
-            1 => "Ichigatsu",
-            2 => "Nigatsu",
-            3 => "Sangatsu",
-            4 => "Shigatsu",
-            5 => "Gogatsu",
-            6 => "Rokugatsu",
-            7 => "Shichigatsu",
-            8 => "Hachigatsu",
-            9 => "Kugatsu",
-            10 => "Jugatsu",
-            11 => "Juichigatsu",
-            12 => "Junigatsu",
+            1 => "1月",
+            2 => "2月",
+            3 => "3月",
+            4 => "4月",
+            5 => "5月",
+            6 => "6月",
+            7 => "7月",
+            8 => "8月",
+            9 => "9月",
+            10 => "10月",
+            11 => "11月",
+            12 => "12月",
             _ => "",
         },
     }
@@ -360,20 +367,22 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{format_localized_date, translate, weekday_short, Language, TranslationKey};
+    use super::{
+        format_localized_date, translate, weekday_fitting, weekday_short, Language, TranslationKey,
+    };
     use chrono::{Local, TimeZone, Weekday};
 
     #[test]
     fn unknown_language_falls_back_to_english() {
         assert_eq!(Language::from_config("unknown"), Language::En);
-        assert_eq!(translate(TranslationKey::Tomorrow, "unknown"), "Tomorrow");
+        assert_eq!(translate(TranslationKey::Feels, "unknown"), "Feels");
     }
 
     #[test]
     fn returns_localized_weekday_abbreviations() {
         assert_eq!(weekday_short(Weekday::Mon, "fr"), "Lun");
         assert_eq!(weekday_short(Weekday::Tue, "de"), "Di");
-        assert_eq!(weekday_short(Weekday::Sun, "ja"), "Nichi");
+        assert_eq!(weekday_short(Weekday::Sun, "ja"), "日");
     }
 
     #[test]
@@ -388,5 +397,13 @@ mod tests {
             format_localized_date(date, "%a, %-d %b", "de"),
             "Sa, 25 Okt"
         );
+    }
+
+    #[test]
+    fn weekday_fitting_falls_back_to_short_name_past_max_len() {
+        // "Donnerstag" (10 bytes) exceeds a max_len of 8, so it falls back to "Do".
+        assert_eq!(weekday_fitting(Weekday::Thu, "de", 8), "Do");
+        // "Montag" (6 bytes) fits within a max_len of 8, so it passes through.
+        assert_eq!(weekday_fitting(Weekday::Mon, "de", 8), "Montag");
     }
 }

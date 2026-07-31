@@ -79,6 +79,9 @@ fn load_fonts(font_db: &mut fontdb::Database) {
         "static/fonts/Roboto-VariableFont_wdth,wght.ttf",
         "static/fonts/Roboto-Italic-VariableFont_wdth,wght.ttf",
         "static/fonts/Roboto-Regular-Dashed.ttf",
+        // Subset covering only the kanji used by the Japanese locale strings in
+        // src/i18n.rs; Roboto has no CJK glyphs, so resvg falls back to this font.
+        "static/fonts/NotoSansJP-Weather-Regular.ttf",
     ];
 
     for file in &font_files {

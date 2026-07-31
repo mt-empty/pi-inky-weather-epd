@@ -1,5 +1,5 @@
 use crate::{
-    clock::Clock, constants::DEFAULT_AXIS_LABEL_FONT_SIZE, i18n::weekday_long, logger,
+    clock::Clock, constants::DEFAULT_AXIS_LABEL_FONT_SIZE, i18n::weekday_fitting, logger,
     weather::icons::UVIndexIcon,
 };
 use anyhow::Error;
@@ -654,9 +654,13 @@ impl HourlyForecastGraph {
 
     fn draw_tomorrow_line(&self, x_coor: f32, clock: &dyn Clock) -> String {
         let language = self.language.as_str();
-        let tomorrow_day_name = weekday_long(
+        // 10 bytes is the longest weekday_long name across all supported
+        // locales ("Donnerstag"); beyond that, fall back to the short form
+        // so a future translation can't overflow this rotated chart label.
+        let tomorrow_day_name = weekday_fitting(
             (clock.now_local(self.tz) + chrono::Duration::days(1)).weekday(),
             language,
+            10,
         )
         .to_string();
 

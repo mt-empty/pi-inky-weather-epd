@@ -36,3 +36,4 @@ comparison_output
 **/icon-preview-*.svg
 simulation_output/
 !misc/showcase_fixtures/gif/
+!misc/languages/*.png
