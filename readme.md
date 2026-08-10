@@ -14,7 +14,7 @@
 
 </div>
 
-The generation of the image is abstracted away from the hardware, so it can be used on any hardware stack.
+The generation of the image is independent of the hardware, so it can be used on any hardware stack.
 
 
 ## Hardware
@@ -225,29 +225,15 @@ When multiple diagnostics occur, the highest priority diagnostic is displayed, l
 
 ## Design Decisions
 
-**Image generation is hardware-agnostic.** Weather data is rendered to an SVG
-via TinyTemplate, then rasterized to PNG with resvg. The same pipeline runs
-on a Pi or a dev laptop, so `cargo run` on your machine shows exactly what
-ships to the panel — no on-device-only rendering path to debug blind.
+**Image generation is hardware-agnostic.** Weather data is rendered to an SVG via TinyTemplate, then converted to PNG with resvg.
 
-**Degrades instead of failing.** If the API is unreachable, the fetcher
-falls back to the last cached response and keeps rendering, surfacing a
-priority-ordered [diagnostic icon](#degraded-operation) instead of a blank
-display or a crash log nobody on a headless Pi will ever see.
+**Degrades instead of failing.** If the API is unreachable, the fetcher falls back to the last cached response and keeps rendering, surfacing a priority-ordered [diagnostic icon](#degraded-operation)
 
-**Config, not code, for personalization.** Colours, units, date format, and
-axis behaviour are all TOML overrides layered on `config/default.toml` — no
-fork needed to reskin the dashboard.
+**Config for personalization.** Colours, units, date format, and axis behaviour are all TOML overrides layered on `config/default.toml` — no fork needed to reskin the dashboard.
 
-**Backward-compatible by default.** The binary can self-update in place on
-unattended Pi devices, so a newer binary routinely reads state (cached JSON,
-TOML config) written by an older one. New fields must tolerate absence
-rather than hard-fail a fetch.
+**Backward-compatible by default.** The binary can self-update in place on unattended Pi devices
 
-**Time is injected, not read.** Time-dependent logic goes through a `Clock`
-abstraction rather than calling the system clock directly, so tests and the
-[24-hour simulation script](docs/CONTRIBUTING.md#dashboard-simulation) can
-drive arbitrary times deterministically.
+**Deterministic testing by injecting Time** Time-dependent logic goes through a `Clock` abstraction rather than calling the system clock directly, so tests and the [24-hour simulation script](docs/CONTRIBUTING.md#dashboard-simulation) can drive arbitrary times deterministically.
 
 ## Contributing
 
