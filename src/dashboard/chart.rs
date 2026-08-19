@@ -407,6 +407,7 @@ pub struct AxisPaths {
     pub x_labels: String,
     pub y_left_labels: String,
     pub y_right_labels: String,
+    pub tomorrow_marker: String,
 }
 
 /// How the "tomorrow" weekday label is drawn on the day-boundary line.
@@ -493,7 +494,6 @@ impl HourlyForecastGraph {
             &mut x_axis_path,
             &mut x_axis_guideline_path,
             x_step,
-            clock,
         );
 
         // Y-axis ticks and labels (left)
@@ -508,6 +508,12 @@ impl HourlyForecastGraph {
             y_right_step,
         );
 
+        let tomorrow_marker = if current_hour != 0.0 {
+            self.draw_tomorrow_line(map_x(24.0 - current_hour), clock)
+        } else {
+            String::new()
+        };
+
         AxisPaths {
             x_axis_path,
             x_axis_guideline_path,
@@ -516,6 +522,7 @@ impl HourlyForecastGraph {
             y_left_labels,
             y_right_axis_path,
             y_right_labels,
+            tomorrow_marker,
         }
     }
 
@@ -613,7 +620,6 @@ impl HourlyForecastGraph {
         x_axis_path: &mut String,
         x_axis_guideline_path: &mut String,
         x_step: f32,
-        clock: &dyn Clock,
     ) -> String {
         let mut x_val: f32 = 0.0;
         let mut x_labels = String::new();
@@ -663,13 +669,6 @@ impl HourlyForecastGraph {
             ));
         }
 
-        // Add tomorrow day name vertically in the graph just like the guidelines
-        if current_hour != 0.0 {
-            x_labels.push_str(
-                self.draw_tomorrow_line(map_x(24.0 - current_hour), clock)
-                    .as_str(),
-            );
-        }
         x_labels
     }
 

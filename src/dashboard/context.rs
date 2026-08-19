@@ -74,6 +74,7 @@ pub struct Context {
     pub y_left_labels: String,
     pub y_right_axis_path: String,
     pub y_right_labels: String,
+    pub tomorrow_marker: String,
     pub uv_gradient: String,
     // daily forecast
     pub day2_mintemp: String,
@@ -176,6 +177,7 @@ impl Context {
             y_left_labels: String::new(),
             y_right_axis_path: String::new(),
             y_right_labels: String::new(),
+            tomorrow_marker: String::new(),
             uv_gradient: String::new(),
             day2_mintemp: NOT_AVAILABLE.to_string(),
             day2_maxtemp: NOT_AVAILABLE.to_string(),
@@ -615,6 +617,7 @@ impl<'a> ContextBuilder<'a> {
         self.context.y_right_axis_path = axis_data_path.y_right_axis_path;
         self.context.y_right_labels = axis_data_path.y_right_labels;
         self.context.x_axis_guideline_path = axis_data_path.x_axis_guideline_path;
+        self.context.tomorrow_marker = axis_data_path.tomorrow_marker;
 
         self.context.uv_gradient = graph.draw_uv_gradient_over_time();
 
