@@ -148,6 +148,10 @@ async fn japanese_language_override_localizes_rendered_dashboard() {
     assert!(svg_content.contains("今"));
     // Date header: Saturday 25 October in Japanese (%A, %d %B)
     assert!(svg_content.contains("土曜日, 25 10月"));
-    // Tomorrow chart marker: 2025-10-26 is Sunday = 日曜日
-    assert!(svg_content.contains("日曜日"));
+    // Tomorrow chart marker: 2025-10-26 is Sunday = 日曜日. Kanji rotated 90°
+    // (the Latin-script convention other locales use here) reads as broken,
+    // so Japanese renders the long-form name stacked top-to-bottom (tategaki)
+    // instead — one <tspan> per character — see draw_tomorrow_line in chart.rs.
+    assert!(svg_content.contains("<tspan x=\"") && svg_content.contains(">日</tspan>"));
+    assert!(svg_content.contains(">曜</tspan>"));
 }

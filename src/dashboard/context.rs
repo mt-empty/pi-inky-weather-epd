@@ -5,7 +5,7 @@ use crate::{
     dashboard::chart::{GraphDataPath, HourlyForecastGraph},
     domain::models::{DailyForecast, HourlyForecast},
     errors::{DashboardError, Description},
-    i18n::{format_localized_date, translate, weekday_short, TranslationKey},
+    i18n::{format_localized_date, translate, weekday_short, Language, TranslationKey},
     logger,
     utils::{find_max_item_between_dates, total_between_dates},
     weather::icons::{HumidityIconName, Icon, IconContext, SunPositionIconName, UVIndexIcon},
@@ -121,7 +121,7 @@ impl Context {
             .to_string();
         let colours = settings.colours.clone();
         let render_options = settings.render_options.clone();
-        let language = render_options.language.as_str();
+        let language = Language::from_config(&render_options.language);
         let graph_height = "300".to_string();
         let graph_width = "600".to_string();
         Self {
@@ -486,7 +486,7 @@ impl<'a> ContextBuilder<'a> {
     }
 
     fn initialize_day_names(&mut self, local_midnight_time: DateTime<Tz>) {
-        let language = self.settings.render_options.language.as_str();
+        let language = Language::from_config(&self.settings.render_options.language);
 
         // Pre-fill day names based on local calendar (independent of forecast data)
         self.context.day2_name = weekday_short(
@@ -571,7 +571,7 @@ impl<'a> ContextBuilder<'a> {
             text_colour: self.settings.colours.text_colour.to_string(),
             background_colour: self.settings.colours.background_colour.to_string(),
             tz: self.settings.misc.timezone,
-            language: self.settings.render_options.language.clone(),
+            language: Language::from_config(&self.settings.render_options.language),
             ..Default::default()
         };
 
@@ -789,7 +789,7 @@ impl<'a> ContextBuilder<'a> {
         self.context.current_day_date = format_localized_date(
             clock.now_local(self.settings.misc.timezone),
             self.settings.render_options.date_format.as_ref(),
-            &self.settings.render_options.language,
+            Language::from_config(&self.settings.render_options.language),
         );
         self.context.current_hour_rain_amount = current_hour.precipitation.amount().to_string();
 

@@ -1,8 +1,9 @@
 use chrono::{DateTime, Datelike, TimeZone, Weekday};
 use std::fmt::Display;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Language {
+    #[default]
     En,
     Fr,
     De,
@@ -32,8 +33,8 @@ pub enum TranslationKey {
     Hours24,
 }
 
-pub fn translate(key: TranslationKey, language_code: &str) -> &'static str {
-    match (Language::from_config(language_code), key) {
+pub fn translate(key: TranslationKey, language: Language) -> &'static str {
+    match (language, key) {
         (Language::En, TranslationKey::Feels) => "Feels",
         (Language::En, TranslationKey::Like) => "Like",
         (Language::En, TranslationKey::Metric) => "Metric",
@@ -67,8 +68,8 @@ pub fn translate(key: TranslationKey, language_code: &str) -> &'static str {
     }
 }
 
-pub fn weekday_short(weekday: Weekday, language_code: &str) -> &'static str {
-    match Language::from_config(language_code) {
+pub fn weekday_short(weekday: Weekday, language: Language) -> &'static str {
+    match language {
         Language::En => match weekday {
             Weekday::Mon => "Mon",
             Weekday::Tue => "Tue",
@@ -117,8 +118,8 @@ pub fn weekday_short(weekday: Weekday, language_code: &str) -> &'static str {
     }
 }
 
-pub fn weekday_long(weekday: Weekday, language_code: &str) -> &'static str {
-    match Language::from_config(language_code) {
+pub fn weekday_long(weekday: Weekday, language: Language) -> &'static str {
+    match language {
         Language::En => match weekday {
             Weekday::Mon => "Monday",
             Weekday::Tue => "Tuesday",
@@ -167,21 +168,8 @@ pub fn weekday_long(weekday: Weekday, language_code: &str) -> &'static str {
     }
 }
 
-/// Returns the long weekday name if it fits within `max_len` bytes, otherwise
-/// falls back to the short abbreviation. Guards fixed-width display slots
-/// (e.g. a rotated chart label) against translations longer than the
-/// hand-picked English/French/Spanish abbreviations happen to be.
-pub fn weekday_fitting(weekday: Weekday, language_code: &str, max_len: usize) -> &'static str {
-    let long_name = weekday_long(weekday, language_code);
-    if long_name.len() <= max_len {
-        long_name
-    } else {
-        weekday_short(weekday, language_code)
-    }
-}
-
-pub fn month_short(month: u32, language_code: &str) -> &'static str {
-    match Language::from_config(language_code) {
+pub fn month_short(month: u32, language: Language) -> &'static str {
+    match language {
         Language::En => match month {
             1 => "Jan",
             2 => "Feb",
@@ -260,8 +248,8 @@ pub fn month_short(month: u32, language_code: &str) -> &'static str {
     }
 }
 
-pub fn month_long(month: u32, language_code: &str) -> &'static str {
-    match Language::from_config(language_code) {
+pub fn month_long(month: u32, language: Language) -> &'static str {
+    match language {
         Language::En => match month {
             1 => "January",
             2 => "February",
@@ -340,12 +328,12 @@ pub fn month_long(month: u32, language_code: &str) -> &'static str {
     }
 }
 
-pub fn format_localized_date<Tz>(date: DateTime<Tz>, format: &str, language_code: &str) -> String
+pub fn format_localized_date<Tz>(date: DateTime<Tz>, format: &str, language: Language) -> String
 where
     Tz: TimeZone,
     Tz::Offset: Display,
 {
-    if Language::from_config(language_code) == Language::En {
+    if language == Language::En {
         return date.format(format).to_string();
     }
 
@@ -359,30 +347,30 @@ where
 
     date.format(&template)
         .to_string()
-        .replace("\x00WL\x00", weekday_long(date.weekday(), language_code))
-        .replace("\x00WS\x00", weekday_short(date.weekday(), language_code))
-        .replace("\x00ML\x00", month_long(date.month(), language_code))
-        .replace("\x00MS\x00", month_short(date.month(), language_code))
+        .replace("\x00WL\x00", weekday_long(date.weekday(), language))
+        .replace("\x00WS\x00", weekday_short(date.weekday(), language))
+        .replace("\x00ML\x00", month_long(date.month(), language))
+        .replace("\x00MS\x00", month_short(date.month(), language))
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        format_localized_date, translate, weekday_fitting, weekday_short, Language, TranslationKey,
+        format_localized_date, translate, weekday_long, weekday_short, Language, TranslationKey,
     };
     use chrono::{Local, TimeZone, Weekday};
 
     #[test]
     fn unknown_language_falls_back_to_english() {
         assert_eq!(Language::from_config("unknown"), Language::En);
-        assert_eq!(translate(TranslationKey::Feels, "unknown"), "Feels");
+        assert_eq!(translate(TranslationKey::Feels, Language::En), "Feels");
     }
 
     #[test]
     fn returns_localized_weekday_abbreviations() {
-        assert_eq!(weekday_short(Weekday::Mon, "fr"), "Lun");
-        assert_eq!(weekday_short(Weekday::Tue, "de"), "Di");
-        assert_eq!(weekday_short(Weekday::Sun, "ja"), "日");
+        assert_eq!(weekday_short(Weekday::Mon, Language::Fr), "Lun");
+        assert_eq!(weekday_short(Weekday::Tue, Language::De), "Di");
+        assert_eq!(weekday_short(Weekday::Sun, Language::Ja), "日");
     }
 
     #[test]
@@ -390,20 +378,40 @@ mod tests {
         let date = Local.with_ymd_and_hms(2025, 10, 25, 12, 0, 0).unwrap();
 
         assert_eq!(
-            format_localized_date(date, "%A, %d %B", "fr"),
+            format_localized_date(date, "%A, %d %B", Language::Fr),
             "Samedi, 25 Octobre"
         );
         assert_eq!(
-            format_localized_date(date, "%a, %-d %b", "de"),
+            format_localized_date(date, "%a, %-d %b", Language::De),
             "Sa, 25 Okt"
         );
     }
 
     #[test]
-    fn weekday_fitting_falls_back_to_short_name_past_max_len() {
-        // "Donnerstag" (10 bytes) exceeds a max_len of 8, so it falls back to "Do".
-        assert_eq!(weekday_fitting(Weekday::Thu, "de", 8), "Do");
-        // "Montag" (6 bytes) fits within a max_len of 8, so it passes through.
-        assert_eq!(weekday_fitting(Weekday::Mon, "de", 8), "Montag");
+    fn weekday_long_names_fit_the_rotated_chart_label_budget() {
+        // draw_tomorrow_line rotates weekday_long into a fixed-height chart
+        // slot for Latin-script languages. All weekdays within a language
+        // must use the same (long) form, so this asserts the budget for
+        // every day rather than falling back per-day at render time, which
+        // would produce visually inconsistent label shapes within a locale.
+        const MAX_LEN: usize = 10;
+        for language in [Language::En, Language::Fr, Language::De, Language::Es] {
+            for weekday in [
+                Weekday::Mon,
+                Weekday::Tue,
+                Weekday::Wed,
+                Weekday::Thu,
+                Weekday::Fri,
+                Weekday::Sat,
+                Weekday::Sun,
+            ] {
+                let name = weekday_long(weekday, language);
+                assert!(
+                    name.len() <= MAX_LEN,
+                    "{name:?} ({language:?}, {weekday:?}) is {} bytes, over the {MAX_LEN}-byte rotated label budget",
+                    name.len()
+                );
+            }
+        }
     }
 }

@@ -1,9 +1,12 @@
 use crate::{
-    clock::Clock, constants::DEFAULT_AXIS_LABEL_FONT_SIZE, i18n::weekday_fitting, logger,
+    clock::Clock,
+    constants::DEFAULT_AXIS_LABEL_FONT_SIZE,
+    i18n::{weekday_long, Language},
+    logger,
     weather::icons::UVIndexIcon,
 };
 use anyhow::Error;
-use chrono::Datelike;
+use chrono::{Datelike, Weekday};
 use std::fmt;
 use strum_macros::Display;
 
@@ -123,7 +126,7 @@ pub struct HourlyForecastGraph {
     /// Display timezone for time-dependent labels (e.g. the "tomorrow" day name).
     pub tz: chrono_tz::Tz,
     /// Display language for time-dependent labels (e.g. the "tomorrow" day name).
-    pub language: String,
+    pub language: Language,
 }
 
 // TODO: use the builder pattern to create the graph
@@ -156,7 +159,7 @@ impl Default for HourlyForecastGraph {
             text_colour: "black".to_string(),
             background_colour: "white".to_string(),
             tz: chrono_tz::UTC,
-            language: "en".to_string(),
+            language: Language::En,
         }
     }
 }
@@ -406,6 +409,24 @@ pub struct AxisPaths {
     pub y_right_labels: String,
 }
 
+/// How the "tomorrow" weekday label is drawn on the day-boundary line.
+enum TomorrowLabel {
+    /// rotated -90° for Latin scripts.
+    Rotated(&'static str),
+    /// Stacked for japanese
+    Stacked(&'static str),
+}
+
+/// Picks the tomorrow-label style for a language.
+fn tomorrow_label(language: Language, weekday: Weekday) -> TomorrowLabel {
+    match language {
+        Language::Ja => TomorrowLabel::Stacked(weekday_long(weekday, language)),
+        Language::En | Language::Fr | Language::De | Language::Es => {
+            TomorrowLabel::Rotated(weekday_long(weekday, language))
+        }
+    }
+}
+
 /// Create the axis paths and labels for the graph
 impl HourlyForecastGraph {
     pub fn create_axis_with_labels(&self, current_hour: f32, clock: &dyn Clock) -> AxisPaths {
@@ -653,30 +674,52 @@ impl HourlyForecastGraph {
     }
 
     fn draw_tomorrow_line(&self, x_coor: f32, clock: &dyn Clock) -> String {
-        let language = self.language.as_str();
-        // 10 bytes is the longest weekday_long name across all supported
-        // locales ("Donnerstag"); beyond that, fall back to the short form
-        // so a future translation can't overflow this rotated chart label.
-        let tomorrow_day_name = weekday_fitting(
-            (clock.now_local(self.tz) + chrono::Duration::days(1)).weekday(),
-            language,
-            10,
-        )
-        .to_string();
+        let tomorrow_weekday = (clock.now_local(self.tz) + chrono::Duration::days(1)).weekday();
 
-        format!(
-            r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
+        match tomorrow_label(self.language, tomorrow_weekday) {
+            TomorrowLabel::Rotated(tomorrow_day_name) => format!(
+                r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
                    <text x="{x_text}" y="{y_text}" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" font-style="{font_style}"  transform="rotate(-90, {rotate_x_text}, {rotate_y_text})" text-anchor="start">{tomorrow_day_name}</text>"#,
-            x = x_coor,
-            chart_height = self.height,
-            x_text = x_coor + 10.0,
-            y_text = (self.height / 2.0) + 20.0,
-            font_style = FontStyle::Italic,
-            rotate_x_text = x_coor + 10.0 - 30.0,
-            rotate_y_text = (self.height / 2.0) - 15.0,
-            colour = self.text_colour,
-            tomorrow_day_name = tomorrow_day_name
-        )
+                x = x_coor,
+                chart_height = self.height,
+                x_text = x_coor + 10.0,
+                y_text = (self.height / 2.0) + 20.0,
+                font_style = FontStyle::Italic,
+                rotate_x_text = x_coor + 10.0 - 30.0,
+                rotate_y_text = (self.height / 2.0) - 15.0,
+                colour = self.text_colour,
+                tomorrow_day_name = tomorrow_day_name,
+            ),
+            TomorrowLabel::Stacked(name) => {
+                let chars: Vec<char> = name.chars().collect();
+                let line_height = f32::from(DEFAULT_AXIS_LABEL_FONT_SIZE);
+                let x_text = x_coor + 10.0;
+                // Centre the column on the same axis point the Upright style used,
+                // offsetting upward by half the total stack height.
+                let start_y =
+                    (self.height / 2.0) - (line_height * (chars.len() as f32 - 1.0) / 2.0);
+                let tspans: String = chars
+                    .iter()
+                    .enumerate()
+                    .map(|(i, c)| {
+                        if i == 0 {
+                            format!(r#"<tspan x="{x_text}" y="{start_y}">{c}</tspan>"#)
+                        } else {
+                            format!(r#"<tspan x="{x_text}" dy="{line_height}">{c}</tspan>"#)
+                        }
+                    })
+                    .collect();
+                format!(
+                    r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
+                       <text fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" font-style="{font_style}" text-anchor="middle">{tspans}</text>"#,
+                    x = x_coor,
+                    chart_height = self.height,
+                    font_style = FontStyle::Normal,
+                    colour = self.text_colour,
+                    tspans = tspans,
+                )
+            }
+        }
     }
 
     fn initialize_x_y_bounds(&mut self) {
