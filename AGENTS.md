@@ -43,6 +43,16 @@ The binary updates in place on unattended Pi devices, so a newer binary routinel
 - Reads of new/changed fields must tolerate absence — prefer `.get(i)`/`.unwrap_or_default()` over direct indexing on `Vec` fields.
 - Add a test that deserializes JSON (or loads config) with the field missing and asserts the fallback, not just the happy path.
 
+## Internationalization (i18n)
+
+This project renders in 5 languages — `en`, `fr`, `de`, `es`, `ja` (`render_options.language` in config; validated in `configs/validation.rs`) — including one non-Latin script (Japanese, via the bundled `NotoSansJP-Weather-Regular.ttf` font). Any change touching rendered text, dashboard templates, or fonts needs to account for all 5, not just English:
+
+- All user-visible strings are translated via `translate()`/`TranslationKey` in `src/i18n.rs` — never hardcode English text in templates or `context.rs`.
+- Word length/width varies a lot by language and script (e.g. French "comme" vs German "wie" vs Japanese "温度"), so layout that assumes English-sized text will misalign or clip for other locales. Prefer computing positions from measured render output (see `utils::measure_stacked_label_dx`/`measure_label_to_number_gap_dx`) over hardcoded per-language pixel offsets — those require manual recalibration every time wording or fonts change and silently rot.
+- After any template/font/layout change, regenerate and eyeball all locales: `bash scripts/generate-showcase.sh` writes `misc/languages/dashboard-{en,fr,de,es,ja}.png`.
+- `tests/i18n_integration_test.rs` covers locale-specific rendering; snapshot tests also exist per locale (e.g. `snapshot_test__localization__french_dashboard`) — review with `cargo insta review` after intentional changes.
+- If you extend the render-and-measure functions in `utils.rs`: `usvg`'s `Text::bounding_box().width()` is glyph ink extent, not cursor advance width — they differ by several pixels (side bearings), so don't use it to predict where the SVG cursor lands after a tspan; rasterize and measure actual pixel positions instead. Also, any measurement function must render through the same `shared_font_db()` used by `convert_svg_to_png` — separate font databases can resolve a bundled font differently than a system-installed one with the same name, silently making measured layout diverge from what actually renders.
+
 ## Known Pitfalls
 
 - `APP_API_PROVIDER` is wrong; use `APP_API__PROVIDER`.
