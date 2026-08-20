@@ -461,6 +461,15 @@ fn format_hour_label(hour: f32, hour_format: HourFormat, language: Language) -> 
     }
 }
 
+/// Weekday of the calendar day after `now`, using calendar-day arithmetic
+/// (not a fixed 24h offset) so it stays correct across DST transitions where
+/// the local day is 23 or 25 hours long.
+fn tomorrow_weekday_from<Tz: chrono::TimeZone>(now: chrono::DateTime<Tz>) -> Weekday {
+    now.checked_add_days(chrono::Days::new(1))
+        .expect("adding one day to the current date does not overflow chrono's range")
+        .weekday()
+}
+
 /// Create the axis paths and labels for the graph
 impl HourlyForecastGraph {
     pub fn create_axis_with_labels(&self, current_hour: f32, clock: &dyn Clock) -> AxisPaths {
@@ -698,7 +707,7 @@ impl HourlyForecastGraph {
     }
 
     fn draw_tomorrow_line(&self, x_coor: f32, clock: &dyn Clock) -> String {
-        let tomorrow_weekday = (clock.now_local(self.tz) + chrono::Duration::days(1)).weekday();
+        let tomorrow_weekday = tomorrow_weekday_from(clock.now_local(self.tz));
 
         match tomorrow_label(self.language, tomorrow_weekday) {
             TomorrowLabel::Rotated(tomorrow_day_name) => format!(
@@ -1030,6 +1039,27 @@ mod tests {
         fn is_a_pure_function_of_seed() {
             let seed = 123456789;
             assert_eq!(lcg_next(seed), lcg_next(seed));
+        }
+    }
+
+    mod tomorrow_weekday_from_tests {
+        use super::*;
+        use chrono::TimeZone;
+        use chrono_tz::America::New_York;
+
+        #[test]
+        fn regular_day_advances_to_the_next_weekday() {
+            let now = New_York.with_ymd_and_hms(2025, 6, 10, 23, 30, 0).unwrap();
+            assert_eq!(tomorrow_weekday_from(now), Weekday::Wed);
+        }
+
+        #[test]
+        fn spring_forward_still_advances_by_one_calendar_day() {
+            // 2025-03-08 23:30 EST is ~1h before US spring-forward DST
+            // start; the local day is only 23h long, so a fixed 24h
+            // duration offset would land on Monday instead of Sunday.
+            let now = New_York.with_ymd_and_hms(2025, 3, 8, 23, 30, 0).unwrap();
+            assert_eq!(tomorrow_weekday_from(now), Weekday::Sun);
         }
     }
 
