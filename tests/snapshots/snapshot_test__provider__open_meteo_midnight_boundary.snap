@@ -67,11 +67,11 @@ expression: svg_content
         <tspan baseline-shift="27" dx="-20" font-size="33">°C</tspan>
     </text>
 
-    <text x="246" y="158" text-anchor="middle" font-size="18" fill="black">
+    <text x="248" y="158" text-anchor="middle" font-size="18" fill="black">
         <tspan>Feels</tspan>
-        <tspan dy="15.5" dx="-46.6">Like</tspan>
+        <tspan dx="-42" dy="15.5">Like</tspan>
         <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="green"
-            dx="10" dy="-7">
+            dx="5" dy="-7">
             16
             <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan>
         </tspan>
@@ -124,12 +124,12 @@ expression: svg_content
 
         <!-- row header-->
         <svg x="15" y="210" label="UV-index" text-anchor="start">
-            <text x="16" y="43.5" fill="black" font-size="20">Metric
+            <text x="43" y="43.5" fill="black" font-size="20"  text-anchor="middle">Metric
             </text>
 
-            <text x="85" y="43.5" fill="black" font-size="20">Now
+            <text x="107" y="43.5" fill="black" font-size="20" text-anchor="middle">Now
             </text>
-            <text x="140" y="43.5" fill="black" font-size="20">Max
+            <text x="177" y="43.5" fill="black" font-size="20" text-anchor="middle">Max
                 <tspan baseline-shift="super" font-size="17" dx="-3">24h</tspan>
             </text>
         </svg>

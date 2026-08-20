@@ -63,11 +63,11 @@
         <tspan baseline-shift="27" dx="-20" font-size="33">°{temp_unit}</tspan>
     </text>
 
-    <text x="246" y="158" text-anchor="middle" font-size="18" fill="{text_colour}">
+    <text x="248" y="158" text-anchor="middle" font-size="18" fill="{text_colour}">
         <tspan>{label_feels}</tspan>
-        <tspan dy="15.5" dx="-46.6">{label_like}</tspan>
+        {label_like_tspan}
         <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="{feels_like_colour}"
-            dx="10" dy="-7">
+            dx="{feels_like_number_dx}" dy="-7">
             {current_hour_feels_like}
             <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan>
         </tspan>

@@ -9,6 +9,7 @@ use resvg::tiny_skia;
 use resvg::usvg;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::{Arc, OnceLock};
 use usvg::fontdb;
 
 /// Converts an SVG file to a PNG file.
@@ -31,12 +32,13 @@ pub fn convert_svg_to_png(
     let svg_data = fs::read_to_string(input_path)
         .map_err(|e| Error::msg(format!("Failed to read SVG file: {e}")))?;
 
-    let mut font_db = fontdb::Database::new();
-    load_fonts(&mut font_db);
-
-    // Parse the SVG
+    // Uses the same cached database as `measure_stacked_label_dx`, so a
+    // label's measured width always matches what actually gets rendered
+    // here — if these ever used separately built databases, a system font
+    // shadowing a bundled one (see `load_fonts`) could make one resolve a
+    // different face than the other.
     let opts = usvg::Options {
-        fontdb: font_db.into(),
+        fontdb: shared_font_db(),
         ..Default::default()
     };
 
@@ -91,6 +93,255 @@ fn load_fonts(font_db: &mut fontdb::Database) {
         }
     }
 }
+
+/// Lazily built, process-wide font database used for text measurement.
+///
+/// Loads the same fonts (and system-font fallback) as [`convert_svg_to_png`],
+/// so widths measured with [`measure_text_width`] match what resvg actually
+/// renders. Cached because `load_system_fonts` is a filesystem scan and
+/// measurement can run once per label per render.
+fn shared_font_db() -> Arc<fontdb::Database> {
+    static FONT_DB: OnceLock<Arc<fontdb::Database>> = OnceLock::new();
+    FONT_DB
+        .get_or_init(|| {
+            let mut font_db = fontdb::Database::new();
+            load_fonts(&mut font_db);
+            Arc::new(font_db)
+        })
+        .clone()
+}
+
+// =============================================================================
+// TEMPORARY WORKAROUND — remove once resvg/usvg supports tspan `text-anchor`
+// with `dx`/`dy` centering correctly: https://github.com/linebender/resvg/issues/583
+//
+// Until then, stacked-label centering (e.g. "Feels"/"Like") and the gap to
+// whatever follows it are computed here by actually rendering and measuring
+// pixels, rather than via native SVG anchoring.
+// =============================================================================
+
+fn escape_xml_text(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
+/// Computes the horizontal `dx` (SVG user units) that visually centers
+/// `line2` directly beneath `line1`, when both are rendered as sibling
+/// `tspan`s of one `<text font_family font_size>` element via relative
+/// `dx`/`dy` (i.e. `<tspan>{line1}</tspan><tspan dx dy>{line2}</tspan>`,
+/// the pattern used for the dashboard's stacked "Feels"/"Like"-style
+/// labels).
+///
+/// Without an explicit `dx`, `line2` starts wherever the cursor was left
+/// after `line1` — its own centre doesn't line up with `line1`'s. Rather
+/// than a hand-tuned constant per language/font, this renders both lines
+/// through the real resvg/usvg pipeline (same font DB as the final
+/// dashboard, including glyph-fallback for scripts like Japanese) and
+/// measures the actual ink centre of each line from the rasterized pixels,
+/// so it stays correct for any wording, font, or font-size — no
+/// recalibration needed when a language or font changes.
+///
+/// Renders the two lines far apart vertically (independent of whatever the
+/// real, much smaller, line spacing will be) purely so their ink can't
+/// overlap while measuring; only the horizontal centres are used. Returns
+/// `0.0` if either line is empty or rendering fails.
+pub fn measure_stacked_label_dx(
+    line1: &str,
+    line2: &str,
+    font_family: &str,
+    font_size: f32,
+) -> f32 {
+    if line1.is_empty() || line2.is_empty() {
+        return 0.0;
+    }
+
+    let line1 = escape_xml_text(line1);
+    let line2 = escape_xml_text(line2);
+    // Mirrors the production markup's own x/text-anchor exactly (not just an
+    // arbitrary centred canvas): text-anchor="middle" changes which pixel
+    // column a glyph's antialiasing lands on (hinting is sensitive to
+    // subpixel position), so matching it keeps this measurement's rounding
+    // behaviour identical to what actually gets rendered.
+    let cx = 246.0_f32;
+    let width = 500.0_f32;
+    let separation = font_size * 10.0;
+    let height = separation + font_size * 4.0;
+    let svg = format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" font-family="{font_family}">
+            <text x="{cx}" y="{font_size}" text-anchor="middle" font-size="{font_size}">
+                <tspan>{line1}</tspan>
+                <tspan dx="0" dy="{separation}">{line2}</tspan>
+            </text>
+        </svg>"#
+    );
+
+    let opts = usvg::Options {
+        fontdb: shared_font_db(),
+        ..Default::default()
+    };
+    let tree = match usvg::Tree::from_str(&svg, &opts) {
+        Ok(tree) => tree,
+        Err(e) => {
+            logger::warning(format!(
+                "Failed to measure stacked label offset for {line1:?}/{line2:?}: {e}"
+            ));
+            return 0.0;
+        }
+    };
+
+    let size = tree.size().to_int_size();
+    let mut pixmap = match tiny_skia::Pixmap::new(size.width(), size.height()) {
+        Some(pixmap) => pixmap,
+        None => return 0.0,
+    };
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::identity(),
+        &mut pixmap.as_mut(),
+    );
+
+    let ink_extent_x = |y_from: u32, y_to: u32| -> Option<(u32, u32)> {
+        let mut min_x = u32::MAX;
+        let mut max_x = 0;
+        for y in y_from..=y_to.min(pixmap.height().saturating_sub(1)) {
+            for x in 0..pixmap.width() {
+                if pixmap.pixel(x, y).map(|p| p.alpha()).unwrap_or(0) > 0 {
+                    min_x = min_x.min(x);
+                    max_x = max_x.max(x);
+                }
+            }
+        }
+        (min_x <= max_x).then_some((min_x, max_x))
+    };
+
+    let split_y = (font_size + separation / 2.0) as u32;
+    let (Some((r1_min, r1_max)), Some((r2_min, r2_max))) = (
+        ink_extent_x(0, split_y),
+        ink_extent_x(split_y + 1, pixmap.height() - 1),
+    ) else {
+        logger::warning(format!(
+            "Failed to measure stacked label offset for {line1:?}/{line2:?}: no ink found"
+        ));
+        return 0.0;
+    };
+
+    let line1_centre = (r1_min + r1_max) as f32 / 2.0;
+    let line2_centre = (r2_min + r2_max) as f32 / 2.0;
+    line1_centre - line2_centre
+}
+
+fn render_svg_to_pixmap(svg: &str) -> Option<tiny_skia::Pixmap> {
+    let opts = usvg::Options {
+        fontdb: shared_font_db(),
+        ..Default::default()
+    };
+    let tree = usvg::Tree::from_str(svg, &opts).ok()?;
+    let size = tree.size().to_int_size();
+    let mut pixmap = tiny_skia::Pixmap::new(size.width(), size.height())?;
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::identity(),
+        &mut pixmap.as_mut(),
+    );
+    Some(pixmap)
+}
+
+/// x-extent (min, max) of near-opaque pixels close to `(r, g, b)`, or `None`
+/// if no such pixel is found.
+///
+/// Only near-full alpha counts: at low alpha, `tiny_skia`'s premultiplied
+/// channels shrink toward zero regardless of hue, so a partially
+/// transparent antialiased edge of *any* colour would otherwise be
+/// misclassified as matching every colour, including black.
+fn ink_extent_x_of_colour(
+    pixmap: &tiny_skia::Pixmap,
+    (r, g, b): (u8, u8, u8),
+) -> Option<(u32, u32)> {
+    let close = |a: u8, b: u8| (a as i32 - b as i32).abs() < 40;
+    let mut min_x = u32::MAX;
+    let mut max_x = 0;
+    for y in 0..pixmap.height() {
+        for x in 0..pixmap.width() {
+            if let Some(p) = pixmap.pixel(x, y) {
+                if p.alpha() > 200 && close(p.red(), r) && close(p.green(), g) && close(p.blue(), b)
+                {
+                    min_x = min_x.min(x);
+                    max_x = max_x.max(x);
+                }
+            }
+        }
+    }
+    (min_x <= max_x).then_some((min_x, max_x))
+}
+
+/// Computes the `dx` (SVG user units) for the tspan that follows a
+/// "Feels"/"Like"-style stacked label, so that tspan's ink starts exactly
+/// `target_gap` after the label's own ink — regardless of how far right the
+/// label's natural cursor position already landed (which is language- and
+/// font-dependent, see [`measure_stacked_label_dx`]).
+///
+/// `label_dx`/`label_dy` must be the exact offsets already applied to
+/// `line2` in production (from [`measure_stacked_label_dx`]), since they
+/// change where the cursor sits by the time the following tspan starts.
+/// `probe_text` stands in for whatever dynamic content the real tspan will
+/// hold (e.g. a temperature reading) — only its left ink edge is used, so
+/// any fixed placeholder of the same font/size works (a real value isn't
+/// known at measurement time and doesn't materially change left-edge
+/// position). Returns `0.0` if either label line is empty or rendering
+/// fails.
+#[allow(clippy::too_many_arguments)]
+pub fn measure_label_to_number_gap_dx(
+    line1: &str,
+    line2: &str,
+    label_dx: f32,
+    label_dy: f32,
+    label_font_family: &str,
+    label_font_size: f32,
+    number_font_family: &str,
+    number_font_size: f32,
+    probe_text: &str,
+    target_gap: f32,
+) -> f32 {
+    if line1.is_empty() || line2.is_empty() {
+        return 0.0;
+    }
+
+    let line1 = escape_xml_text(line1);
+    let line2 = escape_xml_text(line2);
+    let label_colour = (0, 0, 0);
+    let probe_colour = (0, 255, 0);
+    let svg = format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="{number_font_size}" font-family="{label_font_family}">
+            <text x="246" y="{label_font_size}" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
+                <tspan>{line1}</tspan>
+                <tspan dx="{label_dx}" dy="{label_dy}">{line2}</tspan>
+                <tspan font-family="{number_font_family}" dominant-baseline="middle" font-size="{number_font_size}" fill="rgb(0,255,0)" dx="0">{probe_text}</tspan>
+            </text>
+        </svg>"#
+    );
+
+    let Some(pixmap) = render_svg_to_pixmap(&svg) else {
+        logger::warning(format!(
+            "Failed to measure label-to-number gap for {line1:?}/{line2:?}: render failed"
+        ));
+        return 0.0;
+    };
+    let (Some((_, label_max)), Some((probe_min, _))) = (
+        ink_extent_x_of_colour(&pixmap, label_colour),
+        ink_extent_x_of_colour(&pixmap, probe_colour),
+    ) else {
+        logger::warning(format!(
+            "Failed to measure label-to-number gap for {line1:?}/{line2:?}: no ink found"
+        ));
+        return 0.0;
+    };
+
+    let natural_gap = probe_min as f32 - label_max as f32;
+    target_gap - natural_gap
+}
+
+// ============================= END WORKAROUND ==============================
 
 /// Calculates the total value between two dates from a dataset.
 ///
@@ -242,6 +493,147 @@ pub fn encode(lon_x: Longitude, lat_y: Latitude, len: usize) -> Result<String, G
 mod tests {
     use super::*;
     use chrono::Utc;
+
+    /// Renders the full production-shaped construct (stacked label + a
+    /// following coloured tspan) with the `dx`s [`measure_stacked_label_dx`]
+    /// and [`measure_label_to_number_gap_dx`] compute, then verifies the
+    /// tspan's ink actually lands `target_gap` after the label's ink, across
+    /// several scripts/word-length combinations.
+    fn assert_label_to_number_gap(line1: &str, line2: &str, target_gap: f32) {
+        let label_font_size = 18.0;
+        let number_font_size = 55.0;
+        let label_dx =
+            measure_stacked_label_dx(line1, line2, "Roboto, sans-serif", label_font_size);
+        let label_dy = 15.5;
+        let gap_dx = measure_label_to_number_gap_dx(
+            line1,
+            line2,
+            label_dx,
+            label_dy,
+            "Roboto, sans-serif",
+            label_font_size,
+            "Roboto-Regular-Dashed",
+            number_font_size,
+            "16",
+            target_gap,
+        );
+        let svg = format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="250" font-family="Roboto, sans-serif">
+                <text x="246" y="158" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
+                    <tspan>{line1}</tspan>
+                    <tspan dx="{label_dx}" dy="{label_dy}">{line2}</tspan>
+                    <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="{number_font_size}" fill="rgb(0,255,0)" dx="{gap_dx}">16</tspan>
+                </text>
+            </svg>"#
+        );
+        let pixmap = render_svg_to_pixmap(&svg).unwrap();
+        let (_, label_max) = ink_extent_x_of_colour(&pixmap, (0, 0, 0)).unwrap();
+        let (probe_min, _) = ink_extent_x_of_colour(&pixmap, (0, 255, 0)).unwrap();
+        let gap = probe_min as f32 - label_max as f32;
+        assert!(
+            (gap - target_gap).abs() <= 1.0,
+            "{line1:?}/{line2:?}: gap not at target, got {gap} want {target_gap}"
+        );
+    }
+
+    #[test]
+    fn label_to_number_gap_matches_target_for_every_locale_pair() {
+        for (line1, line2) in [
+            ("Feels", "Like"),
+            ("Ress.", "comme"),
+            ("Gef.", "wie"),
+            ("Se", "siente"),
+            ("体感", "温度"),
+        ] {
+            assert_label_to_number_gap(line1, line2, 12.0);
+        }
+    }
+
+    /// Renders `line1`/`line2` stacked with the `dx` computed by
+    /// [`measure_stacked_label_dx`] and verifies the two lines actually end
+    /// up ink-centered on one another (within half a pixel), across several
+    /// scripts/word-length combinations — i.e. that the measurement is
+    /// self-consistent with what it's meant to produce, not just idempotent.
+    fn assert_stacked_label_dx_centers(line1: &str, line2: &str) {
+        let font_size: f32 = 18.0;
+        let dx = measure_stacked_label_dx(line1, line2, "Roboto, sans-serif", font_size);
+        let dy: f32 = 15.5;
+        let svg = format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="250" font-family="Roboto, sans-serif">
+                <text x="246" y="158" text-anchor="middle" font-size="{font_size}">
+                    <tspan>{line1}</tspan>
+                    <tspan dx="{dx}" dy="{dy}">{line2}</tspan>
+                </text>
+            </svg>"#
+        );
+        let opts = usvg::Options {
+            fontdb: shared_font_db(),
+            ..Default::default()
+        };
+        let tree = usvg::Tree::from_str(&svg, &opts).unwrap();
+        let size = tree.size().to_int_size();
+        let mut pixmap = tiny_skia::Pixmap::new(size.width(), size.height()).unwrap();
+        resvg::render(
+            &tree,
+            tiny_skia::Transform::identity(),
+            &mut pixmap.as_mut(),
+        );
+
+        let ink_extent_x = |y_from: u32, y_to: u32| -> (u32, u32) {
+            let mut min_x = u32::MAX;
+            let mut max_x = 0;
+            for y in y_from..=y_to {
+                for x in 0..pixmap.width() {
+                    if pixmap.pixel(x, y).map(|p| p.alpha()).unwrap_or(0) > 0 {
+                        min_x = min_x.min(x);
+                        max_x = max_x.max(x);
+                    }
+                }
+            }
+            assert!(min_x <= max_x, "no ink found in y range {y_from}..={y_to}");
+            (min_x, max_x)
+        };
+        let split_y = (158.0 + dy / 2.0).round() as u32;
+        let (r1_min, r1_max) = ink_extent_x(0, split_y);
+        let (r2_min, r2_max) = ink_extent_x(split_y + 1, pixmap.height() - 1);
+        let c1 = (r1_min + r1_max) as f32 / 2.0;
+        let c2 = (r2_min + r2_max) as f32 / 2.0;
+        // A couple of pixels of slop is expected: the two renders place the
+        // glyphs at different absolute x positions, and font hinting can
+        // shift ink by a pixel depending on where a glyph lands on the pixel
+        // grid. What matters is this is imperceptible at label size, far
+        // smaller than the tens-of-pixels a wrong-by-a-half-width formula
+        // would produce.
+        assert!(
+            (c1 - c2).abs() <= 0.5,
+            "{line1:?}/{line2:?}: line centres not aligned, dx={dx} c1={c1} c2={c2}"
+        );
+    }
+
+    #[test]
+    fn stacked_label_dx_centers_every_locale_pair() {
+        for (line1, line2) in [
+            ("Feels", "Like"),
+            ("Ress.", "comme"),
+            ("Gef.", "wie"),
+            ("Se", "siente"),
+            ("体感", "温度"),
+        ] {
+            assert_stacked_label_dx_centers(line1, line2);
+        }
+    }
+
+    #[test]
+    fn stacked_label_dx_is_zero_for_empty_line() {
+        assert_eq!(
+            measure_stacked_label_dx("", "Like", "Roboto, sans-serif", 18.0),
+            0.0
+        );
+        assert_eq!(
+            measure_stacked_label_dx("Feels", "", "Roboto, sans-serif", 18.0),
+            0.0
+        );
+    }
 
     struct Point {
         time: DateTime<Utc>,
