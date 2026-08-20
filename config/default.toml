@@ -51,6 +51,10 @@ language = "en"                                # Options:
 #   es - Spanish
 #   ja - Japanese, romanized (e.g. "Doyobi", not 土曜日) — the display font
 #        has no Japanese script glyphs, so labels/dates use romaji, not kanji/kana
+hour_format = "auto"                           # Options: auto, 12h, 24h
+#   auto - follow the clock convention of `language` (12-hour for en, 24-hour otherwise)
+#   12h  - always render the hourly-forecast chart's x-axis as e.g. "3pm"
+#   24h  - always render the hourly-forecast chart's x-axis as e.g. "15:00"
 # Date format using strftime specifiers. Examples:
 #   "%A, %d %B"      -> Saturday, 06 December (default)
 #   "%B %-d, %Y"     -> December 6, 2025 (US style)

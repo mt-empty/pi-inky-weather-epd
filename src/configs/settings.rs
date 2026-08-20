@@ -25,6 +25,19 @@ pub enum TemperatureUnit {
     F,
 }
 
+#[derive(Debug, Deserialize, PartialOrd, PartialEq, Clone, Copy, Display, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum HourFormat {
+    /// Follow the clock convention of `render_options.language` (12-hour for
+    /// English, 24-hour for the other supported languages).
+    #[default]
+    Auto,
+    #[strum(serialize = "12h")]
+    TwelveHour,
+    #[strum(serialize = "24h")]
+    TwentyFour,
+}
+
 #[derive(Debug, Deserialize, PartialOrd, PartialEq, Clone, Copy, Display)]
 pub enum WindSpeedUnit {
     #[serde(rename = "km/h")]
@@ -200,6 +213,8 @@ pub struct RenderOptions {
     pub temp_unit: TemperatureUnit,
     pub wind_speed_unit: WindSpeedUnit,
     pub language: String,
+    #[serde(default)]
+    pub hour_format: HourFormat,
     pub date_format: DateFormat,
     pub use_moon_phase_instead_of_clear_night: bool,
     pub x_axis_always_at_min: bool,
@@ -441,6 +456,10 @@ impl DashboardSettings {
             format!("{}", self.render_options.wind_speed_unit),
         );
         logger::kvp("Language", &self.render_options.language);
+        logger::kvp(
+            "Hour Format",
+            format!("{}", self.render_options.hour_format),
+        );
         logger::kvp("Date Format", &self.render_options.date_format);
         logger::kvp(
             "Use Moon Phase",

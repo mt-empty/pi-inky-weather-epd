@@ -1,5 +1,6 @@
 use crate::{
     clock::Clock,
+    configs::settings::HourFormat,
     constants::DEFAULT_AXIS_LABEL_FONT_SIZE,
     i18n::{weekday_long, Language},
     logger,
@@ -127,6 +128,8 @@ pub struct HourlyForecastGraph {
     pub tz: chrono_tz::Tz,
     /// Display language for time-dependent labels (e.g. the "tomorrow" day name).
     pub language: Language,
+    /// Clock convention for the x-axis hour labels (e.g. "3pm" vs "15:00").
+    pub hour_format: HourFormat,
 }
 
 // TODO: use the builder pattern to create the graph
@@ -160,6 +163,7 @@ impl Default for HourlyForecastGraph {
             background_colour: "white".to_string(),
             tz: chrono_tz::UTC,
             language: Language::En,
+            hour_format: HourFormat::Auto,
         }
     }
 }
@@ -428,6 +432,34 @@ fn tomorrow_label(language: Language, weekday: Weekday) -> TomorrowLabel {
     }
 }
 
+/// Renders one x-axis hour tick as text, in either 12-hour ("3pm") or
+/// 24-hour ("15:00") form.
+///
+/// `HourFormat::Auto` follows the clock convention of `language` (12-hour for
+/// English, 24-hour for the other supported languages); `TwelveHour`/`TwentyFour`
+/// override that regardless of language.
+fn format_hour_label(hour: f32, hour_format: HourFormat, language: Language) -> String {
+    let use_twelve_hour = match hour_format {
+        HourFormat::TwelveHour => true,
+        HourFormat::TwentyFour => false,
+        HourFormat::Auto => language == Language::En,
+    };
+
+    if use_twelve_hour {
+        let period = if hour < 12.0 { "am" } else { "pm" };
+        let display_hour = if hour == 0.0 {
+            12.0
+        } else if hour > 12.0 {
+            hour - 12.0
+        } else {
+            hour
+        };
+        format!("{display_hour:.0}{period}")
+    } else {
+        format!("{hour:02.0}:00")
+    }
+}
+
 /// Create the axis paths and labels for the graph
 impl HourlyForecastGraph {
     pub fn create_axis_with_labels(&self, current_hour: f32, clock: &dyn Clock) -> AxisPaths {
@@ -650,15 +682,7 @@ impl HourlyForecastGraph {
             let label_x = xs;
             let label_y = self.height + 20.0;
             let hour = (current_hour + x_val) % 24.0;
-            let period = if hour < 12.0 { "am" } else { "pm" };
-            let display_hour = if hour == 0.0 && period == "am" {
-                12.0
-            } else if hour > 12.0 {
-                hour - 12.0
-            } else {
-                hour
-            };
-            let label_str = format!("{display_hour:.0}{period}");
+            let label_str = format_hour_label(hour, self.hour_format, self.language);
 
             x_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" text-anchor="middle">{text}</text>"#,
@@ -947,6 +971,63 @@ mod tests {
         fn is_a_pure_function_of_seed() {
             let seed = 123456789;
             assert_eq!(lcg_next(seed), lcg_next(seed));
+        }
+    }
+
+    mod format_hour_label_tests {
+        use super::*;
+
+        #[test]
+        fn auto_uses_twelve_hour_for_english() {
+            assert_eq!(
+                format_hour_label(0.0, HourFormat::Auto, Language::En),
+                "12am"
+            );
+            assert_eq!(
+                format_hour_label(9.0, HourFormat::Auto, Language::En),
+                "9am"
+            );
+            assert_eq!(
+                format_hour_label(12.0, HourFormat::Auto, Language::En),
+                "12pm"
+            );
+            assert_eq!(
+                format_hour_label(15.0, HourFormat::Auto, Language::En),
+                "3pm"
+            );
+        }
+
+        #[test]
+        fn auto_uses_twenty_four_hour_for_non_english_languages() {
+            for language in [Language::Fr, Language::De, Language::Es, Language::Ja] {
+                assert_eq!(format_hour_label(0.0, HourFormat::Auto, language), "00:00");
+                assert_eq!(format_hour_label(9.0, HourFormat::Auto, language), "09:00");
+                assert_eq!(format_hour_label(15.0, HourFormat::Auto, language), "15:00");
+            }
+        }
+
+        #[test]
+        fn explicit_twelve_hour_overrides_language() {
+            assert_eq!(
+                format_hour_label(15.0, HourFormat::TwelveHour, Language::Fr),
+                "3pm"
+            );
+            assert_eq!(
+                format_hour_label(0.0, HourFormat::TwelveHour, Language::Ja),
+                "12am"
+            );
+        }
+
+        #[test]
+        fn explicit_twenty_four_hour_overrides_language() {
+            assert_eq!(
+                format_hour_label(15.0, HourFormat::TwentyFour, Language::En),
+                "15:00"
+            );
+            assert_eq!(
+                format_hour_label(0.0, HourFormat::TwentyFour, Language::En),
+                "00:00"
+            );
         }
     }
 

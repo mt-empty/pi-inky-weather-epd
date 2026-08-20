@@ -574,6 +574,7 @@ impl<'a> ContextBuilder<'a> {
             background_colour: self.settings.colours.background_colour.to_string(),
             tz: self.settings.misc.timezone,
             language: Language::from_config(&self.settings.render_options.language),
+            hour_format: self.settings.render_options.hour_format,
             ..Default::default()
         };
 
