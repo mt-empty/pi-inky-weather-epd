@@ -120,13 +120,13 @@
 
         <!-- row header-->
         <svg x="15" y="210" label="UV-index" text-anchor="start">
-            <text x="16" y="43.5" fill="{text_colour}" font-size="20">{label_metric}
+            <text x="43" y="43.5" fill="{text_colour}" font-size="20"  text-anchor="middle">{label_metric}
             </text>
 
-            <text x="85" y="43.5" fill="{text_colour}" font-size="20">{label_now}
+            <text x="107" y="43.5" fill="{text_colour}" font-size="20" text-anchor="middle">{label_now}
             </text>
-            <text x="140" y="43.5" fill="{text_colour}" font-size="20">{label_max}
-                <tspan baseline-shift="super" font-size="17" dx="-3">{label_24h}</tspan>
+            <text x="177" y="43.5" fill="{text_colour}" font-size="20" text-anchor="middle">{label_max}
+                <tspan baseline-shift="super" font-size="17" dx="-3">24h</tspan>
             </text>
         </svg>
 
