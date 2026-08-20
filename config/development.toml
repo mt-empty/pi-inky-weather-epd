@@ -44,6 +44,19 @@ snow_colour = "blue"    # Fill colour of the snow forecast area; snowflakes are 
 [render_options]
 temp_unit = "C"                                 # Options: C, F
 wind_speed_unit = "km/h"                        # Options: km/h, mph, knots
+# Options:
+#   en - English
+#   fr - French
+#   de - German
+#   es - Spanish
+#   ja - Japanese, romanized (e.g. "Doyobi", not 土曜日) — the display font
+#        has no Japanese script glyphs, so labels/dates use romaji, not kanji/kana
+language = "en"
+# Options:
+#   auto - follow the clock convention of `language` (12-hour for en, 24-hour otherwise)
+#   12h  - always render the hourly-forecast chart's x-axis as e.g. "3pm"
+#   24h  - always render the hourly-forecast chart's x-axis as e.g. "15:00"
+hour_format = "auto"
 # Date format using strftime specifiers. Examples:
 #   "%A, %d %B"      -> Saturday, 06 December (default)
 #   "%B %-d, %Y"     -> December 6, 2025 (US style)
@@ -56,10 +69,11 @@ date_format = "%A, %d %B"
 use_moon_phase_instead_of_clear_night = true    # When the sky is clear, the moon phase icon will be used instead of the clear night icon
 x_axis_always_at_min = true                     # Controls x-axis placement when temp is below zero
 use_gust_instead_of_wind = false
-prefer_weather_codes = true                     # Prefer WMO weather codes for icon selection when available (falls back to derived logic)
-                                                # Note: prefer_weather_codes has no effect with bom — BOM does not provide WMO weather codes
-precipitation_opacity_min = 0.40               # Gradient fill opacity at 0% chance (0.0–1.0, must be < max). Recommended: 0.35–0.55
-precipitation_opacity_max = 0.60               # Gradient fill opacity at 100% chance (0.0–1.0, must be > min). Recommended: 0.55–0.75
+# Prefer WMO weather codes for icon selection when available (falls back to derived logic)
+# Note: prefer_weather_codes has no effect with bom — BOM does not provide WMO weather codes
+prefer_weather_codes = true
+precipitation_opacity_min = 0.40  # Gradient fill opacity at 0% chance (0.0–1.0, must be < max). Recommended: 0.35–0.55
+precipitation_opacity_max = 0.60  # Gradient fill opacity at 100% chance (0.0–1.0, must be > min). Recommended: 0.55–0.75
 
 [misc]
 # timezone = "Australia/Melbourne"  # IANA timezone for displayed times; unset = system timezone
