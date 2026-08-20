@@ -119,6 +119,8 @@ The dashboard supports multiple interface languages for compact UI labels and da
 language = "en"
 ```
 
+![Language showcase](./misc/languages/languages.gif)
+
 Example renders for each supported language:
 [en](./misc/languages/dashboard-en.png) ·
 [fr](./misc/languages/dashboard-fr.png) ·

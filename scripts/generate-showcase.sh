@@ -149,6 +149,13 @@ for lang in en fr de es ja; do
 done
 
 echo ""
+echo -e "${BLUE}=====================================================${NC}"
+echo -e "${BLUE}   Language Showcase GIF${NC}"
+echo -e "${BLUE}=====================================================${NC}"
+echo ""
+./scripts/generate-languages-gif.sh
+
+echo ""
 echo -e "${GREEN}=====================================================${NC}"
 echo -e "${GREEN}   Done!${NC}"
 echo -e "${GREEN}=====================================================${NC}"
