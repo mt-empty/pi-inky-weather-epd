@@ -247,6 +247,22 @@ fn render_svg_to_pixmap(svg: &str) -> Option<tiny_skia::Pixmap> {
     Some(pixmap)
 }
 
+/// Vertical pixel centre of a rendered SVG snippet's ink (the midpoint
+/// between its topmost and bottommost non-transparent rows), or `None` if
+/// nothing rendered.
+///
+/// Used to align text vertically by measuring actual glyph ink rather than a
+/// hand-tuned offset — see the TEMPORARY WORKAROUND block above for why.
+pub fn measure_ink_y_center(svg: &str) -> Option<f32> {
+    let pixmap = render_svg_to_pixmap(svg)?;
+    let row_has_ink = |y: u32| -> bool {
+        (0..pixmap.width()).any(|x| pixmap.pixel(x, y).is_some_and(|p| p.alpha() > 0))
+    };
+    let min_y = (0..pixmap.height()).find(|&y| row_has_ink(y))?;
+    let max_y = (0..pixmap.height()).rev().find(|&y| row_has_ink(y))?;
+    Some((min_y + max_y) as f32 / 2.0)
+}
+
 /// x-extent (min, max) of near-opaque pixels close to `(r, g, b)`, or `None`
 /// if no such pixel is found.
 ///

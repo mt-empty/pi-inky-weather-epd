@@ -4,6 +4,7 @@ use crate::{
     constants::DEFAULT_AXIS_LABEL_FONT_SIZE,
     i18n::{weekday_long, Language},
     logger,
+    utils::measure_ink_y_center,
     weather::icons::UVIndexIcon,
 };
 use anyhow::Error;
@@ -705,10 +706,10 @@ impl HourlyForecastGraph {
                    <text x="{x_text}" y="{y_text}" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" font-style="{font_style}"  transform="rotate(-90, {rotate_x_text}, {rotate_y_text})" text-anchor="start">{tomorrow_day_name}</text>"#,
                 x = x_coor,
                 chart_height = self.height,
-                x_text = x_coor + 10.0,
+                x_text = x_coor + 11.0,
                 y_text = (self.height / 2.0) + 20.0,
                 font_style = FontStyle::Italic,
-                rotate_x_text = x_coor + 10.0 - 30.0,
+                rotate_x_text = x_coor + 11.0 - 30.0,
                 rotate_y_text = (self.height / 2.0) - 15.0,
                 colour = self.text_colour,
                 tomorrow_day_name = tomorrow_day_name,
@@ -716,11 +717,9 @@ impl HourlyForecastGraph {
             TomorrowLabel::Stacked(name) => {
                 let chars: Vec<char> = name.chars().collect();
                 let line_height = f32::from(DEFAULT_AXIS_LABEL_FONT_SIZE);
-                let x_text = x_coor + 10.0;
-                // Centre the column on the same axis point the Upright style used,
-                // offsetting upward by half the total stack height.
+                let x_text = x_coor + 11.0;
                 let start_y =
-                    (self.height / 2.0) - (line_height * (chars.len() as f32 - 1.0) / 2.0);
+                    self.stacked_tomorrow_label_start_y(&chars, line_height, tomorrow_weekday);
                 let tspans: String = chars
                     .iter()
                     .enumerate()
@@ -743,6 +742,66 @@ impl HourlyForecastGraph {
                 )
             }
         }
+    }
+
+    /// Computes the `y` of the stacked label's first `tspan` so its ink
+    /// lands at the same on-screen height as the rotated Latin label would
+    /// for this weekday.
+    ///
+    /// The rotated label's anchor/rotation-origin offsets (in the `Rotated`
+    /// arm above) are hand-tuned, not exact geometry, and its ink centre
+    /// also shifts with the rendered word's pixel width. Rather than a
+    /// second hand-tuned constant here that would need re-tuning whenever
+    /// those offsets, the font, or the font size change, this renders both
+    /// labels through the real resvg/usvg pipeline — the rotated label
+    /// using this weekday's English name as a stand-in Latin reference,
+    /// since `Stacked` and `Rotated` are never both in play for the same
+    /// render — and measures their actual ink to compute the offset.
+    fn stacked_tomorrow_label_start_y(
+        &self,
+        chars: &[char],
+        line_height: f32,
+        weekday: Weekday,
+    ) -> f32 {
+        let font_family = "Roboto, sans-serif";
+        let font_size = DEFAULT_AXIS_LABEL_FONT_SIZE;
+
+        let reference_name = weekday_long(weekday, Language::En);
+        let rotate_x_text = 11.0 - 30.0;
+        let rotate_y_text = (self.height / 2.0) - 15.0;
+        let rotated_svg = format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="{height}" font-family="{font_family}">
+                <text x="11" y="{y_text}" font-size="{font_size}" font-style="italic" transform="rotate(-90, {rotate_x_text}, {rotate_y_text})" text-anchor="start">{reference_name}</text>
+            </svg>"#,
+            height = self.height,
+            y_text = (self.height / 2.0) + 20.0,
+        );
+        let target_centre_y =
+            measure_ink_y_center(&rotated_svg).unwrap_or(self.height / 2.0 - 45.0);
+
+        // Positive margin above the first baseline so the tallest glyph's
+        // ascent still lands inside the measurement canvas.
+        let probe_start_y = f32::from(font_size) * 2.0;
+        let tspans: String = chars
+            .iter()
+            .enumerate()
+            .map(|(i, c)| {
+                if i == 0 {
+                    format!(r#"<tspan x="0" y="{probe_start_y}">{c}</tspan>"#)
+                } else {
+                    format!(r#"<tspan x="0" dy="{line_height}">{c}</tspan>"#)
+                }
+            })
+            .collect();
+        let stacked_svg = format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="{height}" font-family="{font_family}">
+                <text x="100" font-size="{font_size}" text-anchor="middle">{tspans}</text>
+            </svg>"#,
+            height = probe_start_y + line_height * chars.len() as f32 * 2.0,
+        );
+        let probe_centre_y = measure_ink_y_center(&stacked_svg).unwrap_or(probe_start_y);
+
+        probe_start_y + (target_centre_y - probe_centre_y)
     }
 
     fn initialize_x_y_bounds(&mut self) {
