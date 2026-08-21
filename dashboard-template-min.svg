@@ -63,11 +63,11 @@
         <tspan baseline-shift="27" dx="-20" font-size="33">°{temp_unit}</tspan>
     </text>
 
-    <text x="246" y="158" text-anchor="middle" font-size="18" fill="{text_colour}">
-        <tspan>Feels</tspan>
-        <tspan dy="15.5" dx="-46.6">Like</tspan>
+    <text x="248" y="158" text-anchor="middle" font-size="18" fill="{text_colour}">
+        <tspan>{label_feels}</tspan>
+        {label_like_tspan}
         <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="{feels_like_colour}"
-            dx="10" dy="-7">
+            dx="{feels_like_number_dx}" dy="-7">
             {current_hour_feels_like}
             <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan>
         </tspan>
@@ -120,12 +120,12 @@
 
         <!-- row header-->
         <svg x="15" y="210" label="UV-index" text-anchor="start">
-            <text x="16" y="43.5" fill="{text_colour}" font-size="20">Metric
+            <text x="43" y="43.5" fill="{text_colour}" font-size="20"  text-anchor="middle">{label_metric}
             </text>
 
-            <text x="85" y="43.5" fill="{text_colour}" font-size="20">Now
+            <text x="107" y="43.5" fill="{text_colour}" font-size="20" text-anchor="middle">{label_now}
             </text>
-            <text x="140" y="43.5" fill="{text_colour}" font-size="20">Max
+            <text x="177" y="43.5" fill="{text_colour}" font-size="20" text-anchor="middle">{label_max}
                 <tspan baseline-shift="super" font-size="17" dx="-3">24h</tspan>
             </text>
         </svg>
@@ -249,6 +249,8 @@
         <!-- feels like temp curve -->
         <path stroke="{feels_like_colour}" stroke-linejoin="round" stroke-dasharray="12,5"
             transform="translate(0, 300) scale(1, -1)" d="{feel_like_curve_data}" stroke-width="4.0" fill="none" />
+        <!-- Tomorrow day-boundary line and label -->
+        {tomorrow_marker}
         <defs>
             <linearGradient id="UVGradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%">
                 {uv_gradient}

@@ -9,6 +9,7 @@ use resvg::tiny_skia;
 use resvg::usvg;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::{Arc, OnceLock};
 use usvg::fontdb;
 
 /// Converts an SVG file to a PNG file.
@@ -31,12 +32,13 @@ pub fn convert_svg_to_png(
     let svg_data = fs::read_to_string(input_path)
         .map_err(|e| Error::msg(format!("Failed to read SVG file: {e}")))?;
 
-    let mut font_db = fontdb::Database::new();
-    load_fonts(&mut font_db);
-
-    // Parse the SVG
+    // Uses the same cached database as `measure_stacked_label_dx`, so a
+    // label's measured width always matches what actually gets rendered
+    // here — if these ever used separately built databases, a system font
+    // shadowing a bundled one (see `load_fonts`) could make one resolve a
+    // different face than the other.
     let opts = usvg::Options {
-        fontdb: font_db.into(),
+        fontdb: shared_font_db(),
         ..Default::default()
     };
 
@@ -70,15 +72,15 @@ pub fn convert_svg_to_png(
 ///
 /// * `font_db` - A mutable reference to a `fontdb::Database` to load fonts into.
 fn load_fonts(font_db: &mut fontdb::Database) {
-    font_db.load_system_fonts();
-
-    // print current path
     let current_path = std::env::current_dir().unwrap();
 
     let font_files = [
         "static/fonts/Roboto-VariableFont_wdth,wght.ttf",
         "static/fonts/Roboto-Italic-VariableFont_wdth,wght.ttf",
         "static/fonts/Roboto-Regular-Dashed.ttf",
+        // Subset covering only the kanji used by the Japanese locale strings in
+        // src/i18n.rs; Roboto has no CJK glyphs, so resvg falls back to this font.
+        "static/fonts/NotoSansJP-Weather-Regular.ttf",
     ];
 
     for file in &font_files {
@@ -88,6 +90,271 @@ fn load_fonts(font_db: &mut fontdb::Database) {
         }
     }
 }
+
+/// Lazily built, process-wide font database used for text measurement.
+///
+/// Loads the same fonts as [`convert_svg_to_png`], so widths measured with
+/// [`measure_text_width`] match what resvg actually renders. Cached because
+/// loading font files involves filesystem I/O and measurement can run once
+/// per label per render.
+fn shared_font_db() -> Arc<fontdb::Database> {
+    static FONT_DB: OnceLock<Arc<fontdb::Database>> = OnceLock::new();
+    FONT_DB
+        .get_or_init(|| {
+            let mut font_db = fontdb::Database::new();
+            load_fonts(&mut font_db);
+            Arc::new(font_db)
+        })
+        .clone()
+}
+
+// =============================================================================
+// TEMPORARY WORKAROUND — remove once resvg/usvg supports tspan `text-anchor`
+// with `dx`/`dy` centering correctly: https://github.com/linebender/resvg/issues/583
+//
+// Until then, stacked-label centering (e.g. "Feels"/"Like") and the gap to
+// whatever follows it are computed here by actually rendering and measuring
+// pixels, rather than via native SVG anchoring.
+// =============================================================================
+
+fn escape_xml_text(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
+/// Computes the horizontal `dx` (SVG user units) that visually centers
+/// `line2` directly beneath `line1`, when both are rendered as sibling
+/// `tspan`s of one `<text font_family font_size>` element via relative
+/// `dx`/`dy` (i.e. `<tspan>{line1}</tspan><tspan dx dy>{line2}</tspan>`,
+/// the pattern used for the dashboard's stacked "Feels"/"Like"-style
+/// labels).
+///
+/// Without an explicit `dx`, `line2` starts wherever the cursor was left
+/// after `line1` — its own centre doesn't line up with `line1`'s. Rather
+/// than a hand-tuned constant per language/font, this renders both lines
+/// through the real resvg/usvg pipeline (same font DB as the final
+/// dashboard, including glyph-fallback for scripts like Japanese) and
+/// measures the actual ink centre of each line from the rasterized pixels,
+/// so it stays correct for any wording, font, or font-size — no
+/// recalibration needed when a language or font changes.
+///
+/// Renders the two lines far apart vertically (independent of whatever the
+/// real, much smaller, line spacing will be) purely so their ink can't
+/// overlap while measuring; only the horizontal centres are used. Returns
+/// `0.0` if either line is empty or rendering fails.
+pub fn measure_stacked_label_dx(
+    line1: &str,
+    line2: &str,
+    font_family: &str,
+    font_size: f32,
+) -> f32 {
+    if line1.is_empty() || line2.is_empty() {
+        return 0.0;
+    }
+
+    let line1 = escape_xml_text(line1);
+    let line2 = escape_xml_text(line2);
+    // Mirrors the production markup's own x/text-anchor exactly (not just an
+    // arbitrary centred canvas): text-anchor="middle" changes which pixel
+    // column a glyph's antialiasing lands on (hinting is sensitive to
+    // subpixel position), so matching it keeps this measurement's rounding
+    // behaviour identical to what actually gets rendered.
+    let cx = 248.0_f32;
+    let width = 500.0_f32;
+    let separation = font_size * 10.0;
+    let height = separation + font_size * 4.0;
+    let svg = format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" font-family="{font_family}">
+            <text x="{cx}" y="{font_size}" text-anchor="middle" font-size="{font_size}">
+                <tspan>{line1}</tspan>
+                <tspan dx="0" dy="{separation}">{line2}</tspan>
+            </text>
+        </svg>"#
+    );
+
+    let Some(pixmap) = render_svg_to_pixmap(&svg) else {
+        logger::warning(format!(
+            "Failed to measure stacked label offset for {line1:?}/{line2:?}: render failed"
+        ));
+        return 0.0;
+    };
+
+    let split_y = (font_size + separation / 2.0) as u32;
+    let (Some((r1_min, r1_max)), Some((r2_min, r2_max))) = (
+        ink_extent_x_in_y_range(&pixmap, 0, split_y),
+        ink_extent_x_in_y_range(&pixmap, split_y + 1, pixmap.height() - 1),
+    ) else {
+        logger::warning(format!(
+            "Failed to measure stacked label offset for {line1:?}/{line2:?}: no ink found"
+        ));
+        return 0.0;
+    };
+
+    let line1_centre = (r1_min + r1_max) as f32 / 2.0;
+    let line2_centre = (r2_min + r2_max) as f32 / 2.0;
+    line1_centre - line2_centre
+}
+
+fn render_svg_to_pixmap(svg: &str) -> Option<tiny_skia::Pixmap> {
+    let opts = usvg::Options {
+        fontdb: shared_font_db(),
+        ..Default::default()
+    };
+    let tree = usvg::Tree::from_str(svg, &opts).ok()?;
+    let size = tree.size().to_int_size();
+    let mut pixmap = tiny_skia::Pixmap::new(size.width(), size.height())?;
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::identity(),
+        &mut pixmap.as_mut(),
+    );
+    Some(pixmap)
+}
+
+/// Vertical pixel centre of a rendered SVG snippet's ink (the midpoint
+/// between its topmost and bottommost non-transparent rows), or `None` if
+/// nothing rendered.
+///
+/// Used to align text vertically by measuring actual glyph ink rather than a
+/// hand-tuned offset — see the TEMPORARY WORKAROUND block above for why.
+pub fn measure_ink_y_center(svg: &str) -> Option<f32> {
+    let pixmap = render_svg_to_pixmap(svg)?;
+    let row_has_ink = |y: u32| -> bool {
+        (0..pixmap.width()).any(|x| pixmap.pixel(x, y).is_some_and(|p| p.alpha() > 0))
+    };
+    let min_y = (0..pixmap.height()).find(|&y| row_has_ink(y))?;
+    let max_y = (0..pixmap.height()).rev().find(|&y| row_has_ink(y))?;
+    Some((min_y + max_y) as f32 / 2.0)
+}
+
+/// x-extent (min, max) of non-transparent pixels within rows `y_from..=y_to`
+/// (clamped to the pixmap's height), or `None` if no such pixel is found.
+fn ink_extent_x_in_y_range(
+    pixmap: &tiny_skia::Pixmap,
+    y_from: u32,
+    y_to: u32,
+) -> Option<(u32, u32)> {
+    let mut min_x = u32::MAX;
+    let mut max_x = 0;
+    for y in y_from..=y_to.min(pixmap.height().saturating_sub(1)) {
+        for x in 0..pixmap.width() {
+            if pixmap.pixel(x, y).map(|p| p.alpha()).unwrap_or(0) > 0 {
+                min_x = min_x.min(x);
+                max_x = max_x.max(x);
+            }
+        }
+    }
+    (min_x <= max_x).then_some((min_x, max_x))
+}
+
+/// x-extent (min, max) of matching pixels, or `None` if there were none.
+type XExtent = Option<(u32, u32)>;
+
+/// x-extents (min, max) of near-opaque pixels close to each of `colour_a`
+/// and `colour_b`, found in a single pass over the pixmap. Either result is
+/// `None` if no matching pixel was found for that colour.
+///
+/// Only near-full alpha counts: at low alpha, `tiny_skia`'s premultiplied
+/// channels shrink toward zero regardless of hue, so a partially
+/// transparent antialiased edge of *any* colour would otherwise be
+/// misclassified as matching every colour, including black.
+fn ink_extent_x_of_two_colours(
+    pixmap: &tiny_skia::Pixmap,
+    colour_a: (u8, u8, u8),
+    colour_b: (u8, u8, u8),
+) -> (XExtent, XExtent) {
+    let close = |a: u8, b: u8| (a as i32 - b as i32).abs() < 40;
+    let matches = |p: tiny_skia::PremultipliedColorU8, (r, g, b): (u8, u8, u8)| {
+        p.alpha() > 200 && close(p.red(), r) && close(p.green(), g) && close(p.blue(), b)
+    };
+    let mut extent_a = (u32::MAX, 0u32);
+    let mut extent_b = (u32::MAX, 0u32);
+    for y in 0..pixmap.height() {
+        for x in 0..pixmap.width() {
+            let Some(p) = pixmap.pixel(x, y) else {
+                continue;
+            };
+            if matches(p, colour_a) {
+                extent_a = (extent_a.0.min(x), extent_a.1.max(x));
+            }
+            if matches(p, colour_b) {
+                extent_b = (extent_b.0.min(x), extent_b.1.max(x));
+            }
+        }
+    }
+    (
+        (extent_a.0 <= extent_a.1).then_some(extent_a),
+        (extent_b.0 <= extent_b.1).then_some(extent_b),
+    )
+}
+
+/// Computes the `dx` (SVG user units) for the tspan that follows a
+/// "Feels"/"Like"-style stacked label, so that tspan's ink starts exactly
+/// `target_gap` after the label's own ink — regardless of how far right the
+/// label's natural cursor position already landed (which is language- and
+/// font-dependent, see [`measure_stacked_label_dx`]).
+///
+/// `label_dx`/`label_dy` must be the exact offsets already applied to
+/// `line2` in production (from [`measure_stacked_label_dx`]), since they
+/// change where the cursor sits by the time the following tspan starts.
+/// `probe_text` stands in for whatever dynamic content the real tspan will
+/// hold (e.g. a temperature reading) — only its left ink edge is used, so
+/// any fixed placeholder of the same font/size works (a real value isn't
+/// known at measurement time and doesn't materially change left-edge
+/// position). Returns `0.0` if either label line is empty or rendering
+/// fails.
+#[allow(clippy::too_many_arguments)]
+pub fn measure_label_to_number_gap_dx(
+    line1: &str,
+    line2: &str,
+    label_dx: f32,
+    label_dy: f32,
+    label_font_family: &str,
+    label_font_size: f32,
+    number_font_family: &str,
+    number_font_size: f32,
+    probe_text: &str,
+    target_gap: f32,
+) -> f32 {
+    if line1.is_empty() || line2.is_empty() {
+        return 0.0;
+    }
+
+    let line1 = escape_xml_text(line1);
+    let line2 = escape_xml_text(line2);
+    let label_colour = (0, 0, 0);
+    let probe_colour = (0, 255, 0);
+    let svg = format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="{number_font_size}" font-family="{label_font_family}">
+            <text x="248" y="{label_font_size}" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
+                <tspan>{line1}</tspan>
+                <tspan dx="{label_dx}" dy="{label_dy}">{line2}</tspan>
+                <tspan font-family="{number_font_family}" dominant-baseline="middle" font-size="{number_font_size}" fill="rgb(0,255,0)" dx="0">{probe_text}</tspan>
+            </text>
+        </svg>"#
+    );
+
+    let Some(pixmap) = render_svg_to_pixmap(&svg) else {
+        logger::warning(format!(
+            "Failed to measure label-to-number gap for {line1:?}/{line2:?}: render failed"
+        ));
+        return 0.0;
+    };
+    let (Some((_, label_max)), Some((probe_min, _))) =
+        ink_extent_x_of_two_colours(&pixmap, label_colour, probe_colour)
+    else {
+        logger::warning(format!(
+            "Failed to measure label-to-number gap for {line1:?}/{line2:?}: no ink found"
+        ));
+        return 0.0;
+    };
+
+    let natural_gap = probe_min as f32 - label_max as f32;
+    target_gap - natural_gap
+}
+
+// ============================= END WORKAROUND ==============================
 
 /// Calculates the total value between two dates from a dataset.
 ///
@@ -162,6 +429,16 @@ where
             Some(acc) if acc > x => Some(acc),
             _ => Some(x),
         })
+}
+
+/// Weekday `days` calendar days after `from`, using calendar-day arithmetic
+/// (not a fixed 24h offset) so it stays correct across DST transitions where
+/// the local day is 23 or 25 hours long.
+pub fn weekday_after_days<TZ: TimeZone>(from: DateTime<TZ>, days: u64) -> chrono::Weekday {
+    use chrono::Datelike;
+    from.checked_add_days(chrono::Days::new(days))
+        .expect("adding a few days to the current date does not overflow chrono's range")
+        .weekday()
 }
 
 // Below code was adopted from Geohash crate
@@ -240,6 +517,201 @@ mod tests {
     use super::*;
     use chrono::Utc;
 
+    /// Renders the full production-shaped construct (stacked label + a
+    /// following coloured tspan) with the `dx`s [`measure_stacked_label_dx`]
+    /// and [`measure_label_to_number_gap_dx`] compute, then verifies the
+    /// tspan's ink actually lands `target_gap` after the label's ink, across
+    /// several scripts/word-length combinations.
+    fn assert_label_to_number_gap(line1: &str, line2: &str, target_gap: f32) {
+        let label_font_size = 18.0;
+        let number_font_size = 55.0;
+        let label_dx =
+            measure_stacked_label_dx(line1, line2, "Roboto, sans-serif", label_font_size);
+        let label_dy = 15.5;
+        let gap_dx = measure_label_to_number_gap_dx(
+            line1,
+            line2,
+            label_dx,
+            label_dy,
+            "Roboto, sans-serif",
+            label_font_size,
+            "Roboto-Regular-Dashed",
+            number_font_size,
+            "16",
+            target_gap,
+        );
+        let svg = format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="250" font-family="Roboto, sans-serif">
+                <text x="248" y="158" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
+                    <tspan>{line1}</tspan>
+                    <tspan dx="{label_dx}" dy="{label_dy}">{line2}</tspan>
+                    <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="{number_font_size}" fill="rgb(0,255,0)" dx="{gap_dx}">16</tspan>
+                </text>
+            </svg>"#
+        );
+        let pixmap = render_svg_to_pixmap(&svg).unwrap();
+        let (label_extent, probe_extent) =
+            ink_extent_x_of_two_colours(&pixmap, (0, 0, 0), (0, 255, 0));
+        let (_, label_max) = label_extent.unwrap();
+        let (probe_min, _) = probe_extent.unwrap();
+        let gap = probe_min as f32 - label_max as f32;
+        assert!(
+            (gap - target_gap).abs() <= 1.0,
+            "{line1:?}/{line2:?}: gap not at target, got {gap} want {target_gap}"
+        );
+    }
+
+    #[test]
+    fn shared_font_db_covers_every_translated_string() {
+        // `load_fonts` deliberately doesn't load system fonts (see its doc
+        // comment), so every character any language can ever render has to
+        // come from the four bundled font files. This walks every string
+        // `i18n.rs` can produce — for every language, automatically, via
+        // `Language`/`TranslationKey`'s `EnumIter` derive — and fails loudly
+        // (a missing glyph is a silent tofu box on the actual dashboard,
+        // not a panic) if the shared db can't render one of its characters.
+        use crate::i18n::{
+            month_long, month_short, translate, weekday_long, weekday_short, Language,
+            TranslationKey,
+        };
+        use chrono::Weekday;
+        use strum::IntoEnumIterator;
+
+        let db = shared_font_db();
+        // Parse each bundled face once up front rather than on every
+        // character check below — this test walks every character of every
+        // translated string across all 5 languages, and Face::parse isn't
+        // free.
+        let face_data: Vec<(Vec<u8>, u32)> = db
+            .faces()
+            .filter_map(|face| db.with_face_data(face.id, |data, index| (data.to_vec(), index)))
+            .collect();
+        let faces: Vec<ttf_parser::Face> = face_data
+            .iter()
+            .filter_map(|(data, index)| ttf_parser::Face::parse(data, *index).ok())
+            .collect();
+        let has_char = |c: char| faces.iter().any(|face| face.glyph_index(c).is_some());
+
+        let weekdays = [
+            Weekday::Mon,
+            Weekday::Tue,
+            Weekday::Wed,
+            Weekday::Thu,
+            Weekday::Fri,
+            Weekday::Sat,
+            Weekday::Sun,
+        ];
+
+        for language in Language::iter() {
+            let mut strings: Vec<&str> = TranslationKey::iter()
+                .map(|key| translate(key, language))
+                .collect();
+            strings.extend(weekdays.iter().map(|&w| weekday_long(w, language)));
+            strings.extend(weekdays.iter().map(|&w| weekday_short(w, language)));
+            strings.extend((1..=12u32).map(|m| month_long(m, language)));
+            strings.extend((1..=12u32).map(|m| month_short(m, language)));
+
+            for s in strings {
+                for c in s.chars() {
+                    assert!(
+                        has_char(c),
+                        "no bundled font covers {c:?} (from {s:?}, {language:?}) — \
+                         load_system_fonts() is intentionally off, so this would \
+                         render as a missing-glyph box on the real dashboard"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn label_to_number_gap_matches_target_for_every_locale_pair() {
+        for (line1, line2) in feels_like_locale_pairs() {
+            assert_label_to_number_gap(line1, line2, 12.0);
+        }
+    }
+
+    /// The "Feels"/"Like" translation pair for every supported language,
+    /// derived from `translate()` itself (via `Language::iter()`) rather
+    /// than a hand-copied list, so a future language is automatically
+    /// covered by both this and `stacked_label_dx_centers_every_locale_pair`.
+    fn feels_like_locale_pairs() -> Vec<(&'static str, &'static str)> {
+        use crate::i18n::{translate, Language, TranslationKey};
+        use strum::IntoEnumIterator;
+
+        Language::iter()
+            .map(|language| {
+                (
+                    translate(TranslationKey::Feels, language),
+                    translate(TranslationKey::Like, language),
+                )
+            })
+            .collect()
+    }
+
+    /// Renders `line1`/`line2` stacked with the `dx` computed by
+    /// [`measure_stacked_label_dx`] and verifies the two lines actually end
+    /// up ink-centered on one another (within half a pixel), across several
+    /// scripts/word-length combinations — i.e. that the measurement is
+    /// self-consistent with what it's meant to produce, not just idempotent.
+    fn assert_stacked_label_dx_centers(line1: &str, line2: &str) {
+        let font_size: f32 = 18.0;
+        let dx = measure_stacked_label_dx(line1, line2, "Roboto, sans-serif", font_size);
+        let dy: f32 = 15.5;
+        let svg = format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="250" font-family="Roboto, sans-serif">
+                <text x="248" y="158" text-anchor="middle" font-size="{font_size}">
+                    <tspan>{line1}</tspan>
+                    <tspan dx="{dx}" dy="{dy}">{line2}</tspan>
+                </text>
+            </svg>"#
+        );
+        let pixmap = render_svg_to_pixmap(&svg).unwrap();
+
+        let split_y = (158.0 + dy / 2.0).round() as u32;
+        let (r1_min, r1_max) = ink_extent_x_in_y_range(&pixmap, 0, split_y)
+            .unwrap_or_else(|| panic!("no ink found in y range 0..={split_y}"));
+        let (r2_min, r2_max) = ink_extent_x_in_y_range(&pixmap, split_y + 1, pixmap.height() - 1)
+            .unwrap_or_else(|| {
+                panic!(
+                    "no ink found in y range {}..={}",
+                    split_y + 1,
+                    pixmap.height() - 1
+                )
+            });
+        let c1 = (r1_min + r1_max) as f32 / 2.0;
+        let c2 = (r2_min + r2_max) as f32 / 2.0;
+        // A couple of pixels of slop is expected: the two renders place the
+        // glyphs at different absolute x positions, and font hinting can
+        // shift ink by a pixel depending on where a glyph lands on the pixel
+        // grid. What matters is this is imperceptible at label size, far
+        // smaller than the tens-of-pixels a wrong-by-a-half-width formula
+        // would produce.
+        assert!(
+            (c1 - c2).abs() <= 0.5,
+            "{line1:?}/{line2:?}: line centres not aligned, dx={dx} c1={c1} c2={c2}"
+        );
+    }
+
+    #[test]
+    fn stacked_label_dx_centers_every_locale_pair() {
+        for (line1, line2) in feels_like_locale_pairs() {
+            assert_stacked_label_dx_centers(line1, line2);
+        }
+    }
+
+    #[test]
+    fn stacked_label_dx_is_zero_for_empty_line() {
+        assert_eq!(
+            measure_stacked_label_dx("", "Like", "Roboto, sans-serif", 18.0),
+            0.0
+        );
+        assert_eq!(
+            measure_stacked_label_dx("Feels", "", "Roboto, sans-serif", 18.0),
+            0.0
+        );
+    }
+
     struct Point {
         time: DateTime<Utc>,
         value: f64,
@@ -299,6 +771,37 @@ mod tests {
             let end = "2024-01-02T00:00:00Z".parse().unwrap();
             let total = total_between_dates(&data, &start, &end, |p| p.value, |p| p.time);
             assert_eq!(total, 10.0);
+        }
+    }
+
+    mod weekday_after_days_tests {
+        use super::*;
+        use chrono::{TimeZone, Weekday};
+        use chrono_tz::America::New_York;
+
+        #[test]
+        fn regular_day_advances_by_the_requested_number_of_days() {
+            let from = New_York.with_ymd_and_hms(2025, 6, 10, 23, 30, 0).unwrap();
+            assert_eq!(weekday_after_days(from, 1), Weekday::Wed);
+        }
+
+        #[test]
+        fn fall_back_dst_still_advances_by_one_calendar_day() {
+            // 2025-11-02 00:00 EDT is the start of the US fall-back local
+            // day, which is 25h long; a fixed 24h duration offset would
+            // land before the next local midnight and report Sunday
+            // instead of Monday.
+            let from = New_York.with_ymd_and_hms(2025, 11, 2, 0, 0, 0).unwrap();
+            assert_eq!(weekday_after_days(from, 1), Weekday::Mon);
+        }
+
+        #[test]
+        fn spring_forward_dst_still_advances_by_one_calendar_day() {
+            // 2025-03-08 23:30 EST is ~1h before US spring-forward DST
+            // start; the local day is only 23h long, so a fixed 24h
+            // duration offset would land on Monday instead of Sunday.
+            let from = New_York.with_ymd_and_hms(2025, 3, 8, 23, 30, 0).unwrap();
+            assert_eq!(weekday_after_days(from, 1), Weekday::Sun);
         }
     }
 

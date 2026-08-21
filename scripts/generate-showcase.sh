@@ -139,6 +139,22 @@ render_example "misc/showcase_fixtures/gif" "2025-10-24T22:00:00Z" "dashboard-da
     APP_COLOURS__FEELS_LIKE_COLOUR=green \
     APP_COLOURS__RAIN_COLOUR=blue
 
+# Language demo — same hour as the default shot, one render per supported
+# `render_options.language` value, so the readme's Language section links to
+# real translated output instead of just describing it.
+mkdir -p misc/languages
+for lang in en fr de es ja; do
+    render_example "misc/showcase_fixtures/gif" "2025-10-24T22:00:00Z" "languages/dashboard-${lang}.png" \
+        APP_RENDER_OPTIONS__LANGUAGE="$lang"
+done
+
+echo ""
+echo -e "${BLUE}=====================================================${NC}"
+echo -e "${BLUE}   Language Showcase GIF${NC}"
+echo -e "${BLUE}=====================================================${NC}"
+echo ""
+./scripts/generate-languages-gif.sh
+
 echo ""
 echo -e "${GREEN}=====================================================${NC}"
 echo -e "${GREEN}   Done!${NC}"

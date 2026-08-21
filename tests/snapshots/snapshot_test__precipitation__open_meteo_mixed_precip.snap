@@ -1,5 +1,5 @@
 ---
-source: tests/snapshot_precipitation_test.rs
+source: tests/snapshot_test.rs
 expression: svg_content
 ---
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
@@ -67,11 +67,11 @@ expression: svg_content
         <tspan baseline-shift="27" dx="-20" font-size="33">°C</tspan>
     </text>
 
-    <text x="246" y="158" text-anchor="middle" font-size="18" fill="black">
+    <text x="248" y="158" text-anchor="middle" font-size="18" fill="black">
         <tspan>Feels</tspan>
-        <tspan dy="15.5" dx="-46.6">Like</tspan>
+        <tspan dx="-42" dy="15.5">Like</tspan>
         <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="green"
-            dx="10" dy="-7">
+            dx="5" dy="-7">
             5
             <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan>
         </tspan>
@@ -124,12 +124,12 @@ expression: svg_content
 
         <!-- row header-->
         <svg x="15" y="210" label="UV-index" text-anchor="start">
-            <text x="16" y="43.5" fill="black" font-size="20">Metric
+            <text x="43" y="43.5" fill="black" font-size="20"  text-anchor="middle">Metric
             </text>
 
-            <text x="85" y="43.5" fill="black" font-size="20">Now
+            <text x="107" y="43.5" fill="black" font-size="20" text-anchor="middle">Now
             </text>
-            <text x="140" y="43.5" fill="black" font-size="20">Max
+            <text x="177" y="43.5" fill="black" font-size="20" text-anchor="middle">Max
                 <tspan baseline-shift="super" font-size="17" dx="-3">24h</tspan>
             </text>
         </svg>
@@ -253,8 +253,7 @@ expression: svg_content
         <path stroke="black" stroke-linejoin="round" stroke-width="1" d="M 0 300 L 600 300 M 0 300 v -300 m 0 2 v -2 M 100 300 v -300 m 0 2 v -2 M 200 300 v -300 m 0 2 v -2 M 300 300 v -300 m 0 2 v -2 M 400 300 v -300 m 0 2 v -2 M 500 300 v -300 m 0 2 v -2 M 600 300 v -300 m 0 2 v -2" fill="none"
             stroke-dasharray="5,10" />
         <!-- X Labels -->
-        <text x="0" y="320" fill="black" font-size="19" text-anchor="middle">11am</text><text x="100" y="320" fill="black" font-size="19" text-anchor="middle">3pm</text><text x="200" y="320" fill="black" font-size="19" text-anchor="middle">7pm</text><text x="300" y="320" fill="black" font-size="19" text-anchor="middle">11pm</text><text x="400" y="320" fill="black" font-size="19" text-anchor="middle">3am</text><text x="500" y="320" fill="black" font-size="19" text-anchor="middle">7am</text><text x="600" y="320" fill="black" font-size="19" text-anchor="middle">11am</text><line x1="325" y1="0" x2="325" y2="300" stroke="black" stroke-width="2" stroke-dasharray="3,3" />
-                   <text x="335" y="170" fill="black" font-size="19" font-style="italic"  transform="rotate(-90, 305, 135)" text-anchor="start">Monday</text>
+        <text x="0" y="320" fill="black" font-size="19" text-anchor="middle">11am</text><text x="100" y="320" fill="black" font-size="19" text-anchor="middle">3pm</text><text x="200" y="320" fill="black" font-size="19" text-anchor="middle">7pm</text><text x="300" y="320" fill="black" font-size="19" text-anchor="middle">11pm</text><text x="400" y="320" fill="black" font-size="19" text-anchor="middle">3am</text><text x="500" y="320" fill="black" font-size="19" text-anchor="middle">7am</text><text x="600" y="320" fill="black" font-size="19" text-anchor="middle">11am</text>
         <!-- Y Labels -->
         <text x="-10" y="300"  fill="black" font-size="35" text-anchor="end" dx="8" dy="4">-8°</text><text x="-10" y="240"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">-4.9°</text><text x="-10" y="180"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">-1.7°</text><text x="-10" y="120.000015"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">1.6°</text><text x="-10" y="60.000015"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">4.8°</text><text x="-10" y="0"  fill="black" font-size="35" text-anchor="end" dx="8" dy="4">8°</text>
         <!-- Y right Labels -->
@@ -265,6 +264,9 @@ expression: svg_content
         <!-- feels like temp curve -->
         <path stroke="green" stroke-linejoin="round" stroke-dasharray="12,5"
             transform="translate(0, 300) scale(1, -1)" d="M 0.0000 243.4783C 34.7826 239.1304, 43.4783 237.8882, 52.1739 236.6460C 60.8696 235.4037, 69.5652 234.1615, 78.2609 232.9192C 86.9565 231.6770, 95.6522 230.4348, 104.3478 229.1925C 113.0435 227.9503, 121.7391 226.7081, 130.4348 225.4658C 139.1304 224.2236, 147.8261 222.9813, 156.5217 221.7391C 165.2174 220.4969, 173.9130 217.3913, 182.6087 218.0124C 191.3043 218.6335, 200.0000 224.5342, 208.6956 225.4658C 217.3913 226.3975, 226.0870 224.2236, 234.7826 223.6025C 243.4783 222.9814, 252.1739 222.3602, 260.8696 221.7391C 269.5652 221.1180, 278.2609 220.4969, 286.9565 219.8758C 295.6521 219.2547, 304.3478 218.6335, 313.0435 218.0124C 321.7391 217.3913, 330.4348 216.7702, 339.1304 216.1491C 347.8261 215.5280, 356.5217 214.9068, 365.2174 214.2857C 373.9131 213.6646, 382.6087 241.6149, 391.3044 212.4224C 400.0000 183.2298, 408.6956 68.9441, 417.3913 39.1304C 426.0869 9.3168, 434.7826 35.4037, 443.4782 33.5404C 452.1739 31.6770, 460.8696 29.8137, 469.5652 27.9503C 478.2609 26.0870, 486.9565 24.2236, 495.6522 22.3603C 504.3478 20.4969, 513.0435 18.6335, 521.7391 16.7702C 530.4348 14.9068, 539.1304 13.0435, 547.8260 11.1801C 556.5217 9.3168, 565.2173 7.4534, 573.9130 5.5901C 582.6086 3.7267, 595.6522 0.9317, 600.0000 0.0000" stroke-width="4.0" fill="none" />
+        <!-- Tomorrow day-boundary line and label -->
+        <line x1="325" y1="0" x2="325" y2="300" stroke="black" stroke-width="2" stroke-dasharray="3,3" />
+                   <text x="336" y="170" fill="black" font-size="19" font-style="italic"  transform="rotate(-90, 306, 135)" text-anchor="start">Monday</text>
         <defs>
             <linearGradient id="UVGradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0.00%" stop-color="green"/><stop offset="4.35%" stop-color="green"/><stop offset="8.70%" stop-color="green"/><stop offset="13.04%" stop-color="green"/><stop offset="17.39%" stop-color="green"/><stop offset="21.74%" stop-color="green"/><stop offset="26.09%" stop-color="green"/><stop offset="30.43%" stop-color="green"/><stop offset="34.78%" stop-color="white"/><stop offset="39.13%" stop-color="white"/><stop offset="43.48%" stop-color="white"/><stop offset="47.83%" stop-color="white"/><stop offset="52.17%" stop-color="white"/><stop offset="56.52%" stop-color="white"/><stop offset="60.87%" stop-color="white"/><stop offset="65.22%" stop-color="white"/><stop offset="69.57%" stop-color="white"/><stop offset="73.91%" stop-color="white"/><stop offset="78.26%" stop-color="white"/><stop offset="82.61%" stop-color="white"/><stop offset="86.96%" stop-color="white"/><stop offset="91.30%" stop-color="white"/><stop offset="95.65%" stop-color="white"/><stop offset="100.00%" stop-color="white"/>

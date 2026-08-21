@@ -5,8 +5,12 @@ use crate::{
     dashboard::chart::{GraphDataPath, HourlyForecastGraph},
     domain::models::{DailyForecast, HourlyForecast},
     errors::{DashboardError, Description},
+    i18n::{format_localized_date, translate, weekday_short, Language, TranslationKey},
     logger,
-    utils::{find_max_item_between_dates, total_between_dates},
+    utils::{
+        find_max_item_between_dates, measure_label_to_number_gap_dx, measure_stacked_label_dx,
+        total_between_dates, weekday_after_days,
+    },
     weather::icons::{HumidityIconName, Icon, IconContext, SunPositionIconName, UVIndexIcon},
 };
 use chrono::{DateTime, NaiveDate, Timelike, Utc};
@@ -15,6 +19,72 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::chart::{generate_unified_precipitation_svg, CurveType, ElementVisibility, FontStyle};
+
+// =============================================================================
+// TEMPORARY WORKAROUND — remove once resvg/usvg supports tspan `text-anchor`
+// with `dx`/`dy` centering correctly: https://github.com/linebender/resvg/issues/583
+//
+// Until then, the "Feels"/"Like" label's line-2 offset and the following
+// number's gap are computed via `utils::measure_stacked_label_dx` /
+// `measure_label_to_number_gap_dx` (render + measure pixels) instead of
+// native SVG anchoring.
+// =============================================================================
+
+/// Font used for the "Feels"/"Like"-style two-line label, matching
+/// `dashboard-template-*.svg`'s inherited root `font-family` and this
+/// `<text>`'s own `font-size` — must stay in sync with the template.
+const FEELS_LIKE_LABEL_FONT_FAMILY: &str = "Roboto, sans-serif";
+const FEELS_LIKE_LABEL_FONT_SIZE: f32 = 18.0;
+const FEELS_LIKE_LABEL_LINE_DY: f32 = 15.5;
+
+/// Font/size for the big feels-like temperature number that follows the
+/// "Feels"/"Like" label, matching `dashboard-template-*.svg`'s number tspan
+/// — must stay in sync with the template.
+const FEELS_LIKE_NUMBER_FONT_FAMILY: &str = "Roboto-Regular-Dashed";
+const FEELS_LIKE_NUMBER_FONT_SIZE: f32 = 55.0;
+
+/// Horizontal gap (SVG user units) between the label's ink and the number's
+/// ink, held constant across languages. Chosen to sit closer than the gap
+/// English's layout happened to produce before this was measured (~17px) —
+/// tune this single constant to taste rather than per-language values.
+const FEELS_LIKE_NUMBER_TARGET_GAP: f32 = 12.0;
+
+/// Horizontal offset (`dx`) re-aligning the "Like" line under "Feels"'s
+/// centre — see `utils::measure_stacked_label_dx` for how/why.
+fn feels_like_label_dx(label_feels: &str, label_like: &str) -> f32 {
+    measure_stacked_label_dx(
+        label_feels,
+        label_like,
+        FEELS_LIKE_LABEL_FONT_FAMILY,
+        FEELS_LIKE_LABEL_FONT_SIZE,
+    )
+}
+
+/// Builds the `<tspan>` markup for the "Like" line and the dx nudge applied
+/// to the feels-like number, both derived from the same label offset.
+fn feels_like_tspan_and_number_dx(language: Language) -> (String, String) {
+    let label_feels = translate(TranslationKey::Feels, language);
+    let label_like = translate(TranslationKey::Like, language);
+    let label_dx = feels_like_label_dx(label_feels, label_like);
+    let label_like_tspan =
+        format!(r#"<tspan dx="{label_dx}" dy="{FEELS_LIKE_LABEL_LINE_DY}">{label_like}</tspan>"#,);
+    let feels_like_number_dx = measure_label_to_number_gap_dx(
+        label_feels,
+        label_like,
+        label_dx,
+        FEELS_LIKE_LABEL_LINE_DY,
+        FEELS_LIKE_LABEL_FONT_FAMILY,
+        FEELS_LIKE_LABEL_FONT_SIZE,
+        FEELS_LIKE_NUMBER_FONT_FAMILY,
+        FEELS_LIKE_NUMBER_FONT_SIZE,
+        "16",
+        FEELS_LIKE_NUMBER_TARGET_GAP,
+    )
+    .to_string();
+    (label_like_tspan, feels_like_number_dx)
+}
+
+// ============================= END WORKAROUND ==============================
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Context {
@@ -48,6 +118,12 @@ pub struct Context {
     pub current_hour_relative_humidity: String,
     pub current_hour_relative_humidity_icon: String,
     pub current_day_date: String,
+    pub label_feels: String,
+    pub label_like_tspan: String,
+    pub feels_like_number_dx: String,
+    pub label_metric: String,
+    pub label_now: String,
+    pub label_max: String,
     pub current_hour_rain_amount: String,
     pub sunset_time: String,
     pub sunrise_time: String,
@@ -67,6 +143,7 @@ pub struct Context {
     pub y_left_labels: String,
     pub y_right_axis_path: String,
     pub y_right_labels: String,
+    pub tomorrow_marker: String,
     pub uv_gradient: String,
     // daily forecast
     pub day2_mintemp: String,
@@ -114,8 +191,10 @@ impl Context {
             .to_string();
         let colours = settings.colours.clone();
         let render_options = settings.render_options.clone();
+        let language = render_options.language;
         let graph_height = "300".to_string();
         let graph_width = "600".to_string();
+        let (label_like_tspan, feels_like_number_dx) = feels_like_tspan_and_number_dx(language);
         Self {
             background_colour: colours.background_colour.to_string(),
             text_colour: colours.text_colour.to_string(),
@@ -145,6 +224,12 @@ impl Context {
             current_hour_relative_humidity: NOT_AVAILABLE.to_string(),
             current_hour_relative_humidity_icon: not_available_icon_path.clone(),
             current_day_date: NOT_AVAILABLE.to_string(),
+            label_feels: translate(TranslationKey::Feels, language).to_string(),
+            label_like_tspan,
+            feels_like_number_dx,
+            label_metric: translate(TranslationKey::Metric, language).to_string(),
+            label_now: translate(TranslationKey::Now, language).to_string(),
+            label_max: translate(TranslationKey::Max, language).to_string(),
             current_hour_rain_amount: NOT_AVAILABLE.to_string(),
             sunrise_time: NOT_AVAILABLE.to_string(),
             sunset_time: NOT_AVAILABLE.to_string(),
@@ -162,6 +247,7 @@ impl Context {
             y_left_labels: String::new(),
             y_right_axis_path: String::new(),
             y_right_labels: String::new(),
+            tomorrow_marker: String::new(),
             uv_gradient: String::new(),
             day2_mintemp: NOT_AVAILABLE.to_string(),
             day2_maxtemp: NOT_AVAILABLE.to_string(),
@@ -472,25 +558,21 @@ impl<'a> ContextBuilder<'a> {
     }
 
     fn initialize_day_names(&mut self, local_midnight_time: DateTime<Tz>) {
+        let language = self.settings.render_options.language;
+
         // Pre-fill day names based on local calendar (independent of forecast data)
-        self.context.day2_name = (local_midnight_time + chrono::Duration::days(1))
-            .format("%a")
-            .to_string();
-        self.context.day3_name = (local_midnight_time + chrono::Duration::days(2))
-            .format("%a")
-            .to_string();
-        self.context.day4_name = (local_midnight_time + chrono::Duration::days(3))
-            .format("%a")
-            .to_string();
-        self.context.day5_name = (local_midnight_time + chrono::Duration::days(4))
-            .format("%a")
-            .to_string();
-        self.context.day6_name = (local_midnight_time + chrono::Duration::days(5))
-            .format("%a")
-            .to_string();
-        self.context.day7_name = (local_midnight_time + chrono::Duration::days(6))
-            .format("%a")
-            .to_string();
+        self.context.day2_name =
+            weekday_short(weekday_after_days(local_midnight_time, 1), language).to_string();
+        self.context.day3_name =
+            weekday_short(weekday_after_days(local_midnight_time, 2), language).to_string();
+        self.context.day4_name =
+            weekday_short(weekday_after_days(local_midnight_time, 3), language).to_string();
+        self.context.day5_name =
+            weekday_short(weekday_after_days(local_midnight_time, 4), language).to_string();
+        self.context.day6_name =
+            weekday_short(weekday_after_days(local_midnight_time, 5), language).to_string();
+        self.context.day7_name =
+            weekday_short(weekday_after_days(local_midnight_time, 6), language).to_string();
     }
 
     // Extrusion Pattern: force everything through one function until it resembles spaghetti
@@ -543,6 +625,8 @@ impl<'a> ContextBuilder<'a> {
             text_colour: self.settings.colours.text_colour.to_string(),
             background_colour: self.settings.colours.background_colour.to_string(),
             tz: self.settings.misc.timezone,
+            language: self.settings.render_options.language,
+            hour_format: self.settings.render_options.hour_format,
             ..Default::default()
         };
 
@@ -586,6 +670,7 @@ impl<'a> ContextBuilder<'a> {
         self.context.y_right_axis_path = axis_data_path.y_right_axis_path;
         self.context.y_right_labels = axis_data_path.y_right_labels;
         self.context.x_axis_guideline_path = axis_data_path.x_axis_guideline_path;
+        self.context.tomorrow_marker = axis_data_path.tomorrow_marker;
 
         self.context.uv_gradient = graph.draw_uv_gradient_over_time();
 
@@ -757,10 +842,11 @@ impl<'a> ContextBuilder<'a> {
         self.context.current_hour_actual_temp = current_hour.temperature.to_string();
         self.context.current_hour_weather_icon = current_hour.icon_path(&self.icon_ctx);
         self.context.current_hour_feels_like = current_hour.apparent_temperature.to_string();
-        self.context.current_day_date = clock
-            .now_local(self.settings.misc.timezone)
-            .format(self.settings.render_options.date_format.as_ref())
-            .to_string();
+        self.context.current_day_date = format_localized_date(
+            clock.now_local(self.settings.misc.timezone),
+            self.settings.render_options.date_format.as_ref(),
+            self.settings.render_options.language,
+        );
         self.context.current_hour_rain_amount = current_hour.precipitation.amount().to_string();
 
         self

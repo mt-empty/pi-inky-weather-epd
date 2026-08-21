@@ -1,7 +1,14 @@
 use crate::{
-    clock::Clock, constants::DEFAULT_AXIS_LABEL_FONT_SIZE, logger, weather::icons::UVIndexIcon,
+    clock::Clock,
+    configs::settings::HourFormat,
+    constants::DEFAULT_AXIS_LABEL_FONT_SIZE,
+    i18n::{weekday_long, Language},
+    logger,
+    utils::{measure_ink_y_center, weekday_after_days},
+    weather::icons::UVIndexIcon,
 };
 use anyhow::Error;
+use chrono::Weekday;
 use std::fmt;
 use strum_macros::Display;
 
@@ -120,6 +127,10 @@ pub struct HourlyForecastGraph {
     pub background_colour: String,
     /// Display timezone for time-dependent labels (e.g. the "tomorrow" day name).
     pub tz: chrono_tz::Tz,
+    /// Display language for time-dependent labels (e.g. the "tomorrow" day name).
+    pub language: Language,
+    /// Clock convention for the x-axis hour labels (e.g. "3pm" vs "15:00").
+    pub hour_format: HourFormat,
 }
 
 // TODO: use the builder pattern to create the graph
@@ -152,6 +163,8 @@ impl Default for HourlyForecastGraph {
             text_colour: "black".to_string(),
             background_colour: "white".to_string(),
             tz: chrono_tz::UTC,
+            language: Language::En,
+            hour_format: HourFormat::Auto,
         }
     }
 }
@@ -399,6 +412,72 @@ pub struct AxisPaths {
     pub x_labels: String,
     pub y_left_labels: String,
     pub y_right_labels: String,
+    pub tomorrow_marker: String,
+}
+
+/// How the "tomorrow" weekday label is drawn on the day-boundary line.
+enum TomorrowLabel {
+    /// rotated -90° for Latin scripts.
+    Rotated(&'static str),
+    /// Stacked for japanese
+    Stacked(&'static str),
+}
+
+/// Picks the tomorrow-label style for a language.
+fn tomorrow_label(language: Language, weekday: Weekday) -> TomorrowLabel {
+    match language {
+        Language::Ja => TomorrowLabel::Stacked(weekday_long(weekday, language)),
+        Language::En | Language::Fr | Language::De | Language::Es => {
+            TomorrowLabel::Rotated(weekday_long(weekday, language))
+        }
+    }
+}
+
+/// Builds the vertically-stacked `<tspan>` sequence for [`TomorrowLabel::Stacked`]
+/// (one character per line, each subsequent line offset by `line_height`).
+/// Shared by the real render and by [`HourlyForecastGraph::stacked_tomorrow_label_start_y`]'s
+/// measurement probe, so the probe's markup can't silently drift from what's
+/// actually rendered.
+fn stacked_tspans(chars: &[char], x: f32, start_y: f32, line_height: f32) -> String {
+    chars
+        .iter()
+        .enumerate()
+        .map(|(i, c)| {
+            if i == 0 {
+                format!(r#"<tspan x="{x}" y="{start_y}">{c}</tspan>"#)
+            } else {
+                format!(r#"<tspan x="{x}" dy="{line_height}">{c}</tspan>"#)
+            }
+        })
+        .collect()
+}
+
+/// Renders one x-axis hour tick as text, in either 12-hour ("3pm") or
+/// 24-hour ("15:00") form.
+///
+/// `HourFormat::Auto` follows the clock convention of `language` (12-hour for
+/// English, 24-hour for the other supported languages); `TwelveHour`/`TwentyFour`
+/// override that regardless of language.
+fn format_hour_label(hour: f32, hour_format: HourFormat, language: Language) -> String {
+    let use_twelve_hour = match hour_format {
+        HourFormat::TwelveHour => true,
+        HourFormat::TwentyFour => false,
+        HourFormat::Auto => language.uses_twelve_hour_clock(),
+    };
+
+    if use_twelve_hour {
+        let period = if hour < 12.0 { "am" } else { "pm" };
+        let display_hour = if hour == 0.0 {
+            12.0
+        } else if hour > 12.0 {
+            hour - 12.0
+        } else {
+            hour
+        };
+        format!("{display_hour:.0}{period}")
+    } else {
+        format!("{hour:02.0}:00")
+    }
 }
 
 /// Create the axis paths and labels for the graph
@@ -467,7 +546,6 @@ impl HourlyForecastGraph {
             &mut x_axis_path,
             &mut x_axis_guideline_path,
             x_step,
-            clock,
         );
 
         // Y-axis ticks and labels (left)
@@ -482,6 +560,12 @@ impl HourlyForecastGraph {
             y_right_step,
         );
 
+        let tomorrow_marker = if current_hour != 0.0 {
+            self.draw_tomorrow_line(map_x(24.0 - current_hour), clock)
+        } else {
+            String::new()
+        };
+
         AxisPaths {
             x_axis_path,
             x_axis_guideline_path,
@@ -490,6 +574,7 @@ impl HourlyForecastGraph {
             y_left_labels,
             y_right_axis_path,
             y_right_labels,
+            tomorrow_marker,
         }
     }
 
@@ -587,7 +672,6 @@ impl HourlyForecastGraph {
         x_axis_path: &mut String,
         x_axis_guideline_path: &mut String,
         x_step: f32,
-        clock: &dyn Clock,
     ) -> String {
         let mut x_val: f32 = 0.0;
         let mut x_labels = String::new();
@@ -618,15 +702,7 @@ impl HourlyForecastGraph {
             let label_x = xs;
             let label_y = self.height + 20.0;
             let hour = (current_hour + x_val) % 24.0;
-            let period = if hour < 12.0 { "am" } else { "pm" };
-            let display_hour = if hour == 0.0 && period == "am" {
-                12.0
-            } else if hour > 12.0 {
-                hour - 12.0
-            } else {
-                hour
-            };
-            let label_str = format!("{display_hour:.0}{period}");
+            let label_str = format_hour_label(hour, self.hour_format, self.language);
 
             x_labels.push_str(&format!(
                 r#"<text x="{x}" y="{y}" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" text-anchor="middle">{text}</text>"#,
@@ -637,36 +713,94 @@ impl HourlyForecastGraph {
             ));
         }
 
-        // Add tomorrow day name vertically in the graph just like the guidelines
-        if current_hour != 0.0 {
-            x_labels.push_str(
-                self.draw_tomorrow_line(map_x(24.0 - current_hour), clock)
-                    .as_str(),
-            );
-        }
         x_labels
     }
 
     fn draw_tomorrow_line(&self, x_coor: f32, clock: &dyn Clock) -> String {
-        let tomorrow_day_name = clock
-            .now_local(self.tz)
-            .checked_add_days(chrono::Days::new(1))
-            .map(|d| d.format("%A").to_string())
-            .unwrap_or_else(|| "Tomorrow".to_string());
+        let tomorrow_weekday = weekday_after_days(clock.now_local(self.tz), 1);
 
-        format!(
-            r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
+        match tomorrow_label(self.language, tomorrow_weekday) {
+            TomorrowLabel::Rotated(tomorrow_day_name) => format!(
+                r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
                    <text x="{x_text}" y="{y_text}" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" font-style="{font_style}"  transform="rotate(-90, {rotate_x_text}, {rotate_y_text})" text-anchor="start">{tomorrow_day_name}</text>"#,
-            x = x_coor,
-            chart_height = self.height,
-            x_text = x_coor + 10.0,
+                x = x_coor,
+                chart_height = self.height,
+                x_text = x_coor + 11.0,
+                y_text = (self.height / 2.0) + 20.0,
+                font_style = FontStyle::Italic,
+                rotate_x_text = x_coor + 11.0 - 30.0,
+                rotate_y_text = (self.height / 2.0) - 15.0,
+                colour = self.text_colour,
+                tomorrow_day_name = tomorrow_day_name,
+            ),
+            TomorrowLabel::Stacked(name) => {
+                let chars: Vec<char> = name.chars().collect();
+                let line_height = f32::from(DEFAULT_AXIS_LABEL_FONT_SIZE);
+                let x_text = x_coor + 11.0;
+                let start_y =
+                    self.stacked_tomorrow_label_start_y(&chars, line_height, tomorrow_weekday);
+                let tspans = stacked_tspans(&chars, x_text, start_y, line_height);
+                format!(
+                    r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
+                       <text fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" font-style="{font_style}" text-anchor="middle">{tspans}</text>"#,
+                    x = x_coor,
+                    chart_height = self.height,
+                    font_style = FontStyle::Normal,
+                    colour = self.text_colour,
+                    tspans = tspans,
+                )
+            }
+        }
+    }
+
+    /// Computes the `y` of the stacked label's first `tspan` so its ink
+    /// lands at the same on-screen height as the rotated Latin label would
+    /// for this weekday.
+    ///
+    /// The rotated label's anchor/rotation-origin offsets (in the `Rotated`
+    /// arm above) are hand-tuned, not exact geometry, and its ink centre
+    /// also shifts with the rendered word's pixel width. Rather than a
+    /// second hand-tuned constant here that would need re-tuning whenever
+    /// those offsets, the font, or the font size change, this renders both
+    /// labels through the real resvg/usvg pipeline — the rotated label
+    /// using this weekday's English name as a stand-in Latin reference,
+    /// since `Stacked` and `Rotated` are never both in play for the same
+    /// render — and measures their actual ink to compute the offset.
+    fn stacked_tomorrow_label_start_y(
+        &self,
+        chars: &[char],
+        line_height: f32,
+        weekday: Weekday,
+    ) -> f32 {
+        let font_family = "Roboto, sans-serif";
+        let font_size = DEFAULT_AXIS_LABEL_FONT_SIZE;
+
+        let reference_name = weekday_long(weekday, Language::En);
+        let rotate_x_text = 11.0 - 30.0;
+        let rotate_y_text = (self.height / 2.0) - 15.0;
+        let rotated_svg = format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="{height}" font-family="{font_family}">
+                <text x="11" y="{y_text}" font-size="{font_size}" font-style="italic" transform="rotate(-90, {rotate_x_text}, {rotate_y_text})" text-anchor="start">{reference_name}</text>
+            </svg>"#,
+            height = self.height,
             y_text = (self.height / 2.0) + 20.0,
-            font_style = FontStyle::Italic,
-            rotate_x_text = x_coor + 10.0 - 30.0,
-            rotate_y_text = (self.height / 2.0) - 15.0,
-            colour = self.text_colour,
-            tomorrow_day_name = tomorrow_day_name
-        )
+        );
+        let target_centre_y =
+            measure_ink_y_center(&rotated_svg).unwrap_or(self.height / 2.0 - 45.0);
+
+        // Positive margin above the first baseline so the tallest glyph's
+        // ascent still lands inside the measurement canvas.
+        let probe_start_y = f32::from(font_size) * 2.0;
+        let tspans = stacked_tspans(chars, 0.0, probe_start_y, line_height);
+        let stacked_svg = format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="{height}" font-family="{font_family}">
+                <text x="100" font-size="{font_size}" text-anchor="middle">{tspans}</text>
+            </svg>"#,
+            height = probe_start_y + line_height * chars.len() as f32 * 2.0,
+        );
+        let probe_centre_y = measure_ink_y_center(&stacked_svg).unwrap_or(probe_start_y);
+
+        probe_start_y + (target_centre_y - probe_centre_y)
     }
 
     fn initialize_x_y_bounds(&mut self) {
@@ -895,6 +1029,63 @@ mod tests {
         fn is_a_pure_function_of_seed() {
             let seed = 123456789;
             assert_eq!(lcg_next(seed), lcg_next(seed));
+        }
+    }
+
+    mod format_hour_label_tests {
+        use super::*;
+
+        #[test]
+        fn auto_uses_twelve_hour_for_english() {
+            assert_eq!(
+                format_hour_label(0.0, HourFormat::Auto, Language::En),
+                "12am"
+            );
+            assert_eq!(
+                format_hour_label(9.0, HourFormat::Auto, Language::En),
+                "9am"
+            );
+            assert_eq!(
+                format_hour_label(12.0, HourFormat::Auto, Language::En),
+                "12pm"
+            );
+            assert_eq!(
+                format_hour_label(15.0, HourFormat::Auto, Language::En),
+                "3pm"
+            );
+        }
+
+        #[test]
+        fn auto_uses_twenty_four_hour_for_non_english_languages() {
+            for language in [Language::Fr, Language::De, Language::Es, Language::Ja] {
+                assert_eq!(format_hour_label(0.0, HourFormat::Auto, language), "00:00");
+                assert_eq!(format_hour_label(9.0, HourFormat::Auto, language), "09:00");
+                assert_eq!(format_hour_label(15.0, HourFormat::Auto, language), "15:00");
+            }
+        }
+
+        #[test]
+        fn explicit_twelve_hour_overrides_language() {
+            assert_eq!(
+                format_hour_label(15.0, HourFormat::TwelveHour, Language::Fr),
+                "3pm"
+            );
+            assert_eq!(
+                format_hour_label(0.0, HourFormat::TwelveHour, Language::Ja),
+                "12am"
+            );
+        }
+
+        #[test]
+        fn explicit_twenty_four_hour_overrides_language() {
+            assert_eq!(
+                format_hour_label(15.0, HourFormat::TwentyFour, Language::En),
+                "15:00"
+            );
+            assert_eq!(
+                format_hour_label(0.0, HourFormat::TwentyFour, Language::En),
+                "00:00"
+            );
         }
     }
 

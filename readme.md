@@ -104,6 +104,30 @@ You can override the default configs located at [./config/](./config/) by creati
 
 Here are example configurations.
 
+#### Language (UI Localization)
+
+The dashboard supports multiple interface languages for compact UI labels and day names.
+
+```toml
+[render_options]
+# Supported in Phase 1:
+# en - English
+# fr - French
+# de - German
+# es - Spanish
+# ja - Japanese (e.g. "土曜日")
+language = "en"
+```
+
+<img src="./misc/languages/languages.gif" alt="Default configuration" width="600"/>
+
+Example renders for each supported language:
+[en](./misc/languages/dashboard-en.png) ·
+[fr](./misc/languages/dashboard-fr.png) ·
+[de](./misc/languages/dashboard-de.png) ·
+[es](./misc/languages/dashboard-es.png) ·
+[ja](./misc/languages/dashboard-ja.png)
+
 #### Default Configuration
 
 <img src="./misc/dashboard-default.png" alt="Default configuration" width="600"/>
@@ -186,6 +210,41 @@ update_interval_days = 7
 # Opt in to pre-release versions (requires update_interval_days > 0)
 allow_pre_release_version = false
 ```
+
+### Full Configuration Reference
+
+The examples above cover the most commonly changed settings. Every available
+key, its type, and its default value:
+
+| Section | Key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `[api]` | `latitude` | float | `-37.8136` | Location latitude |
+| `[api]` | `longitude` | float | `144.9631` | Location longitude |
+| `[api]` | `provider` | string | `"open_meteo"` | `"open_meteo"` (worldwide) or `"bom"` (Australia only) |
+| `[colours]` | `background_colour` | string | `"white"` | Dashboard background colour |
+| `[colours]` | `text_colour` | string | `"black"` | Text colour |
+| `[colours]` | `x_axis_colour` | string | `"black"` | X-axis line colour |
+| `[colours]` | `y_left_axis_colour` | string | `"red"` | Temperature axis colour |
+| `[colours]` | `y_right_axis_colour` | string | `"blue"` | Rain scale axis colour |
+| `[colours]` | `actual_temp_colour` | string | `"red"` | Actual temperature line colour |
+| `[colours]` | `feels_like_colour` | string | `"green"` | Feels-like temperature line colour |
+| `[colours]` | `rain_colour` | string | `"blue"` | Rain forecast fill colour (raindrops always white) |
+| `[colours]` | `snow_colour` | string | `"blue"` | Snow forecast fill colour (snowflakes always white) |
+| `[render_options]` | `temp_unit` | string | `"C"` | `"C"` or `"F"` |
+| `[render_options]` | `wind_speed_unit` | string | `"km/h"` | `"km/h"`, `"mph"`, or `"knots"` |
+| `[render_options]` | `language` | string | `"en"` | UI language: `en`, `fr`, `de`, `es`, `ja` |
+| `[render_options]` | `date_format` | string | `"%A, %d %B"` | [chrono strftime](https://docs.rs/chrono/latest/chrono/format/strftime/) format |
+| `[render_options]` | `use_moon_phase_instead_of_clear_night` | bool | `true` | Show moon phase icon instead of clear-night icon |
+| `[render_options]` | `x_axis_always_at_min` | bool | `true` | Keep x-axis at y=0 when temperature is below zero |
+| `[render_options]` | `use_gust_instead_of_wind` | bool | `false` | Display gust speed instead of sustained wind speed |
+| `[render_options]` | `prefer_weather_codes` | bool | `true` | Prefer WMO weather codes for icon selection (no effect with `bom` provider) |
+| `[render_options]` | `precipitation_opacity_min` | float | `0.40` | Gradient fill opacity at 0% precipitation chance (0.0–1.0, must be < max) |
+| `[render_options]` | `precipitation_opacity_max` | float | `0.60` | Gradient fill opacity at 100% precipitation chance (0.0–1.0, must be > min) |
+| `[misc]` | `timezone` | string | unset (system timezone) | IANA timezone override for displayed times |
+| `[release]` | `update_interval_days` | int | `7` | Days between auto-update checks; `0` disables |
+| `[release]` | `allow_pre_release_version` | bool | `false` | Opt in to pre-release versions |
+
+See [./config/default.toml](./config/default.toml) for the authoritative source.
 
 ## Degraded Operation
 

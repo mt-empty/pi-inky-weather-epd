@@ -1,4 +1,5 @@
 use super::validation::*;
+use crate::i18n::Language;
 use nutype::nutype;
 use serde::Deserialize;
 use std::{env, fmt, path::PathBuf};
@@ -23,6 +24,21 @@ pub enum TemperatureUnit {
     C,
     #[strum(serialize = "F")]
     F,
+}
+
+#[derive(Debug, Deserialize, PartialOrd, PartialEq, Clone, Copy, Display, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum HourFormat {
+    /// Follow the clock convention of `render_options.language` (12-hour for
+    /// English, 24-hour for the other supported languages).
+    #[default]
+    Auto,
+    #[serde(rename = "12h")]
+    #[strum(serialize = "12h")]
+    TwelveHour,
+    #[serde(rename = "24h")]
+    #[strum(serialize = "24h")]
+    TwentyFour,
 }
 
 #[derive(Debug, Deserialize, PartialOrd, PartialEq, Clone, Copy, Display)]
@@ -199,6 +215,9 @@ pub struct Opacity(f32);
 pub struct RenderOptions {
     pub temp_unit: TemperatureUnit,
     pub wind_speed_unit: WindSpeedUnit,
+    pub language: Language,
+    #[serde(default)]
+    pub hour_format: HourFormat,
     pub date_format: DateFormat,
     pub use_moon_phase_instead_of_clear_night: bool,
     pub x_axis_always_at_min: bool,
@@ -391,6 +410,7 @@ impl DashboardSettings {
             ) {
                 return Err(ConfigError::Message(msg));
             }
+
             let omin = s.render_options.precipitation_opacity_min.into_inner();
             let omax = s.render_options.precipitation_opacity_max.into_inner();
             if omin >= omax {
@@ -430,6 +450,11 @@ impl DashboardSettings {
         logger::kvp(
             "Wind Speed Unit",
             format!("{}", self.render_options.wind_speed_unit),
+        );
+        logger::kvp("Language", format!("{}", self.render_options.language));
+        logger::kvp(
+            "Hour Format",
+            format!("{}", self.render_options.hour_format),
         );
         logger::kvp("Date Format", &self.render_options.date_format);
         logger::kvp(
@@ -525,6 +550,18 @@ mod tests {
     fn disallow_pre_release_with_nonzero_interval_is_accepted() {
         assert!(
             validate_release_cross_fields(UpdateIntervalDays::try_new(7).unwrap(), false).is_ok()
+        );
+    }
+
+    #[test]
+    fn hour_format_deserializes_documented_values() {
+        assert_eq!(
+            serde_json::from_str::<super::HourFormat>("\"12h\"").unwrap(),
+            super::HourFormat::TwelveHour
+        );
+        assert_eq!(
+            serde_json::from_str::<super::HourFormat>("\"24h\"").unwrap(),
+            super::HourFormat::TwentyFour
         );
     }
 }

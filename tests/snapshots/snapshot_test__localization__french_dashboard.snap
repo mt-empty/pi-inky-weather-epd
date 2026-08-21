@@ -57,7 +57,7 @@ expression: svg_content
     <!-- Current Day Information -->
     <!-- Due to resvg bug, the position is intentionally off to compensate for the bug -->
     <!-- Do not modify the x position of current_hour_temp and current_hour_feels_like, see above issue at the start of the file -->
-    <text x="400" y="50" font-size="35" fill="black" text-anchor="middle">Saturday, 25 October</text>
+    <text x="400" y="50" font-size="35" fill="black" text-anchor="middle">Samedi, 25 Octobre</text>
     <image x="0" y="-5" width="200" height="180" href="static/fill-svg-static/partly-cloudy-day.svg" />
 
 
@@ -68,10 +68,10 @@ expression: svg_content
     </text>
 
     <text x="248" y="158" text-anchor="middle" font-size="18" fill="black">
-        <tspan>Feels</tspan>
-        <tspan dx="-42" dy="15.5">Like</tspan>
+        <tspan>Ress.</tspan>
+        <tspan dx="-57" dy="15.5">comme</tspan>
         <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="green"
-            dx="5" dy="-7">
+            dx="0" dy="-7">
             15
             <tspan baseline-shift="12" dx="-15" font-size="30">°</tspan>
         </tspan>
@@ -124,10 +124,10 @@ expression: svg_content
 
         <!-- row header-->
         <svg x="15" y="210" label="UV-index" text-anchor="start">
-            <text x="43" y="43.5" fill="black" font-size="20"  text-anchor="middle">Metric
+            <text x="43" y="43.5" fill="black" font-size="20"  text-anchor="middle">Mesure
             </text>
 
-            <text x="107" y="43.5" fill="black" font-size="20" text-anchor="middle">Now
+            <text x="107" y="43.5" fill="black" font-size="20" text-anchor="middle">Maint.
             </text>
             <text x="177" y="43.5" fill="black" font-size="20" text-anchor="middle">Max
                 <tspan baseline-shift="super" font-size="17" dx="-3">24h</tspan>
@@ -171,7 +171,7 @@ expression: svg_content
 
     <!-- Forecast for the next 6 days -->
     <svg x="292" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Sun</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Dim</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/extreme-day-drizzle.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">23°</tspan>
@@ -181,7 +181,7 @@ expression: svg_content
     </svg>
 
     <svg x="373" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Mon</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Lun</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">13°</tspan>
@@ -191,7 +191,7 @@ expression: svg_content
     </svg>
 
     <svg x="454" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Tue</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Mar</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">17°</tspan>
@@ -201,7 +201,7 @@ expression: svg_content
     </svg>
 
     <svg x="535" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Wed</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Mer</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">18°</tspan>
@@ -211,7 +211,7 @@ expression: svg_content
     </svg>
 
     <svg x="616" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Thu</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Jeu</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/clear-day.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">19°</tspan>
@@ -221,7 +221,7 @@ expression: svg_content
     </svg>
 
     <svg x="697" y="30">
-        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Fri</text>
+        <text x="50" y="65" text-anchor="middle" font-size="20" fill="black">Ven</text>
         <image x="12" y="50" width="75" height="100" href="static/fill-svg-static/partly-cloudy-day-drizzle.svg" />
         <text y="155" font-size="20" fill="black">
             <tspan x="52" text-anchor="end">25°</tspan>
@@ -253,7 +253,7 @@ expression: svg_content
         <path stroke="black" stroke-linejoin="round" stroke-width="1" d="M 0 300 L 600 300 M 0 300 v -300 m 0 2 v -2 M 100 300 v -300 m 0 2 v -2 M 200 300 v -300 m 0 2 v -2 M 400 300 v -300 m 0 2 v -2 M 500 300 v -300 m 0 2 v -2 M 600 300 v -300 m 0 2 v -2" fill="none"
             stroke-dasharray="5,10" />
         <!-- X Labels -->
-        <text x="0" y="320" fill="black" font-size="19" text-anchor="middle">12pm</text><text x="100" y="320" fill="black" font-size="19" text-anchor="middle">4pm</text><text x="200" y="320" fill="black" font-size="19" text-anchor="middle">8pm</text><text x="300" y="320" fill="black" font-size="19" text-anchor="middle">12am</text><text x="400" y="320" fill="black" font-size="19" text-anchor="middle">4am</text><text x="500" y="320" fill="black" font-size="19" text-anchor="middle">8am</text><text x="600" y="320" fill="black" font-size="19" text-anchor="middle">12pm</text>
+        <text x="0" y="320" fill="black" font-size="19" text-anchor="middle">12:00</text><text x="100" y="320" fill="black" font-size="19" text-anchor="middle">16:00</text><text x="200" y="320" fill="black" font-size="19" text-anchor="middle">20:00</text><text x="300" y="320" fill="black" font-size="19" text-anchor="middle">00:00</text><text x="400" y="320" fill="black" font-size="19" text-anchor="middle">04:00</text><text x="500" y="320" fill="black" font-size="19" text-anchor="middle">08:00</text><text x="600" y="320" fill="black" font-size="19" text-anchor="middle">12:00</text>
         <!-- Y Labels -->
         <text x="-10" y="300"  fill="black" font-size="35" text-anchor="end" dx="8" dy="4">12°</text><text x="-10" y="240"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">13.7°</text><text x="-10" y="180.00002"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">14.9°</text><text x="-10" y="119.999985"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">16.1°</text><text x="-10" y="60.00003"  fill="black" font-size="19" text-anchor="end" dx="8" dy="4">17.3°</text><text x="-10" y="0"  fill="black" font-size="35" text-anchor="end" dx="8" dy="4">18°</text>
         <!-- Y right Labels -->
@@ -266,7 +266,7 @@ expression: svg_content
             transform="translate(0, 300) scale(1, -1)" d="M 0.0000 120.0000C 34.7826 161.6666, 43.4783 196.6666, 52.1739 215.0000C 60.8696 233.3333, 69.5652 252.5000, 78.2609 255.0000C 86.9565 257.5000, 95.6522 258.3333, 104.3478 230.0000C 113.0435 201.6667, 121.7391 113.3333, 130.4348 85.0000C 139.1304 56.6667, 147.8261 67.5000, 156.5217 60.0000C 165.2174 52.5000, 173.9130 44.1667, 182.6087 40.0000C 191.3043 35.8333, 200.0000 36.6667, 208.6956 35.0000C 217.3913 33.3333, 226.0870 27.5000, 234.7826 30.0000C 243.4783 32.5000, 252.1739 45.0000, 260.8696 50.0000C 269.5652 55.0000, 278.2609 59.1667, 286.9565 60.0000C 295.6521 60.8333, 304.3478 59.1667, 313.0435 55.0000C 321.7391 50.8334, 330.4348 42.5000, 339.1304 35.0000C 347.8261 27.5000, 356.5217 15.0000, 365.2174 10.0000C 373.9131 5.0000, 382.6087 6.6667, 391.3044 5.0000C 400.0000 3.3334, 408.6956 -0.8333, 417.3913 0.0000C 426.0869 0.8333, 434.7826 8.3333, 443.4782 10.0000C 452.1739 11.6667, 460.8696 7.5000, 469.5652 10.0000C 478.2609 12.5000, 486.9565 18.3333, 495.6522 25.0000C 504.3478 31.6667, 513.0435 41.6667, 521.7391 50.0000C 530.4348 58.3333, 539.1304 65.0000, 547.8260 75.0000C 556.5217 85.0000, 565.2173 97.5000, 573.9130 110.0000C 582.6086 122.5000, 595.6522 143.3333, 600.0000 150.0000" stroke-width="4.0" fill="none" />
         <!-- Tomorrow day-boundary line and label -->
         <line x1="300" y1="0" x2="300" y2="300" stroke="black" stroke-width="2" stroke-dasharray="3,3" />
-                   <text x="311" y="170" fill="black" font-size="19" font-style="italic"  transform="rotate(-90, 281, 135)" text-anchor="start">Sunday</text>
+                   <text x="311" y="170" fill="black" font-size="19" font-style="italic"  transform="rotate(-90, 281, 135)" text-anchor="start">Dimanche</text>
         <defs>
             <linearGradient id="UVGradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0.00%" stop-color="orange"/><stop offset="4.35%" stop-color="orange"/><stop offset="8.70%" stop-color="orange"/><stop offset="13.04%" stop-color="yellow"/><stop offset="17.39%" stop-color="green"/><stop offset="21.74%" stop-color="green"/><stop offset="26.09%" stop-color="green"/><stop offset="30.43%" stop-color="white"/><stop offset="34.78%" stop-color="white"/><stop offset="39.13%" stop-color="white"/><stop offset="43.48%" stop-color="white"/><stop offset="47.83%" stop-color="white"/><stop offset="52.17%" stop-color="white"/><stop offset="56.52%" stop-color="white"/><stop offset="60.87%" stop-color="white"/><stop offset="65.22%" stop-color="white"/><stop offset="69.57%" stop-color="white"/><stop offset="73.91%" stop-color="white"/><stop offset="78.26%" stop-color="white"/><stop offset="82.61%" stop-color="white"/><stop offset="86.96%" stop-color="white"/><stop offset="91.30%" stop-color="white"/><stop offset="95.65%" stop-color="white"/><stop offset="100.00%" stop-color="green"/>
