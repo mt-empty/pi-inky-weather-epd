@@ -834,4 +834,40 @@ mod localization {
 
         insta::assert_snapshot!(svg_content);
     }
+
+    /// Oct 25 2025, 01:00 UTC = Oct 25 2025, 12:00 Melbourne (AEDT) – noon
+    #[tokio::test]
+    async fn japanese_dashboard() {
+        let mock_server = wiremock_setup::setup_open_meteo_mock(
+            "tests/fixtures/open_meteo_hourly_forecast.json",
+            "tests/fixtures/open_meteo_daily_forecast.json",
+        )
+        .await;
+
+        let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
+        settings.render_options.language = Language::Ja;
+
+        let clock =
+            FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");
+        let output_svg_name = Path::new("tests/output/snapshot_japanese_dashboard.svg");
+
+        let svg_content = tokio::task::spawn_blocking(move || {
+            let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
+            assert!(
+                result.is_ok(),
+                "Dashboard generation failed: {:?}",
+                result.err()
+            );
+
+            let svg =
+                fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file");
+            assert!(!svg.is_empty(), "Generated SVG should not be empty");
+            assert!(svg.contains("<svg"), "Generated file should be valid SVG");
+            svg
+        })
+        .await
+        .expect("Task panicked");
+
+        insta::assert_snapshot!(svg_content);
+    }
 }

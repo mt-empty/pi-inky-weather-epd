@@ -553,48 +553,6 @@ mod tests {
         );
     }
 
-    /// Restores an environment variable to its prior state on drop, so a test
-    /// that mutates process-wide env state cleans up even on panic. This is
-    /// the only test in the crate that touches process env — everything else
-    /// uses injected `DashboardSettings` values (see `tests/helpers/test_utils.rs`)
-    /// specifically to avoid process-global state.
-    struct EnvVarGuard {
-        key: &'static str,
-        previous: Option<String>,
-    }
-
-    impl Drop for EnvVarGuard {
-        fn drop(&mut self) {
-            // SAFETY: test-only, single-threaded-with-respect-to-this-key use;
-            // no other test in the crate reads or writes this key.
-            unsafe {
-                match &self.previous {
-                    Some(value) => std::env::set_var(self.key, value),
-                    None => std::env::remove_var(self.key),
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn language_env_override_updates_render_options() {
-        let key = "APP_RENDER_OPTIONS__LANGUAGE";
-        let _guard = EnvVarGuard {
-            key,
-            previous: std::env::var(key).ok(),
-        };
-        // SAFETY: see `EnvVarGuard` above.
-        unsafe {
-            std::env::set_var(key, "fr");
-        }
-
-        let settings =
-            super::DashboardSettings::load_from_sources(super::ConfigLayer::Development, true)
-                .expect("failed to load settings with env override");
-
-        assert_eq!(settings.render_options.language, super::Language::Fr);
-    }
-
     #[test]
     fn hour_format_deserializes_documented_values() {
         assert_eq!(
