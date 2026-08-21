@@ -8,8 +8,11 @@ use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injectio
 use std::fs;
 use std::path::Path;
 
-#[tokio::test]
-async fn french_language_override_localizes_rendered_dashboard() {
+async fn render_dashboard_svg(
+    language: Language,
+    hour_format: Option<HourFormat>,
+    output_svg_name: &Path,
+) -> String {
     let mock_server = wiremock_setup::setup_open_meteo_mock(
         "tests/fixtures/open_meteo_hourly_forecast.json",
         "tests/fixtures/open_meteo_daily_forecast.json",
@@ -17,24 +20,37 @@ async fn french_language_override_localizes_rendered_dashboard() {
     .await;
 
     let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-    settings.render_options.language = Language::Fr;
+    settings.render_options.language = language;
+    if let Some(hour_format) = hour_format {
+        settings.render_options.hour_format = hour_format;
+    }
 
     let clock =
         FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");
-    let output_svg_name = Path::new("tests/output/french_language_dashboard.svg");
+    let output_svg_name = output_svg_name.to_path_buf();
 
-    let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
+    tokio::task::spawn_blocking(move || {
+        let result = generate_weather_dashboard_injection(&settings, &clock, &output_svg_name);
         assert!(
             result.is_ok(),
             "Dashboard generation failed: {:?}",
             result.err()
         );
 
-        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file")
+        fs::read_to_string(&output_svg_name).expect("Failed to read generated SVG file")
     })
     .await
-    .expect("Task panicked");
+    .expect("Task panicked")
+}
+
+#[tokio::test]
+async fn french_language_override_localizes_rendered_dashboard() {
+    let svg_content = render_dashboard_svg(
+        Language::Fr,
+        None,
+        Path::new("tests/output/french_language_dashboard.svg"),
+    )
+    .await;
 
     assert!(svg_content.contains("Mesure"));
     assert!(svg_content.contains("Maint."));
@@ -48,31 +64,12 @@ async fn french_language_override_localizes_rendered_dashboard() {
 
 #[tokio::test]
 async fn german_language_override_localizes_rendered_dashboard() {
-    let mock_server = wiremock_setup::setup_open_meteo_mock(
-        "tests/fixtures/open_meteo_hourly_forecast.json",
-        "tests/fixtures/open_meteo_daily_forecast.json",
+    let svg_content = render_dashboard_svg(
+        Language::De,
+        None,
+        Path::new("tests/output/german_language_dashboard.svg"),
     )
     .await;
-
-    let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-    settings.render_options.language = Language::De;
-
-    let clock =
-        FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");
-    let output_svg_name = Path::new("tests/output/german_language_dashboard.svg");
-
-    let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
-        assert!(
-            result.is_ok(),
-            "Dashboard generation failed: {:?}",
-            result.err()
-        );
-
-        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file")
-    })
-    .await
-    .expect("Task panicked");
 
     // Labels
     assert!(svg_content.contains("Wert"));
@@ -88,31 +85,12 @@ async fn german_language_override_localizes_rendered_dashboard() {
 
 #[tokio::test]
 async fn spanish_language_override_localizes_rendered_dashboard() {
-    let mock_server = wiremock_setup::setup_open_meteo_mock(
-        "tests/fixtures/open_meteo_hourly_forecast.json",
-        "tests/fixtures/open_meteo_daily_forecast.json",
+    let svg_content = render_dashboard_svg(
+        Language::Es,
+        None,
+        Path::new("tests/output/spanish_language_dashboard.svg"),
     )
     .await;
-
-    let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-    settings.render_options.language = Language::Es;
-
-    let clock =
-        FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");
-    let output_svg_name = Path::new("tests/output/spanish_language_dashboard.svg");
-
-    let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
-        assert!(
-            result.is_ok(),
-            "Dashboard generation failed: {:?}",
-            result.err()
-        );
-
-        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file")
-    })
-    .await
-    .expect("Task panicked");
 
     // Labels
     assert!(svg_content.contains("Medida"));
@@ -128,31 +106,12 @@ async fn spanish_language_override_localizes_rendered_dashboard() {
 
 #[tokio::test]
 async fn japanese_language_override_localizes_rendered_dashboard() {
-    let mock_server = wiremock_setup::setup_open_meteo_mock(
-        "tests/fixtures/open_meteo_hourly_forecast.json",
-        "tests/fixtures/open_meteo_daily_forecast.json",
+    let svg_content = render_dashboard_svg(
+        Language::Ja,
+        None,
+        Path::new("tests/output/japanese_language_dashboard.svg"),
     )
     .await;
-
-    let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-    settings.render_options.language = Language::Ja;
-
-    let clock =
-        FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");
-    let output_svg_name = Path::new("tests/output/japanese_language_dashboard.svg");
-
-    let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
-        assert!(
-            result.is_ok(),
-            "Dashboard generation failed: {:?}",
-            result.err()
-        );
-
-        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file")
-    })
-    .await
-    .expect("Task panicked");
 
     // Labels
     assert!(svg_content.contains("指標"));
@@ -172,32 +131,12 @@ async fn japanese_language_override_localizes_rendered_dashboard() {
 
 #[tokio::test]
 async fn hour_format_override_forces_twelve_hour_regardless_of_language() {
-    let mock_server = wiremock_setup::setup_open_meteo_mock(
-        "tests/fixtures/open_meteo_hourly_forecast.json",
-        "tests/fixtures/open_meteo_daily_forecast.json",
+    let svg_content = render_dashboard_svg(
+        Language::Fr,
+        Some(HourFormat::TwelveHour),
+        Path::new("tests/output/hour_format_override_twelve_hour.svg"),
     )
     .await;
-
-    let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-    settings.render_options.language = Language::Fr;
-    settings.render_options.hour_format = HourFormat::TwelveHour;
-
-    let clock =
-        FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");
-    let output_svg_name = Path::new("tests/output/hour_format_override_twelve_hour.svg");
-
-    let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
-        assert!(
-            result.is_ok(),
-            "Dashboard generation failed: {:?}",
-            result.err()
-        );
-
-        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file")
-    })
-    .await
-    .expect("Task panicked");
 
     // Forced 12-hour format overrides French's 24-hour default.
     assert!(svg_content.contains("4pm</text>"));
@@ -206,32 +145,12 @@ async fn hour_format_override_forces_twelve_hour_regardless_of_language() {
 
 #[tokio::test]
 async fn hour_format_override_forces_twenty_four_hour_regardless_of_language() {
-    let mock_server = wiremock_setup::setup_open_meteo_mock(
-        "tests/fixtures/open_meteo_hourly_forecast.json",
-        "tests/fixtures/open_meteo_daily_forecast.json",
+    let svg_content = render_dashboard_svg(
+        Language::En,
+        Some(HourFormat::TwentyFour),
+        Path::new("tests/output/hour_format_override_twenty_four_hour.svg"),
     )
     .await;
-
-    let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-    settings.render_options.language = Language::En;
-    settings.render_options.hour_format = HourFormat::TwentyFour;
-
-    let clock =
-        FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");
-    let output_svg_name = Path::new("tests/output/hour_format_override_twenty_four_hour.svg");
-
-    let svg_content = tokio::task::spawn_blocking(move || {
-        let result = generate_weather_dashboard_injection(&settings, &clock, output_svg_name);
-        assert!(
-            result.is_ok(),
-            "Dashboard generation failed: {:?}",
-            result.err()
-        );
-
-        fs::read_to_string(output_svg_name).expect("Failed to read generated SVG file")
-    })
-    .await
-    .expect("Task panicked");
 
     // Forced 24-hour format overrides English's 12-hour default.
     assert!(svg_content.contains("16:00</text>"));
