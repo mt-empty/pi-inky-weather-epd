@@ -32,11 +32,6 @@ pub fn convert_svg_to_png(
     let svg_data = fs::read_to_string(input_path)
         .map_err(|e| Error::msg(format!("Failed to read SVG file: {e}")))?;
 
-    // Uses the same cached database as `measure_stacked_label_dx`, so a
-    // label's measured width always matches what actually gets rendered
-    // here — if these ever used separately built databases, a system font
-    // shadowing a bundled one (see `load_fonts`) could make one resolve a
-    // different face than the other.
     let opts = usvg::Options {
         fontdb: shared_font_db(),
         ..Default::default()

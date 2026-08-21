@@ -25,7 +25,7 @@ The generation of the image is independent of the hardware, so it can be used on
 
 ![Dashboard Case](./misc/dashboard-case.png)
 
-## Setup on Raspberry Pi
+## Quick Setup on Raspberry Pi
 
 1. **Install the Inky library:**
 
@@ -100,24 +100,14 @@ You can override the default configs located at [./config/](./config/) by creati
 ~/.config/pi-inky-weather-epd.toml
 ```
 
-### Configuration Examples
 
-Here are example configurations.
+<!-- #### Default Configuration
 
-#### Language (UI Localization)
+<img src="./misc/dashboard-default.png" alt="Default configuration" width="600"/> -->
+
+#### Language (UI Localisation)
 
 The dashboard supports multiple interface languages for compact UI labels and day names.
-
-```toml
-[render_options]
-# Supported in Phase 1:
-# en - English
-# fr - French
-# de - German
-# es - Spanish
-# ja - Japanese (e.g. "土曜日")
-language = "en"
-```
 
 <img src="./misc/languages/languages.gif" alt="Default configuration" width="600"/>
 
@@ -128,36 +118,6 @@ Example renders for each supported language:
 [es](./misc/languages/dashboard-es.png) ·
 [ja](./misc/languages/dashboard-ja.png)
 
-#### Default Configuration
-
-<img src="./misc/dashboard-default.png" alt="Default configuration" width="600"/>
-
-#### Imperial Units
-
-```toml
-[render_options]
-temp_unit = "F"
-wind_speed_unit = "mph"
-```
-
-#### Date Format
-
-You can customise the date format using chrono strftime specifiers. The default is `"%A, %d %B"` (e.g., "Saturday, 06 December").
-
-```toml
-[render_options]
-# Example formats:
-# date_format = "%B %-d, %Y"     # December 6, 2025 (US style)
-# date_format = "%d/%m/%Y"       # 06/12/2025 (Australia/UK)
-# date_format = "%m/%d/%Y"       # 12/06/2025 (USA)
-# date_format = "%Y-%m-%d"       # 2025-12-06 (ISO 8601)
-# date_format = "%a, %-d %b"     # Sat, 6 Dec
-# date_format = "%d.%m.%Y"       # 06.12.2025 (Germany)
-
-date_format = "%A, %d %B"
-```
-
-See [chrono strftime documentation](https://docs.rs/chrono/latest/chrono/format/strftime/) for all available format specifiers.
 
 #### Use Clear night Icon instead of Moon Phase icon when Time=night and Weather=clear
 
@@ -288,7 +248,7 @@ When multiple diagnostics occur, the highest priority diagnostic is displayed, l
 
 **Degrades instead of failing.** If the API is unreachable, the fetcher falls back to the last cached response and keeps rendering, surfacing a priority-ordered [diagnostic icon](#degraded-operation)
 
-**Config for personalization.** Colours, units, date format, and axis behaviour are all TOML overrides layered on `config/default.toml` — no fork needed to reskin the dashboard.
+**Config for personalisation.** Colours, units, date format, and axis behaviour are all TOML overrides layered on `config/default.toml` — no fork needed to reskin the dashboard.
 
 **Backward-compatible by default.** The binary can self-update in place on unattended Pi devices
 
