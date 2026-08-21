@@ -24,7 +24,7 @@ impl Language {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum TranslationKey {
     Feels,
     Like,

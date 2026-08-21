@@ -72,9 +72,6 @@ pub fn convert_svg_to_png(
 ///
 /// * `font_db` - A mutable reference to a `fontdb::Database` to load fonts into.
 fn load_fonts(font_db: &mut fontdb::Database) {
-    font_db.load_system_fonts();
-
-    // print current path
     let current_path = std::env::current_dir().unwrap();
 
     let font_files = [
@@ -96,10 +93,10 @@ fn load_fonts(font_db: &mut fontdb::Database) {
 
 /// Lazily built, process-wide font database used for text measurement.
 ///
-/// Loads the same fonts (and system-font fallback) as [`convert_svg_to_png`],
-/// so widths measured with [`measure_text_width`] match what resvg actually
-/// renders. Cached because `load_system_fonts` is a filesystem scan and
-/// measurement can run once per label per render.
+/// Loads the same fonts as [`convert_svg_to_png`], so widths measured with
+/// [`measure_text_width`] match what resvg actually renders. Cached because
+/// loading font files involves filesystem I/O and measurement can run once
+/// per label per render.
 fn shared_font_db() -> Arc<fontdb::Database> {
     static FONT_DB: OnceLock<Arc<fontdb::Database>> = OnceLock::new();
     FONT_DB
@@ -550,6 +547,65 @@ mod tests {
             (gap - target_gap).abs() <= 1.0,
             "{line1:?}/{line2:?}: gap not at target, got {gap} want {target_gap}"
         );
+    }
+
+    #[test]
+    fn shared_font_db_covers_every_translated_string() {
+        // `load_fonts` deliberately doesn't load system fonts (see its doc
+        // comment), so every character any language can ever render has to
+        // come from the four bundled font files. This walks every string
+        // `i18n.rs` can produce — for every language, automatically, via
+        // `Language`/`TranslationKey`'s `EnumIter` derive — and fails loudly
+        // (a missing glyph is a silent tofu box on the actual dashboard,
+        // not a panic) if the shared db can't render one of its characters.
+        use crate::i18n::{
+            month_long, month_short, translate, weekday_long, weekday_short, Language,
+            TranslationKey,
+        };
+        use chrono::Weekday;
+        use strum::IntoEnumIterator;
+
+        let db = shared_font_db();
+        let has_char = |c: char| {
+            db.faces().any(|face| {
+                db.with_face_data(face.id, |data, index| {
+                    ttf_parser::Face::parse(data, index)
+                        .is_ok_and(|parsed| parsed.glyph_index(c).is_some())
+                })
+                .unwrap_or(false)
+            })
+        };
+
+        let weekdays = [
+            Weekday::Mon,
+            Weekday::Tue,
+            Weekday::Wed,
+            Weekday::Thu,
+            Weekday::Fri,
+            Weekday::Sat,
+            Weekday::Sun,
+        ];
+
+        for language in Language::iter() {
+            let mut strings: Vec<&str> = TranslationKey::iter()
+                .map(|key| translate(key, language))
+                .collect();
+            strings.extend(weekdays.iter().map(|&w| weekday_long(w, language)));
+            strings.extend(weekdays.iter().map(|&w| weekday_short(w, language)));
+            strings.extend((1..=12u32).map(|m| month_long(m, language)));
+            strings.extend((1..=12u32).map(|m| month_short(m, language)));
+
+            for s in strings {
+                for c in s.chars() {
+                    assert!(
+                        has_char(c),
+                        "no bundled font covers {c:?} (from {s:?}, {language:?}) — \
+                         load_system_fonts() is intentionally off, so this would \
+                         render as a missing-glyph box on the real dashboard"
+                    );
+                }
+            }
+        }
     }
 
     #[test]
