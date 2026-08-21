@@ -5,6 +5,9 @@ use std::{
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use strum::IntoEnumIterator;
+
+use crate::i18n::{format_localized_date, Language};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ValidationError {
@@ -386,14 +389,35 @@ pub fn is_valid_date_format(format: &str) -> Result<(), ValidationError> {
         ));
     }
 
-    // Check output length
-    if formatted.len() > MAX_DATE_FORMAT_OUTPUT_LENGTH {
-        let message = format!(
-            "Date format produces output that is too long for display, it must be {MAX_DATE_FORMAT_OUTPUT_LENGTH} characters or fewer"
-        );
-        return Err(ValidationError {
-            message: Cow::Owned(message),
-        });
+    // Check output length against every supported language, not just
+    // English: `render_options.language` is a separate config field this
+    // validator can't see, and `format_localized_date` substitutes each
+    // language's own weekday/month names, which can be longer than
+    // English's — so the format has to fit the budget under whichever
+    // language ends up selected. Safe to call unguarded (no write!/panic
+    // risk): the write! probe above already proved `trimmed` is a
+    // chrono-valid format, and `format_localized_date`'s specifier
+    // substitution preserves that validity (see i18n.rs).
+    //
+    // Any 7 consecutive calendar days contain each of the 7 weekdays
+    // exactly once, so days 1..=7 of every month cover all 84
+    // (weekday, month) pairings, including whichever one is longest
+    // for a given language.
+    for language in Language::iter() {
+        for month in 1..=12u32 {
+            for day in 1..=7u32 {
+                let date = Utc.with_ymd_and_hms(2023, month, day, 12, 0, 0).unwrap();
+                let rendered = format_localized_date(date, trimmed, language);
+                if rendered.len() > MAX_DATE_FORMAT_OUTPUT_LENGTH {
+                    let message = format!(
+                        "Date format produces output that is too long for display, it must be {MAX_DATE_FORMAT_OUTPUT_LENGTH} characters or fewer"
+                    );
+                    return Err(ValidationError {
+                        message: Cow::Owned(message),
+                    });
+                }
+            }
+        }
     }
 
     Ok(())
@@ -611,6 +635,64 @@ mod tests {
             fn never_panics_on_arbitrary_input(format in ".*") {
                 let _ = is_valid_date_format(&format);
             }
+
+            /// `is_valid_date_format` checks every supported language's
+            /// rendered length via `format_localized_date`, not just
+            /// English's — this is the regression test for that budget
+            /// promise, checked against the same `format.trim()` the
+            /// validator itself checks (and the same trimmed value
+            /// `DateFormat`'s `sanitize(trim)` actually stores and renders
+            /// in production — an untrimmed `format` here would check a
+            /// string that's never the one actually rendered).
+            #[test]
+            fn accepted_formats_stay_within_budget_for_every_language(
+                format in date_format_strategy()
+            ) {
+                if is_valid_date_format(&format).is_ok() {
+                    let trimmed = format.trim();
+                    for language in Language::iter() {
+                        // Any 7 consecutive calendar days contain each of the
+                        // 7 weekdays exactly once, so days 1..=7 of every
+                        // month cover all 84 (weekday, month) pairings —
+                        // including whichever one produces this language's
+                        // longest %A/%B rendering.
+                        for month in 1..=12u32 {
+                            for day in 1..=7u32 {
+                                let date = Utc.with_ymd_and_hms(2023, month, day, 10, 30, 0).unwrap();
+                                let rendered = format_localized_date(date, trimmed, language);
+                                prop_assert!(
+                                    rendered.len() <= MAX_DATE_FORMAT_OUTPUT_LENGTH,
+                                    "format {format:?} passed is_valid_date_format but rendered \
+                                     to {} bytes ({rendered:?}) for {language:?} on {date:?}",
+                                    rendered.len(),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /// Realistic date-format tokens (not fully arbitrary strings — see
+        /// `never_panics_on_arbitrary_input` above for that), biased toward
+        /// combinations that actually exercise %A/%B and %%-escaping.
+        fn date_format_strategy() -> impl Strategy<Value = String> {
+            let token = prop_oneof![
+                Just("%A".to_string()),
+                Just("%a".to_string()),
+                Just("%B".to_string()),
+                Just("%b".to_string()),
+                Just("%%A".to_string()),
+                Just("%%B".to_string()),
+                Just("%d".to_string()),
+                Just("%-d".to_string()),
+                Just("%m".to_string()),
+                Just("%Y".to_string()),
+                Just(", ".to_string()),
+                Just(" ".to_string()),
+                Just("-".to_string()),
+            ];
+            proptest::collection::vec(token, 1..8).prop_map(|tokens| tokens.concat())
         }
     }
 }

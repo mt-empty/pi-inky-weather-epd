@@ -1,7 +1,8 @@
 use chrono::{DateTime, Datelike, TimeZone, Weekday};
 use std::fmt::Display;
+use strum_macros::EnumIter;
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum Language {
     #[default]
     En,
@@ -328,6 +329,57 @@ pub fn month_long(month: u32, language: Language) -> &'static str {
     }
 }
 
+/// Swaps chrono's `%A`/`%a`/`%B`/`%b` specifiers for null-byte-delimited
+/// sentinels (`format_localized_date` replaces these with translated names
+/// after chrono has rendered everything else), leaving every other
+/// specifier — including an escaped `%%` — untouched.
+///
+/// This walks the string one `%`-token at a time instead of doing a plain
+/// substring replace, specifically so `%%A` (chrono's escape for a literal
+/// "%A") isn't misread as the specifier `%A`: a substring replace would
+/// match the `%A` inside `%%A` and corrupt the escape into an invalid
+/// specifier, which made chrono's formatter — and `.to_string()` on it —
+/// panic.
+fn substitute_localizable_specifiers(format: &str) -> String {
+    let mut result = String::with_capacity(format.len());
+    let mut chars = format.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c != '%' {
+            result.push(c);
+            continue;
+        }
+        match chars.peek() {
+            Some('%') => {
+                // Escaped literal percent — leave both chars for chrono.
+                result.push('%');
+                result.push(chars.next().expect("peek confirmed a next char"));
+            }
+            Some('A') => {
+                result.push_str("\x00WL\x00");
+                chars.next();
+            }
+            Some('a') => {
+                result.push_str("\x00WS\x00");
+                chars.next();
+            }
+            Some('B') => {
+                result.push_str("\x00ML\x00");
+                chars.next();
+            }
+            Some('b') => {
+                result.push_str("\x00MS\x00");
+                chars.next();
+            }
+            // Any other specifier (or a trailing '%'): leave the '%' for
+            // chrono to interpret together with whatever follows.
+            _ => result.push('%'),
+        }
+    }
+
+    result
+}
+
 pub fn format_localized_date<Tz>(date: DateTime<Tz>, format: &str, language: Language) -> String
 where
     Tz: TimeZone,
@@ -337,13 +389,7 @@ where
         return date.format(format).to_string();
     }
 
-    // Use non-printable null-byte delimiters as sentinels: they can never appear
-    // in any localized string, so each substitution is independent of the others.
-    let template = format
-        .replace("%A", "\x00WL\x00")
-        .replace("%a", "\x00WS\x00")
-        .replace("%B", "\x00ML\x00")
-        .replace("%b", "\x00MS\x00");
+    let template = substitute_localizable_specifiers(format);
 
     date.format(&template)
         .to_string()
@@ -384,6 +430,19 @@ mod tests {
         assert_eq!(
             format_localized_date(date, "%a, %-d %b", Language::De),
             "Sa, 25 Okt"
+        );
+    }
+
+    #[test]
+    fn escaped_percent_before_a_specifier_letter_is_not_corrupted() {
+        // "%%A" is chrono's escape for a literal "%A", not the weekday
+        // specifier — a naive substring replace of "%A" would match inside
+        // it and corrupt the escape into an invalid format, which used to
+        // make chrono's formatter (and `.to_string()` on it) panic.
+        let date = Local.with_ymd_and_hms(2025, 10, 25, 12, 0, 0).unwrap();
+        assert_eq!(
+            format_localized_date(date, "%%A, %d %B", Language::Fr),
+            "%A, 25 Octobre"
         );
     }
 
