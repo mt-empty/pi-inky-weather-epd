@@ -31,7 +31,6 @@ pub enum TranslationKey {
     Metric,
     Now,
     Max,
-    Hours24,
 }
 
 pub fn translate(key: TranslationKey, language: Language) -> &'static str {
@@ -41,31 +40,26 @@ pub fn translate(key: TranslationKey, language: Language) -> &'static str {
         (Language::En, TranslationKey::Metric) => "Metric",
         (Language::En, TranslationKey::Now) => "Now",
         (Language::En, TranslationKey::Max) => "Max",
-        (Language::En, TranslationKey::Hours24) => "24h",
         (Language::Fr, TranslationKey::Feels) => "Ress.",
         (Language::Fr, TranslationKey::Like) => "comme",
         (Language::Fr, TranslationKey::Metric) => "Mesure",
         (Language::Fr, TranslationKey::Now) => "Maint.",
         (Language::Fr, TranslationKey::Max) => "Max",
-        (Language::Fr, TranslationKey::Hours24) => "24h",
         (Language::De, TranslationKey::Feels) => "Gef.",
         (Language::De, TranslationKey::Like) => "wie",
         (Language::De, TranslationKey::Metric) => "Wert",
         (Language::De, TranslationKey::Now) => "Jetzt",
         (Language::De, TranslationKey::Max) => "Max",
-        (Language::De, TranslationKey::Hours24) => "24h",
         (Language::Es, TranslationKey::Feels) => "Se",
         (Language::Es, TranslationKey::Like) => "siente",
         (Language::Es, TranslationKey::Metric) => "Medida",
         (Language::Es, TranslationKey::Now) => "Ahora",
         (Language::Es, TranslationKey::Max) => "Max",
-        (Language::Es, TranslationKey::Hours24) => "24h",
         (Language::Ja, TranslationKey::Feels) => "体感",
         (Language::Ja, TranslationKey::Like) => "温度",
         (Language::Ja, TranslationKey::Metric) => "指標",
         (Language::Ja, TranslationKey::Now) => "今",
         (Language::Ja, TranslationKey::Max) => "最大",
-        (Language::Ja, TranslationKey::Hours24) => "24h",
     }
 }
 

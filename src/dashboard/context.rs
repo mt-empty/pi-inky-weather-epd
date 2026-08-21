@@ -142,7 +142,6 @@ pub struct Context {
     pub label_metric: String,
     pub label_now: String,
     pub label_max: String,
-    pub label_24h: String,
     pub current_hour_rain_amount: String,
     pub sunset_time: String,
     pub sunrise_time: String,
@@ -249,7 +248,6 @@ impl Context {
             label_metric: translate(TranslationKey::Metric, language).to_string(),
             label_now: translate(TranslationKey::Now, language).to_string(),
             label_max: translate(TranslationKey::Max, language).to_string(),
-            label_24h: translate(TranslationKey::Hours24, language).to_string(),
             current_hour_rain_amount: NOT_AVAILABLE.to_string(),
             sunrise_time: NOT_AVAILABLE.to_string(),
             sunset_time: NOT_AVAILABLE.to_string(),
@@ -322,6 +320,18 @@ fn pick_today_or_tomorrow_max<V: PartialOrd>(
         (None, Some(tm)) => Some((tm, true)),
         (None, None) => None,
     }
+}
+
+/// Weekday `days` calendar days after `from`, using calendar-day arithmetic
+/// (not a fixed 24h offset) so it stays correct across DST transitions where
+/// the local day is 23 or 25 hours long.
+fn weekday_after_days<TzType: chrono::TimeZone>(
+    from: DateTime<TzType>,
+    days: u64,
+) -> chrono::Weekday {
+    from.checked_add_days(chrono::Days::new(days))
+        .expect("adding a few days to the current date does not overflow chrono's range")
+        .weekday()
 }
 
 pub struct ContextBuilder<'a> {
@@ -581,36 +591,18 @@ impl<'a> ContextBuilder<'a> {
         let language = Language::from_config(&self.settings.render_options.language);
 
         // Pre-fill day names based on local calendar (independent of forecast data)
-        self.context.day2_name = weekday_short(
-            (local_midnight_time + chrono::Duration::days(1)).weekday(),
-            language,
-        )
-        .to_string();
-        self.context.day3_name = weekday_short(
-            (local_midnight_time + chrono::Duration::days(2)).weekday(),
-            language,
-        )
-        .to_string();
-        self.context.day4_name = weekday_short(
-            (local_midnight_time + chrono::Duration::days(3)).weekday(),
-            language,
-        )
-        .to_string();
-        self.context.day5_name = weekday_short(
-            (local_midnight_time + chrono::Duration::days(4)).weekday(),
-            language,
-        )
-        .to_string();
-        self.context.day6_name = weekday_short(
-            (local_midnight_time + chrono::Duration::days(5)).weekday(),
-            language,
-        )
-        .to_string();
-        self.context.day7_name = weekday_short(
-            (local_midnight_time + chrono::Duration::days(6)).weekday(),
-            language,
-        )
-        .to_string();
+        self.context.day2_name =
+            weekday_short(weekday_after_days(local_midnight_time, 1), language).to_string();
+        self.context.day3_name =
+            weekday_short(weekday_after_days(local_midnight_time, 2), language).to_string();
+        self.context.day4_name =
+            weekday_short(weekday_after_days(local_midnight_time, 3), language).to_string();
+        self.context.day5_name =
+            weekday_short(weekday_after_days(local_midnight_time, 4), language).to_string();
+        self.context.day6_name =
+            weekday_short(weekday_after_days(local_midnight_time, 5), language).to_string();
+        self.context.day7_name =
+            weekday_short(weekday_after_days(local_midnight_time, 6), language).to_string();
     }
 
     // Extrusion Pattern: force everything through one function until it resembles spaghetti
@@ -1041,6 +1033,37 @@ mod tests {
     use super::*;
     use crate::clock::FixedClock;
     use crate::domain::models::{Astronomical, Temperature};
+
+    mod weekday_after_days_tests {
+        use super::*;
+        use chrono::{TimeZone, Weekday};
+        use chrono_tz::America::New_York;
+
+        #[test]
+        fn regular_day_advances_by_the_requested_number_of_days() {
+            let from = New_York.with_ymd_and_hms(2025, 6, 10, 23, 30, 0).unwrap();
+            assert_eq!(weekday_after_days(from, 1), Weekday::Wed);
+        }
+
+        #[test]
+        fn fall_back_dst_still_advances_by_one_calendar_day() {
+            // 2025-11-02 00:00 EDT is the start of the US fall-back local
+            // day, which is 25h long; a fixed 24h duration offset would
+            // land before the next local midnight and report Sunday
+            // instead of Monday.
+            let from = New_York.with_ymd_and_hms(2025, 11, 2, 0, 0, 0).unwrap();
+            assert_eq!(weekday_after_days(from, 1), Weekday::Mon);
+        }
+
+        #[test]
+        fn spring_forward_dst_still_advances_by_one_calendar_day() {
+            // 2025-03-08 23:30 EST is ~1h before US spring-forward DST
+            // start; the local day is only 23h long, so a fixed 24h
+            // duration offset would land on Monday instead of Sunday.
+            let from = New_York.with_ymd_and_hms(2025, 3, 8, 23, 30, 0).unwrap();
+            assert_eq!(weekday_after_days(from, 1), Weekday::Sun);
+        }
+    }
 
     mod pick_today_or_tomorrow_max_tests {
         use super::*;

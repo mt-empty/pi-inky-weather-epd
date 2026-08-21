@@ -49,8 +49,8 @@ wind_speed_unit = "km/h"                        # Options: km/h, mph, knots
 #   fr - French
 #   de - German
 #   es - Spanish
-#   ja - Japanese, romanized (e.g. "Doyobi", not 土曜日) — the display font
-#        has no Japanese script glyphs, so labels/dates use romaji, not kanji/kana
+#   ja - Japanese (e.g. "土曜日") — rendered in native script via the bundled
+#        NotoSansJP font
 language = "en"
 # Options:
 #   auto - follow the clock convention of `language` (12-hour for en, 24-hour otherwise)

@@ -32,8 +32,10 @@ pub enum HourFormat {
     /// English, 24-hour for the other supported languages).
     #[default]
     Auto,
+    #[serde(rename = "12h")]
     #[strum(serialize = "12h")]
     TwelveHour,
+    #[serde(rename = "24h")]
     #[strum(serialize = "24h")]
     TwentyFour,
 }
@@ -610,5 +612,17 @@ mod tests {
                 .expect("failed to load settings with env override");
 
         assert_eq!(settings.render_options.language, "fr");
+    }
+
+    #[test]
+    fn hour_format_deserializes_documented_values() {
+        assert_eq!(
+            serde_json::from_str::<super::HourFormat>("\"12h\"").unwrap(),
+            super::HourFormat::TwelveHour
+        );
+        assert_eq!(
+            serde_json::from_str::<super::HourFormat>("\"24h\"").unwrap(),
+            super::HourFormat::TwentyFour
+        );
     }
 }
