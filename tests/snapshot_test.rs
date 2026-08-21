@@ -6,6 +6,7 @@ mod helpers;
 
 use helpers::test_utils;
 use helpers::wiremock_setup;
+use pi_inky_weather_epd::i18n::Language;
 use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injection};
 use std::fs;
 use std::path::Path;
@@ -808,7 +809,7 @@ mod localization {
         .await;
 
         let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-        settings.render_options.language = "fr".to_string();
+        settings.render_options.language = Language::Fr;
 
         let clock =
             FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");

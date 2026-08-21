@@ -160,7 +160,7 @@ pub fn measure_stacked_label_dx(
     // column a glyph's antialiasing lands on (hinting is sensitive to
     // subpixel position), so matching it keeps this measurement's rounding
     // behaviour identical to what actually gets rendered.
-    let cx = 246.0_f32;
+    let cx = 248.0_f32;
     let width = 500.0_f32;
     let separation = font_size * 10.0;
     let height = separation + font_size * 4.0;
@@ -173,49 +173,17 @@ pub fn measure_stacked_label_dx(
         </svg>"#
     );
 
-    let opts = usvg::Options {
-        fontdb: shared_font_db(),
-        ..Default::default()
-    };
-    let tree = match usvg::Tree::from_str(&svg, &opts) {
-        Ok(tree) => tree,
-        Err(e) => {
-            logger::warning(format!(
-                "Failed to measure stacked label offset for {line1:?}/{line2:?}: {e}"
-            ));
-            return 0.0;
-        }
-    };
-
-    let size = tree.size().to_int_size();
-    let mut pixmap = match tiny_skia::Pixmap::new(size.width(), size.height()) {
-        Some(pixmap) => pixmap,
-        None => return 0.0,
-    };
-    resvg::render(
-        &tree,
-        tiny_skia::Transform::identity(),
-        &mut pixmap.as_mut(),
-    );
-
-    let ink_extent_x = |y_from: u32, y_to: u32| -> Option<(u32, u32)> {
-        let mut min_x = u32::MAX;
-        let mut max_x = 0;
-        for y in y_from..=y_to.min(pixmap.height().saturating_sub(1)) {
-            for x in 0..pixmap.width() {
-                if pixmap.pixel(x, y).map(|p| p.alpha()).unwrap_or(0) > 0 {
-                    min_x = min_x.min(x);
-                    max_x = max_x.max(x);
-                }
-            }
-        }
-        (min_x <= max_x).then_some((min_x, max_x))
+    let Some(pixmap) = render_svg_to_pixmap(&svg) else {
+        logger::warning(format!(
+            "Failed to measure stacked label offset for {line1:?}/{line2:?}: render failed"
+        ));
+        return 0.0;
     };
 
     let split_y = (font_size + separation / 2.0) as u32;
     let (Some((r1_min, r1_max)), Some((r2_min, r2_max))) = (
-        ink_extent_x(0, split_y),
-        ink_extent_x(split_y + 1, pixmap.height() - 1),
+        ink_extent_x_in_y_range(&pixmap, 0, split_y),
+        ink_extent_x_in_y_range(&pixmap, split_y + 1, pixmap.height() - 1),
     ) else {
         logger::warning(format!(
             "Failed to measure stacked label offset for {line1:?}/{line2:?}: no ink found"
@@ -260,32 +228,65 @@ pub fn measure_ink_y_center(svg: &str) -> Option<f32> {
     Some((min_y + max_y) as f32 / 2.0)
 }
 
-/// x-extent (min, max) of near-opaque pixels close to `(r, g, b)`, or `None`
-/// if no such pixel is found.
+/// x-extent (min, max) of non-transparent pixels within rows `y_from..=y_to`
+/// (clamped to the pixmap's height), or `None` if no such pixel is found.
+fn ink_extent_x_in_y_range(
+    pixmap: &tiny_skia::Pixmap,
+    y_from: u32,
+    y_to: u32,
+) -> Option<(u32, u32)> {
+    let mut min_x = u32::MAX;
+    let mut max_x = 0;
+    for y in y_from..=y_to.min(pixmap.height().saturating_sub(1)) {
+        for x in 0..pixmap.width() {
+            if pixmap.pixel(x, y).map(|p| p.alpha()).unwrap_or(0) > 0 {
+                min_x = min_x.min(x);
+                max_x = max_x.max(x);
+            }
+        }
+    }
+    (min_x <= max_x).then_some((min_x, max_x))
+}
+
+/// x-extent (min, max) of matching pixels, or `None` if there were none.
+type XExtent = Option<(u32, u32)>;
+
+/// x-extents (min, max) of near-opaque pixels close to each of `colour_a`
+/// and `colour_b`, found in a single pass over the pixmap. Either result is
+/// `None` if no matching pixel was found for that colour.
 ///
 /// Only near-full alpha counts: at low alpha, `tiny_skia`'s premultiplied
 /// channels shrink toward zero regardless of hue, so a partially
 /// transparent antialiased edge of *any* colour would otherwise be
 /// misclassified as matching every colour, including black.
-fn ink_extent_x_of_colour(
+fn ink_extent_x_of_two_colours(
     pixmap: &tiny_skia::Pixmap,
-    (r, g, b): (u8, u8, u8),
-) -> Option<(u32, u32)> {
+    colour_a: (u8, u8, u8),
+    colour_b: (u8, u8, u8),
+) -> (XExtent, XExtent) {
     let close = |a: u8, b: u8| (a as i32 - b as i32).abs() < 40;
-    let mut min_x = u32::MAX;
-    let mut max_x = 0;
+    let matches = |p: tiny_skia::PremultipliedColorU8, (r, g, b): (u8, u8, u8)| {
+        p.alpha() > 200 && close(p.red(), r) && close(p.green(), g) && close(p.blue(), b)
+    };
+    let mut extent_a = (u32::MAX, 0u32);
+    let mut extent_b = (u32::MAX, 0u32);
     for y in 0..pixmap.height() {
         for x in 0..pixmap.width() {
-            if let Some(p) = pixmap.pixel(x, y) {
-                if p.alpha() > 200 && close(p.red(), r) && close(p.green(), g) && close(p.blue(), b)
-                {
-                    min_x = min_x.min(x);
-                    max_x = max_x.max(x);
-                }
+            let Some(p) = pixmap.pixel(x, y) else {
+                continue;
+            };
+            if matches(p, colour_a) {
+                extent_a = (extent_a.0.min(x), extent_a.1.max(x));
+            }
+            if matches(p, colour_b) {
+                extent_b = (extent_b.0.min(x), extent_b.1.max(x));
             }
         }
     }
-    (min_x <= max_x).then_some((min_x, max_x))
+    (
+        (extent_a.0 <= extent_a.1).then_some(extent_a),
+        (extent_b.0 <= extent_b.1).then_some(extent_b),
+    )
 }
 
 /// Computes the `dx` (SVG user units) for the tspan that follows a
@@ -326,7 +327,7 @@ pub fn measure_label_to_number_gap_dx(
     let probe_colour = (0, 255, 0);
     let svg = format!(
         r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="{number_font_size}" font-family="{label_font_family}">
-            <text x="246" y="{label_font_size}" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
+            <text x="248" y="{label_font_size}" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
                 <tspan>{line1}</tspan>
                 <tspan dx="{label_dx}" dy="{label_dy}">{line2}</tspan>
                 <tspan font-family="{number_font_family}" dominant-baseline="middle" font-size="{number_font_size}" fill="rgb(0,255,0)" dx="0">{probe_text}</tspan>
@@ -340,10 +341,9 @@ pub fn measure_label_to_number_gap_dx(
         ));
         return 0.0;
     };
-    let (Some((_, label_max)), Some((probe_min, _))) = (
-        ink_extent_x_of_colour(&pixmap, label_colour),
-        ink_extent_x_of_colour(&pixmap, probe_colour),
-    ) else {
+    let (Some((_, label_max)), Some((probe_min, _))) =
+        ink_extent_x_of_two_colours(&pixmap, label_colour, probe_colour)
+    else {
         logger::warning(format!(
             "Failed to measure label-to-number gap for {line1:?}/{line2:?}: no ink found"
         ));
@@ -429,6 +429,16 @@ where
             Some(acc) if acc > x => Some(acc),
             _ => Some(x),
         })
+}
+
+/// Weekday `days` calendar days after `from`, using calendar-day arithmetic
+/// (not a fixed 24h offset) so it stays correct across DST transitions where
+/// the local day is 23 or 25 hours long.
+pub fn weekday_after_days<TZ: TimeZone>(from: DateTime<TZ>, days: u64) -> chrono::Weekday {
+    use chrono::Datelike;
+    from.checked_add_days(chrono::Days::new(days))
+        .expect("adding a few days to the current date does not overflow chrono's range")
+        .weekday()
 }
 
 // Below code was adopted from Geohash crate
@@ -532,7 +542,7 @@ mod tests {
         );
         let svg = format!(
             r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="250" font-family="Roboto, sans-serif">
-                <text x="246" y="158" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
+                <text x="248" y="158" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
                     <tspan>{line1}</tspan>
                     <tspan dx="{label_dx}" dy="{label_dy}">{line2}</tspan>
                     <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="{number_font_size}" fill="rgb(0,255,0)" dx="{gap_dx}">16</tspan>
@@ -540,8 +550,10 @@ mod tests {
             </svg>"#
         );
         let pixmap = render_svg_to_pixmap(&svg).unwrap();
-        let (_, label_max) = ink_extent_x_of_colour(&pixmap, (0, 0, 0)).unwrap();
-        let (probe_min, _) = ink_extent_x_of_colour(&pixmap, (0, 255, 0)).unwrap();
+        let (label_extent, probe_extent) =
+            ink_extent_x_of_two_colours(&pixmap, (0, 0, 0), (0, 255, 0));
+        let (_, label_max) = label_extent.unwrap();
+        let (probe_min, _) = probe_extent.unwrap();
         let gap = probe_min as f32 - label_max as f32;
         assert!(
             (gap - target_gap).abs() <= 1.0,
@@ -566,15 +578,19 @@ mod tests {
         use strum::IntoEnumIterator;
 
         let db = shared_font_db();
-        let has_char = |c: char| {
-            db.faces().any(|face| {
-                db.with_face_data(face.id, |data, index| {
-                    ttf_parser::Face::parse(data, index)
-                        .is_ok_and(|parsed| parsed.glyph_index(c).is_some())
-                })
-                .unwrap_or(false)
-            })
-        };
+        // Parse each bundled face once up front rather than on every
+        // character check below — this test walks every character of every
+        // translated string across all 5 languages, and Face::parse isn't
+        // free.
+        let face_data: Vec<(Vec<u8>, u32)> = db
+            .faces()
+            .filter_map(|face| db.with_face_data(face.id, |data, index| (data.to_vec(), index)))
+            .collect();
+        let faces: Vec<ttf_parser::Face> = face_data
+            .iter()
+            .filter_map(|(data, index)| ttf_parser::Face::parse(data, *index).ok())
+            .collect();
+        let has_char = |c: char| faces.iter().any(|face| face.glyph_index(c).is_some());
 
         let weekdays = [
             Weekday::Mon,
@@ -610,15 +626,27 @@ mod tests {
 
     #[test]
     fn label_to_number_gap_matches_target_for_every_locale_pair() {
-        for (line1, line2) in [
-            ("Feels", "Like"),
-            ("Ress.", "comme"),
-            ("Gef.", "wie"),
-            ("Se", "siente"),
-            ("体感", "温度"),
-        ] {
+        for (line1, line2) in feels_like_locale_pairs() {
             assert_label_to_number_gap(line1, line2, 12.0);
         }
+    }
+
+    /// The "Feels"/"Like" translation pair for every supported language,
+    /// derived from `translate()` itself (via `Language::iter()`) rather
+    /// than a hand-copied list, so a future language is automatically
+    /// covered by both this and `stacked_label_dx_centers_every_locale_pair`.
+    fn feels_like_locale_pairs() -> Vec<(&'static str, &'static str)> {
+        use crate::i18n::{translate, Language, TranslationKey};
+        use strum::IntoEnumIterator;
+
+        Language::iter()
+            .map(|language| {
+                (
+                    translate(TranslationKey::Feels, language),
+                    translate(TranslationKey::Like, language),
+                )
+            })
+            .collect()
     }
 
     /// Renders `line1`/`line2` stacked with the `dx` computed by
@@ -632,42 +660,25 @@ mod tests {
         let dy: f32 = 15.5;
         let svg = format!(
             r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="250" font-family="Roboto, sans-serif">
-                <text x="246" y="158" text-anchor="middle" font-size="{font_size}">
+                <text x="248" y="158" text-anchor="middle" font-size="{font_size}">
                     <tspan>{line1}</tspan>
                     <tspan dx="{dx}" dy="{dy}">{line2}</tspan>
                 </text>
             </svg>"#
         );
-        let opts = usvg::Options {
-            fontdb: shared_font_db(),
-            ..Default::default()
-        };
-        let tree = usvg::Tree::from_str(&svg, &opts).unwrap();
-        let size = tree.size().to_int_size();
-        let mut pixmap = tiny_skia::Pixmap::new(size.width(), size.height()).unwrap();
-        resvg::render(
-            &tree,
-            tiny_skia::Transform::identity(),
-            &mut pixmap.as_mut(),
-        );
+        let pixmap = render_svg_to_pixmap(&svg).unwrap();
 
-        let ink_extent_x = |y_from: u32, y_to: u32| -> (u32, u32) {
-            let mut min_x = u32::MAX;
-            let mut max_x = 0;
-            for y in y_from..=y_to {
-                for x in 0..pixmap.width() {
-                    if pixmap.pixel(x, y).map(|p| p.alpha()).unwrap_or(0) > 0 {
-                        min_x = min_x.min(x);
-                        max_x = max_x.max(x);
-                    }
-                }
-            }
-            assert!(min_x <= max_x, "no ink found in y range {y_from}..={y_to}");
-            (min_x, max_x)
-        };
         let split_y = (158.0 + dy / 2.0).round() as u32;
-        let (r1_min, r1_max) = ink_extent_x(0, split_y);
-        let (r2_min, r2_max) = ink_extent_x(split_y + 1, pixmap.height() - 1);
+        let (r1_min, r1_max) = ink_extent_x_in_y_range(&pixmap, 0, split_y)
+            .unwrap_or_else(|| panic!("no ink found in y range 0..={split_y}"));
+        let (r2_min, r2_max) = ink_extent_x_in_y_range(&pixmap, split_y + 1, pixmap.height() - 1)
+            .unwrap_or_else(|| {
+                panic!(
+                    "no ink found in y range {}..={}",
+                    split_y + 1,
+                    pixmap.height() - 1
+                )
+            });
         let c1 = (r1_min + r1_max) as f32 / 2.0;
         let c2 = (r2_min + r2_max) as f32 / 2.0;
         // A couple of pixels of slop is expected: the two renders place the
@@ -684,13 +695,7 @@ mod tests {
 
     #[test]
     fn stacked_label_dx_centers_every_locale_pair() {
-        for (line1, line2) in [
-            ("Feels", "Like"),
-            ("Ress.", "comme"),
-            ("Gef.", "wie"),
-            ("Se", "siente"),
-            ("体感", "温度"),
-        ] {
+        for (line1, line2) in feels_like_locale_pairs() {
             assert_stacked_label_dx_centers(line1, line2);
         }
     }
@@ -766,6 +771,37 @@ mod tests {
             let end = "2024-01-02T00:00:00Z".parse().unwrap();
             let total = total_between_dates(&data, &start, &end, |p| p.value, |p| p.time);
             assert_eq!(total, 10.0);
+        }
+    }
+
+    mod weekday_after_days_tests {
+        use super::*;
+        use chrono::{TimeZone, Weekday};
+        use chrono_tz::America::New_York;
+
+        #[test]
+        fn regular_day_advances_by_the_requested_number_of_days() {
+            let from = New_York.with_ymd_and_hms(2025, 6, 10, 23, 30, 0).unwrap();
+            assert_eq!(weekday_after_days(from, 1), Weekday::Wed);
+        }
+
+        #[test]
+        fn fall_back_dst_still_advances_by_one_calendar_day() {
+            // 2025-11-02 00:00 EDT is the start of the US fall-back local
+            // day, which is 25h long; a fixed 24h duration offset would
+            // land before the next local midnight and report Sunday
+            // instead of Monday.
+            let from = New_York.with_ymd_and_hms(2025, 11, 2, 0, 0, 0).unwrap();
+            assert_eq!(weekday_after_days(from, 1), Weekday::Mon);
+        }
+
+        #[test]
+        fn spring_forward_dst_still_advances_by_one_calendar_day() {
+            // 2025-03-08 23:30 EST is ~1h before US spring-forward DST
+            // start; the local day is only 23h long, so a fixed 24h
+            // duration offset would land on Monday instead of Sunday.
+            let from = New_York.with_ymd_and_hms(2025, 3, 8, 23, 30, 0).unwrap();
+            assert_eq!(weekday_after_days(from, 1), Weekday::Sun);
         }
     }
 

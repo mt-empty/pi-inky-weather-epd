@@ -3,6 +3,7 @@ mod helpers;
 use helpers::test_utils;
 use helpers::wiremock_setup;
 use pi_inky_weather_epd::configs::settings::HourFormat;
+use pi_inky_weather_epd::i18n::Language;
 use pi_inky_weather_epd::{clock::FixedClock, generate_weather_dashboard_injection};
 use std::fs;
 use std::path::Path;
@@ -16,7 +17,7 @@ async fn french_language_override_localizes_rendered_dashboard() {
     .await;
 
     let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-    settings.render_options.language = "fr".to_string();
+    settings.render_options.language = Language::Fr;
 
     let clock =
         FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");
@@ -54,7 +55,7 @@ async fn german_language_override_localizes_rendered_dashboard() {
     .await;
 
     let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-    settings.render_options.language = "de".to_string();
+    settings.render_options.language = Language::De;
 
     let clock =
         FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");
@@ -94,7 +95,7 @@ async fn spanish_language_override_localizes_rendered_dashboard() {
     .await;
 
     let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-    settings.render_options.language = "es".to_string();
+    settings.render_options.language = Language::Es;
 
     let clock =
         FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");
@@ -134,7 +135,7 @@ async fn japanese_language_override_localizes_rendered_dashboard() {
     .await;
 
     let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-    settings.render_options.language = "ja".to_string();
+    settings.render_options.language = Language::Ja;
 
     let clock =
         FixedClock::from_rfc3339("2025-10-25T01:00:00Z").expect("Failed to create fixed clock");
@@ -178,7 +179,7 @@ async fn hour_format_override_forces_twelve_hour_regardless_of_language() {
     .await;
 
     let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-    settings.render_options.language = "fr".to_string();
+    settings.render_options.language = Language::Fr;
     settings.render_options.hour_format = HourFormat::TwelveHour;
 
     let clock =
@@ -212,7 +213,7 @@ async fn hour_format_override_forces_twenty_four_hour_regardless_of_language() {
     .await;
 
     let mut settings = test_utils::open_meteo_settings(&mock_server.uri());
-    settings.render_options.language = "en".to_string();
+    settings.render_options.language = Language::En;
     settings.render_options.hour_format = HourFormat::TwentyFour;
 
     let clock =

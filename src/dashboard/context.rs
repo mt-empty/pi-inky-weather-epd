@@ -9,11 +9,11 @@ use crate::{
     logger,
     utils::{
         find_max_item_between_dates, measure_label_to_number_gap_dx, measure_stacked_label_dx,
-        total_between_dates,
+        total_between_dates, weekday_after_days,
     },
     weather::icons::{HumidityIconName, Icon, IconContext, SunPositionIconName, UVIndexIcon},
 };
-use chrono::{DateTime, Datelike, NaiveDate, Timelike, Utc};
+use chrono::{DateTime, NaiveDate, Timelike, Utc};
 use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -49,29 +49,15 @@ const FEELS_LIKE_NUMBER_FONT_SIZE: f32 = 55.0;
 /// tune this single constant to taste rather than per-language values.
 const FEELS_LIKE_NUMBER_TARGET_GAP: f32 = 12.0;
 
-/// Horizontal/vertical offset for the second "Feels/Like" line, re-aligning it
-/// under the first line's centre. The first line doesn't reset its x position,
-/// so `dx` must compensate for how wide the first line rendered — which varies
-/// by script and wording, not just character count.
-struct FeelsLikeLabelOffset {
-    dx: f32,
-    dy: f32,
-}
-
-/// Computes the offset by actually rendering both label strings through the
-/// real resvg/usvg font pipeline (see `utils::measure_stacked_label_dx`)
-/// instead of a per-language hand-tuned table, so any future translation,
-/// wording change, or font swap stays aligned automatically.
-fn feels_like_label_offset(label_feels: &str, label_like: &str) -> FeelsLikeLabelOffset {
-    FeelsLikeLabelOffset {
-        dx: measure_stacked_label_dx(
-            label_feels,
-            label_like,
-            FEELS_LIKE_LABEL_FONT_FAMILY,
-            FEELS_LIKE_LABEL_FONT_SIZE,
-        ),
-        dy: FEELS_LIKE_LABEL_LINE_DY,
-    }
+/// Horizontal offset (`dx`) re-aligning the "Like" line under "Feels"'s
+/// centre — see `utils::measure_stacked_label_dx` for how/why.
+fn feels_like_label_dx(label_feels: &str, label_like: &str) -> f32 {
+    measure_stacked_label_dx(
+        label_feels,
+        label_like,
+        FEELS_LIKE_LABEL_FONT_FAMILY,
+        FEELS_LIKE_LABEL_FONT_SIZE,
+    )
 }
 
 /// Builds the `<tspan>` markup for the "Like" line and the dx nudge applied
@@ -79,18 +65,14 @@ fn feels_like_label_offset(label_feels: &str, label_like: &str) -> FeelsLikeLabe
 fn feels_like_tspan_and_number_dx(language: Language) -> (String, String) {
     let label_feels = translate(TranslationKey::Feels, language);
     let label_like = translate(TranslationKey::Like, language);
-    let offset = feels_like_label_offset(label_feels, label_like);
-    let label_like_tspan = format!(
-        r#"<tspan dx="{dx}" dy="{dy}">{text}</tspan>"#,
-        dx = offset.dx,
-        dy = offset.dy,
-        text = label_like,
-    );
+    let label_dx = feels_like_label_dx(label_feels, label_like);
+    let label_like_tspan =
+        format!(r#"<tspan dx="{label_dx}" dy="{FEELS_LIKE_LABEL_LINE_DY}">{label_like}</tspan>"#,);
     let feels_like_number_dx = measure_label_to_number_gap_dx(
         label_feels,
         label_like,
-        offset.dx,
-        offset.dy,
+        label_dx,
+        FEELS_LIKE_LABEL_LINE_DY,
         FEELS_LIKE_LABEL_FONT_FAMILY,
         FEELS_LIKE_LABEL_FONT_SIZE,
         FEELS_LIKE_NUMBER_FONT_FAMILY,
@@ -209,7 +191,7 @@ impl Context {
             .to_string();
         let colours = settings.colours.clone();
         let render_options = settings.render_options.clone();
-        let language = Language::from_config(&render_options.language);
+        let language = render_options.language;
         let graph_height = "300".to_string();
         let graph_width = "600".to_string();
         let (label_like_tspan, feels_like_number_dx) = feels_like_tspan_and_number_dx(language);
@@ -320,18 +302,6 @@ fn pick_today_or_tomorrow_max<V: PartialOrd>(
         (None, Some(tm)) => Some((tm, true)),
         (None, None) => None,
     }
-}
-
-/// Weekday `days` calendar days after `from`, using calendar-day arithmetic
-/// (not a fixed 24h offset) so it stays correct across DST transitions where
-/// the local day is 23 or 25 hours long.
-fn weekday_after_days<TzType: chrono::TimeZone>(
-    from: DateTime<TzType>,
-    days: u64,
-) -> chrono::Weekday {
-    from.checked_add_days(chrono::Days::new(days))
-        .expect("adding a few days to the current date does not overflow chrono's range")
-        .weekday()
 }
 
 pub struct ContextBuilder<'a> {
@@ -588,7 +558,7 @@ impl<'a> ContextBuilder<'a> {
     }
 
     fn initialize_day_names(&mut self, local_midnight_time: DateTime<Tz>) {
-        let language = Language::from_config(&self.settings.render_options.language);
+        let language = self.settings.render_options.language;
 
         // Pre-fill day names based on local calendar (independent of forecast data)
         self.context.day2_name =
@@ -655,7 +625,7 @@ impl<'a> ContextBuilder<'a> {
             text_colour: self.settings.colours.text_colour.to_string(),
             background_colour: self.settings.colours.background_colour.to_string(),
             tz: self.settings.misc.timezone,
-            language: Language::from_config(&self.settings.render_options.language),
+            language: self.settings.render_options.language,
             hour_format: self.settings.render_options.hour_format,
             ..Default::default()
         };
@@ -875,7 +845,7 @@ impl<'a> ContextBuilder<'a> {
         self.context.current_day_date = format_localized_date(
             clock.now_local(self.settings.misc.timezone),
             self.settings.render_options.date_format.as_ref(),
-            Language::from_config(&self.settings.render_options.language),
+            self.settings.render_options.language,
         );
         self.context.current_hour_rain_amount = current_hour.precipitation.amount().to_string();
 
@@ -1033,37 +1003,6 @@ mod tests {
     use super::*;
     use crate::clock::FixedClock;
     use crate::domain::models::{Astronomical, Temperature};
-
-    mod weekday_after_days_tests {
-        use super::*;
-        use chrono::{TimeZone, Weekday};
-        use chrono_tz::America::New_York;
-
-        #[test]
-        fn regular_day_advances_by_the_requested_number_of_days() {
-            let from = New_York.with_ymd_and_hms(2025, 6, 10, 23, 30, 0).unwrap();
-            assert_eq!(weekday_after_days(from, 1), Weekday::Wed);
-        }
-
-        #[test]
-        fn fall_back_dst_still_advances_by_one_calendar_day() {
-            // 2025-11-02 00:00 EDT is the start of the US fall-back local
-            // day, which is 25h long; a fixed 24h duration offset would
-            // land before the next local midnight and report Sunday
-            // instead of Monday.
-            let from = New_York.with_ymd_and_hms(2025, 11, 2, 0, 0, 0).unwrap();
-            assert_eq!(weekday_after_days(from, 1), Weekday::Mon);
-        }
-
-        #[test]
-        fn spring_forward_dst_still_advances_by_one_calendar_day() {
-            // 2025-03-08 23:30 EST is ~1h before US spring-forward DST
-            // start; the local day is only 23h long, so a fixed 24h
-            // duration offset would land on Monday instead of Sunday.
-            let from = New_York.with_ymd_and_hms(2025, 3, 8, 23, 30, 0).unwrap();
-            assert_eq!(weekday_after_days(from, 1), Weekday::Sun);
-        }
-    }
 
     mod pick_today_or_tomorrow_max_tests {
         use super::*;

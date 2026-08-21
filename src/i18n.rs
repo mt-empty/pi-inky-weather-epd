@@ -1,8 +1,13 @@
 use chrono::{DateTime, Datelike, TimeZone, Weekday};
+use serde::Deserialize;
 use std::fmt::Display;
-use strum_macros::EnumIter;
+use strum_macros::{Display as StrumDisplay, EnumIter};
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, EnumIter)]
+/// A supported UI language (`render_options.language`), deserialized
+/// directly from config
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, EnumIter, Deserialize, StrumDisplay)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 pub enum Language {
     #[default]
     En,
@@ -13,13 +18,11 @@ pub enum Language {
 }
 
 impl Language {
-    pub fn from_config(value: &str) -> Self {
-        match value.trim().to_ascii_lowercase().as_str() {
-            "fr" => Self::Fr,
-            "de" => Self::De,
-            "es" => Self::Es,
-            "ja" => Self::Ja,
-            _ => Self::En,
+    /// Whether this language's native clock convention is 12-hour or 24-hour.
+    pub fn uses_twelve_hour_clock(self) -> bool {
+        match self {
+            Self::En => true,
+            Self::Fr | Self::De | Self::Es | Self::Ja => false,
         }
     }
 }
@@ -395,15 +398,28 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        format_localized_date, translate, weekday_long, weekday_short, Language, TranslationKey,
-    };
+    use super::{format_localized_date, weekday_long, weekday_short, Language};
     use chrono::{Local, TimeZone, Weekday};
 
     #[test]
-    fn unknown_language_falls_back_to_english() {
-        assert_eq!(Language::from_config("unknown"), Language::En);
-        assert_eq!(translate(TranslationKey::Feels, Language::En), "Feels");
+    fn deserializes_every_documented_language_code() {
+        for (code, expected) in [
+            ("en", Language::En),
+            ("fr", Language::Fr),
+            ("de", Language::De),
+            ("es", Language::Es),
+            ("ja", Language::Ja),
+        ] {
+            assert_eq!(
+                serde_json::from_str::<Language>(&format!("{code:?}")).unwrap(),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_unsupported_language_code() {
+        assert!(serde_json::from_str::<Language>("\"unknown\"").is_err());
     }
 
     #[test]

@@ -1,4 +1,5 @@
 use super::validation::*;
+use crate::i18n::Language;
 use nutype::nutype;
 use serde::Deserialize;
 use std::{env, fmt, path::PathBuf};
@@ -214,7 +215,7 @@ pub struct Opacity(f32);
 pub struct RenderOptions {
     pub temp_unit: TemperatureUnit,
     pub wind_speed_unit: WindSpeedUnit,
-    pub language: String,
+    pub language: Language,
     #[serde(default)]
     pub hour_format: HourFormat,
     pub date_format: DateFormat,
@@ -417,13 +418,6 @@ impl DashboardSettings {
                     "precipitation_opacity_min ({omin}) must be less than precipitation_opacity_max ({omax})"
                 )));
             }
-
-            if let Err(error) = is_valid_language_code(&s.render_options.language) {
-                return Err(ConfigError::Message(format!(
-                    "Configuration validation failed: {}",
-                    error
-                )));
-            }
         }
 
         final_settings
@@ -457,7 +451,7 @@ impl DashboardSettings {
             "Wind Speed Unit",
             format!("{}", self.render_options.wind_speed_unit),
         );
-        logger::kvp("Language", &self.render_options.language);
+        logger::kvp("Language", format!("{}", self.render_options.language));
         logger::kvp(
             "Hour Format",
             format!("{}", self.render_options.hour_format),
@@ -528,7 +522,6 @@ impl DashboardSettings {
 #[cfg(test)]
 mod tests {
     use super::{validate_release_cross_fields, UpdateIntervalDays};
-    use crate::configs::validation::is_valid_language_code;
 
     #[test]
     fn allow_pre_release_with_zero_interval_is_rejected() {
@@ -558,18 +551,6 @@ mod tests {
         assert!(
             validate_release_cross_fields(UpdateIntervalDays::try_new(7).unwrap(), false).is_ok()
         );
-    }
-
-    #[test]
-    fn language_code_validation_accepts_supported_values() {
-        for language in ["en", "fr", "de", "es", "ja"] {
-            assert!(is_valid_language_code(language).is_ok());
-        }
-    }
-
-    #[test]
-    fn language_code_validation_rejects_unsupported_values() {
-        assert!(is_valid_language_code("pt").is_err());
     }
 
     /// Restores an environment variable to its prior state on drop, so a test
@@ -611,7 +592,7 @@ mod tests {
             super::DashboardSettings::load_from_sources(super::ConfigLayer::Development, true)
                 .expect("failed to load settings with env override");
 
-        assert_eq!(settings.render_options.language, "fr");
+        assert_eq!(settings.render_options.language, super::Language::Fr);
     }
 
     #[test]

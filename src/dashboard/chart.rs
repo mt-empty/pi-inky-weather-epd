@@ -4,11 +4,11 @@ use crate::{
     constants::DEFAULT_AXIS_LABEL_FONT_SIZE,
     i18n::{weekday_long, Language},
     logger,
-    utils::measure_ink_y_center,
+    utils::{measure_ink_y_center, weekday_after_days},
     weather::icons::UVIndexIcon,
 };
 use anyhow::Error;
-use chrono::{Datelike, Weekday};
+use chrono::Weekday;
 use std::fmt;
 use strum_macros::Display;
 
@@ -433,6 +433,25 @@ fn tomorrow_label(language: Language, weekday: Weekday) -> TomorrowLabel {
     }
 }
 
+/// Builds the vertically-stacked `<tspan>` sequence for [`TomorrowLabel::Stacked`]
+/// (one character per line, each subsequent line offset by `line_height`).
+/// Shared by the real render and by [`HourlyForecastGraph::stacked_tomorrow_label_start_y`]'s
+/// measurement probe, so the probe's markup can't silently drift from what's
+/// actually rendered.
+fn stacked_tspans(chars: &[char], x: f32, start_y: f32, line_height: f32) -> String {
+    chars
+        .iter()
+        .enumerate()
+        .map(|(i, c)| {
+            if i == 0 {
+                format!(r#"<tspan x="{x}" y="{start_y}">{c}</tspan>"#)
+            } else {
+                format!(r#"<tspan x="{x}" dy="{line_height}">{c}</tspan>"#)
+            }
+        })
+        .collect()
+}
+
 /// Renders one x-axis hour tick as text, in either 12-hour ("3pm") or
 /// 24-hour ("15:00") form.
 ///
@@ -443,7 +462,7 @@ fn format_hour_label(hour: f32, hour_format: HourFormat, language: Language) -> 
     let use_twelve_hour = match hour_format {
         HourFormat::TwelveHour => true,
         HourFormat::TwentyFour => false,
-        HourFormat::Auto => language == Language::En,
+        HourFormat::Auto => language.uses_twelve_hour_clock(),
     };
 
     if use_twelve_hour {
@@ -459,15 +478,6 @@ fn format_hour_label(hour: f32, hour_format: HourFormat, language: Language) -> 
     } else {
         format!("{hour:02.0}:00")
     }
-}
-
-/// Weekday of the calendar day after `now`, using calendar-day arithmetic
-/// (not a fixed 24h offset) so it stays correct across DST transitions where
-/// the local day is 23 or 25 hours long.
-fn tomorrow_weekday_from<Tz: chrono::TimeZone>(now: chrono::DateTime<Tz>) -> Weekday {
-    now.checked_add_days(chrono::Days::new(1))
-        .expect("adding one day to the current date does not overflow chrono's range")
-        .weekday()
 }
 
 /// Create the axis paths and labels for the graph
@@ -707,7 +717,7 @@ impl HourlyForecastGraph {
     }
 
     fn draw_tomorrow_line(&self, x_coor: f32, clock: &dyn Clock) -> String {
-        let tomorrow_weekday = tomorrow_weekday_from(clock.now_local(self.tz));
+        let tomorrow_weekday = weekday_after_days(clock.now_local(self.tz), 1);
 
         match tomorrow_label(self.language, tomorrow_weekday) {
             TomorrowLabel::Rotated(tomorrow_day_name) => format!(
@@ -729,17 +739,7 @@ impl HourlyForecastGraph {
                 let x_text = x_coor + 11.0;
                 let start_y =
                     self.stacked_tomorrow_label_start_y(&chars, line_height, tomorrow_weekday);
-                let tspans: String = chars
-                    .iter()
-                    .enumerate()
-                    .map(|(i, c)| {
-                        if i == 0 {
-                            format!(r#"<tspan x="{x_text}" y="{start_y}">{c}</tspan>"#)
-                        } else {
-                            format!(r#"<tspan x="{x_text}" dy="{line_height}">{c}</tspan>"#)
-                        }
-                    })
-                    .collect();
+                let tspans = stacked_tspans(&chars, x_text, start_y, line_height);
                 format!(
                     r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
                        <text fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" font-style="{font_style}" text-anchor="middle">{tspans}</text>"#,
@@ -791,17 +791,7 @@ impl HourlyForecastGraph {
         // Positive margin above the first baseline so the tallest glyph's
         // ascent still lands inside the measurement canvas.
         let probe_start_y = f32::from(font_size) * 2.0;
-        let tspans: String = chars
-            .iter()
-            .enumerate()
-            .map(|(i, c)| {
-                if i == 0 {
-                    format!(r#"<tspan x="0" y="{probe_start_y}">{c}</tspan>"#)
-                } else {
-                    format!(r#"<tspan x="0" dy="{line_height}">{c}</tspan>"#)
-                }
-            })
-            .collect();
+        let tspans = stacked_tspans(chars, 0.0, probe_start_y, line_height);
         let stacked_svg = format!(
             r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="{height}" font-family="{font_family}">
                 <text x="100" font-size="{font_size}" text-anchor="middle">{tspans}</text>
@@ -1039,27 +1029,6 @@ mod tests {
         fn is_a_pure_function_of_seed() {
             let seed = 123456789;
             assert_eq!(lcg_next(seed), lcg_next(seed));
-        }
-    }
-
-    mod tomorrow_weekday_from_tests {
-        use super::*;
-        use chrono::TimeZone;
-        use chrono_tz::America::New_York;
-
-        #[test]
-        fn regular_day_advances_to_the_next_weekday() {
-            let now = New_York.with_ymd_and_hms(2025, 6, 10, 23, 30, 0).unwrap();
-            assert_eq!(tomorrow_weekday_from(now), Weekday::Wed);
-        }
-
-        #[test]
-        fn spring_forward_still_advances_by_one_calendar_day() {
-            // 2025-03-08 23:30 EST is ~1h before US spring-forward DST
-            // start; the local day is only 23h long, so a fixed 24h
-            // duration offset would land on Monday instead of Sunday.
-            let now = New_York.with_ymd_and_hms(2025, 3, 8, 23, 30, 0).unwrap();
-            assert_eq!(tomorrow_weekday_from(now), Weekday::Sun);
         }
     }
 
