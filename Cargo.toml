@@ -29,7 +29,6 @@ tinytemplate = "1.2"
 resvg = "0.48"
 zip = "8.1.0"
 semver = "1.0"
-thiserror = "2.0"
 tempfile = "3.17"
 url = { version = "2.5", features = ["serde"] }
 nutype = { version = "0.7", features = ["serde"] }

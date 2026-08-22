@@ -1,6 +1,5 @@
 use std::fmt;
 use strum_macros::Display;
-use thiserror::Error;
 
 use crate::weather::icons::{Icon, IconContext};
 
@@ -12,16 +11,25 @@ pub enum DiagnosticPriority {
     High = 3,   // ApiError - red
 }
 
-#[derive(Error, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum DashboardError {
-    #[error("No internet connection")]
     NetworkError { details: String },
-    #[error("API error")]
     ApiError { details: String },
-    #[error("Incomplete data")]
     IncompleteData { details: String },
-    #[error("Update failed")]
     UpdateFailed { details: String },
+}
+
+impl std::error::Error for DashboardError {}
+
+impl fmt::Display for DashboardError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DashboardError::NetworkError { .. } => write!(f, "No internet connection"),
+            DashboardError::ApiError { .. } => write!(f, "API error"),
+            DashboardError::IncompleteData { .. } => write!(f, "Incomplete data"),
+            DashboardError::UpdateFailed { .. } => write!(f, "Update failed"),
+        }
+    }
 }
 
 #[derive(Debug, Display)]
@@ -94,7 +102,7 @@ impl Description for DashboardError {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum GeohashError {
     InvalidLength(usize),
 }
@@ -109,6 +117,8 @@ impl fmt::Display for GeohashError {
         }
     }
 }
+
+impl std::error::Error for GeohashError {}
 
 #[cfg(test)]
 mod tests {
