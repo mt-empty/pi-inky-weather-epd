@@ -3,7 +3,6 @@ use std::{
     fmt::{self, Display},
 };
 
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
@@ -188,18 +187,32 @@ const NAMED_COLOURS: [&str; 147] = [
     "yellowgreen",
 ];
 
-const SPECIAL_COLOURS: [&str; 4] = ["currentColor", "inherit", "transparent", "initial"];
+const SPECIAL_COLOURS: [&str; 4] = ["currentcolor", "inherit", "transparent", "initial"];
 
 fn is_named_colour(colour: &str) -> bool {
     NAMED_COLOURS.contains(&colour)
 }
 fn is_hex_colour(colour: &str) -> bool {
-    // This regex matches hex colours in the format "#FFF" or "#FFFFFF"
-    let hex_colour_re = Regex::new(r"^#(?:[0-9a-fA-F]{3}){1,2}$").unwrap();
-    hex_colour_re.is_match(colour)
+    // Matches hex colours in the format "#FFF" or "#FFFFFF"
+    if !colour.starts_with('#') || (colour.len() != 4 && colour.len() != 7) {
+        return false;
+    } else {
+        for c in colour.chars().skip(1) {
+            if !c.is_ascii_hexdigit() {
+                return false;
+            }
+        }
+    }
+    true
 }
 fn is_rgb_colour(colour: &str) -> bool {
-    let rgb_values: Vec<&str> = colour[4..colour.len() - 1].split(',').collect();
+    let Some(inner) = colour
+        .strip_prefix("rgb(")
+        .and_then(|s| s.strip_suffix(")"))
+    else {
+        return false;
+    };
+    let rgb_values: Vec<&str> = inner.split(',').collect();
     if rgb_values.len() == 3 {
         for value in rgb_values {
             if let Ok(num) = value.trim().parse::<i32>() {
@@ -217,7 +230,13 @@ fn is_rgb_colour(colour: &str) -> bool {
 }
 fn is_rgba_colour(colour: &str) -> bool {
     // Check if the colour is in rgba format
-    let rgba_values: Vec<&str> = colour[5..colour.len() - 1].split(',').collect();
+    let Some(inner) = colour
+        .strip_prefix("rgba(")
+        .and_then(|s| s.strip_suffix(")"))
+    else {
+        return false;
+    };
+    let rgba_values: Vec<&str> = inner.split(',').collect();
     if rgba_values.len() == 4 {
         for value in &rgba_values[..3] {
             if let Ok(num) = value.trim().parse::<i32>() {
@@ -242,7 +261,13 @@ fn is_rgba_colour(colour: &str) -> bool {
 }
 
 fn is_hsl_colour(colour: &str) -> bool {
-    let hsl_values: Vec<&str> = colour[4..colour.len() - 1].split(',').collect();
+    let Some(inner) = colour
+        .strip_prefix("hsl(")
+        .and_then(|s| s.strip_suffix(")"))
+    else {
+        return false;
+    };
+    let hsl_values: Vec<&str> = inner.split(',').collect();
     if hsl_values.len() == 3 {
         for value in &hsl_values[..2] {
             if let Ok(num) = value.trim().parse::<f32>() {
@@ -266,7 +291,13 @@ fn is_hsl_colour(colour: &str) -> bool {
     }
 }
 fn is_hsla_colour(colour: &str) -> bool {
-    let hsla_values: Vec<&str> = colour[5..colour.len() - 1].split(',').collect();
+    let Some(inner) = colour
+        .strip_prefix("hsla(")
+        .and_then(|s| s.strip_suffix(")"))
+    else {
+        return false;
+    };
+    let hsla_values: Vec<&str> = inner.split(',').collect();
     if hsla_values.len() == 4 {
         for value in &hsla_values[..2] {
             if let Ok(num) = value.trim().parse::<f32>() {
@@ -661,6 +692,17 @@ mod tests {
                         }
                     }
                 }
+            }
+        }
+
+        proptest! {
+            /// `colour` is user-controlled config, hand-checked byte-by-byte
+            /// (no regex) since the regex crate was dropped — arbitrary
+            /// strings (empty, too short, unicode) must never panic, only
+            /// return `Ok`/`Err`.
+            #[test]
+            fn colour_never_panics_on_arbitrary_input(colour in ".*") {
+                let _ = is_valid_colour(&colour);
             }
         }
 
