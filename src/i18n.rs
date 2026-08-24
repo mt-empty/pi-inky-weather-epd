@@ -46,7 +46,7 @@ pub fn translate(key: TranslationKey, language: Language) -> &'static str {
         (Language::Fr, TranslationKey::Feels) => "Ress.",
         (Language::Fr, TranslationKey::Like) => "comme",
         (Language::Fr, TranslationKey::Metric) => "Mesure",
-        (Language::Fr, TranslationKey::Now) => "Maint.",
+        (Language::Fr, TranslationKey::Now) => "Maint",
         (Language::Fr, TranslationKey::Max) => "Max",
         (Language::De, TranslationKey::Feels) => "Gef.",
         (Language::De, TranslationKey::Like) => "wie",

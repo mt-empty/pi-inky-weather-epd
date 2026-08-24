@@ -53,7 +53,7 @@ async fn french_language_override_localizes_rendered_dashboard() {
     .await;
 
     assert!(svg_content.contains("Mesure"));
-    assert!(svg_content.contains("Maint."));
+    assert!(svg_content.contains("Maint"));
     assert!(svg_content.contains("Samedi, 25 Octobre"));
     assert!(svg_content.contains("Dimanche"));
     assert!(svg_content.contains("Dim"));

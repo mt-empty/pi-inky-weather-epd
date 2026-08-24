@@ -1,5 +1,6 @@
 ---
 source: tests/snapshot_test.rs
+assertion_line: 835
 expression: svg_content
 ---
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
@@ -127,7 +128,7 @@ expression: svg_content
             <text x="43" y="43.5" fill="black" font-size="20"  text-anchor="middle">Mesure
             </text>
 
-            <text x="107" y="43.5" fill="black" font-size="20" text-anchor="middle">Maint.
+            <text x="107" y="43.5" fill="black" font-size="20" text-anchor="middle">Maint
             </text>
             <text x="177" y="43.5" fill="black" font-size="20" text-anchor="middle">Max
                 <tspan baseline-shift="super" font-size="17" dx="-3">24h</tspan>
