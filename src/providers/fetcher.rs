@@ -238,10 +238,28 @@ impl Fetcher {
             }
         }
 
-        fs::write(file_path, &body)?;
-        logger::debug(format!("Cached response to: {}", file_path.display()));
+        // Parse before caching: a response that's HTTP-200 and passes `error_checker`
+        // but still fails to deserialize (e.g. issue #82 - a field the API nulled out
+        // unexpectedly) must not overwrite a last-known-good cache. Every retry hits
+        // the same broken response, so caching it here would poison the exact fallback
+        // `try_fetch_with_retry` reaches for once retries are exhausted, defeating it
+        // right when it's needed most.
         let data = serde_json::from_str(&body).map_err(Error::msg)?;
+        Self::write_cache_atomically(file_path, &body)?;
+        logger::debug(format!("Cached response to: {}", file_path.display()));
         Ok(FetchOutcome::Fresh(data))
+    }
+
+    /// Writes `contents` to `file_path` atomically: writes to a sibling temp file
+    /// first, then renames it into place. `rename` is atomic on the same filesystem,
+    /// so a crash or power loss mid-write (a real risk on Pi hardware) leaves either
+    /// the old cache intact or the new one fully written - never a half-written,
+    /// corrupt file.
+    fn write_cache_atomically(file_path: &PathBuf, contents: &str) -> Result<(), Error> {
+        let tmp_path = file_path.with_extension("tmp");
+        fs::write(&tmp_path, contents)?;
+        fs::rename(&tmp_path, file_path)?;
+        Ok(())
     }
 
     /// Handle fetch errors with logging (classify_error logs raw details internally)
@@ -574,6 +592,35 @@ mod tests {
             .mount(&mock_server)
             .await;
         mock_server
+    }
+
+    mod write_cache_atomically {
+        use super::*;
+
+        #[test]
+        fn writes_contents_and_leaves_no_temp_file_behind() {
+            let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
+            let file_path = temp_dir.path().join("cache.json");
+
+            Fetcher::write_cache_atomically(&file_path, "hello").expect("write should succeed");
+
+            assert_eq!(fs::read_to_string(&file_path).unwrap(), "hello");
+            assert!(
+                !file_path.with_extension("tmp").exists(),
+                "temp file should be renamed away, not left behind"
+            );
+        }
+
+        #[test]
+        fn overwrites_an_existing_file_with_new_contents() {
+            let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
+            let file_path = temp_dir.path().join("cache.json");
+            fs::write(&file_path, "old").unwrap();
+
+            Fetcher::write_cache_atomically(&file_path, "new").expect("write should succeed");
+
+            assert_eq!(fs::read_to_string(&file_path).unwrap(), "new");
+        }
     }
 
     mod parse_retry_after {
