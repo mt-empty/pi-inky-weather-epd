@@ -77,3 +77,9 @@ This project renders in 5 languages — `en`, `fr`, `de`, `es`, `ja` (`render_op
 - Keep it short and high-signal.
 - Prefer links to in-repo docs over embedded long-form explanations.
 - Focus on non-obvious project conventions that improve agent success rate.
+
+## Comments
+state only a non-obvious current constraint — a security
+invariant, driver/browser quirk, race, or test setup requirement. Keep them
+to one or two sentences. Do not narrate history, rejected alternatives, or
+another port's implementation; comments describe this code, not its lineage.
