@@ -238,23 +238,17 @@ impl Fetcher {
             }
         }
 
-        // Parse before caching: a response that's HTTP-200 and passes `error_checker`
-        // but still fails to deserialize (e.g. issue #82 - a field the API nulled out
-        // unexpectedly) must not overwrite a last-known-good cache. Every retry hits
-        // the same broken response, so caching it here would poison the exact fallback
-        // `try_fetch_with_retry` reaches for once retries are exhausted, defeating it
-        // right when it's needed most.
+        // Parse before caching: a response that passes `error_checker` but fails to
+        // deserialize must not overwrite the last-known-good cache, since a broken
+        // response tends to repeat identically across every retry.
         let data = serde_json::from_str(&body).map_err(Error::msg)?;
         Self::write_cache_atomically(file_path, &body)?;
         logger::debug(format!("Cached response to: {}", file_path.display()));
         Ok(FetchOutcome::Fresh(data))
     }
 
-    /// Writes `contents` to `file_path` atomically: writes to a sibling temp file
-    /// first, then renames it into place. `rename` is atomic on the same filesystem,
-    /// so a crash or power loss mid-write (a real risk on Pi hardware) leaves either
-    /// the old cache intact or the new one fully written - never a half-written,
-    /// corrupt file.
+    /// Writes via a sibling temp file + `rename`, which is atomic on the same
+    /// filesystem, so a crash or power loss mid-write can't leave a half-written file.
     fn write_cache_atomically(file_path: &PathBuf, contents: &str) -> Result<(), Error> {
         let tmp_path = file_path.with_extension("tmp");
         fs::write(&tmp_path, contents)?;

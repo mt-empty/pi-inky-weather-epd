@@ -307,12 +307,9 @@ async fn test_body_level_client_error_is_not_retried() {
 
 #[tokio::test]
 async fn test_undeserializable_response_does_not_poison_cache() {
-    // Regression test for issue #82: a response that's HTTP-200 and passes the
-    // error_checker but still fails to deserialize (e.g. a field the API
-    // unexpectedly nulled out) must not overwrite a last-known-good cache. Every
-    // retry hits the same broken body, so if caching happened before parsing, the
-    // fallback-to-cache path at the end would read the very data it just poisoned
-    // and fail identically - exactly what happened in #82.
+    // A response that's HTTP-200 and passes the error_checker but still fails to
+    // deserialize must not overwrite a last-known-good cache, since every retry
+    // tends to hit the same broken body.
     let mock_server = MockServer::start().await;
 
     // Every attempt returns 200 with a body that deserializes fine as JSON but
