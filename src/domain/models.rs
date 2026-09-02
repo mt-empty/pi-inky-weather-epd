@@ -1112,7 +1112,7 @@ mod tests {
                 time in proptest::collection::vec(any_datetime(), count),
                 temperature_2m in proptest::collection::vec(any::<f32>(), count),
                 apparent_temperature in proptest::collection::vec(any::<f32>(), count),
-                precipitation_probability in proptest::collection::vec(any::<u16>(), count),
+                precipitation_probability in proptest::collection::vec(proptest::option::of(any::<u16>()), count),
                 precipitation in proptest::collection::vec(any::<f32>(), count),
                 snowfall in proptest::collection::vec(any::<f32>(), count),
                 uv_index in proptest::collection::vec(any::<f32>(), count),
@@ -1121,7 +1121,7 @@ mod tests {
                 relative_humidity_2m in proptest::collection::vec(any::<u16>(), count),
                 cloud_cover in proptest::collection::vec(proptest::option::of(any::<u16>()), count),
                 is_day in proptest::collection::vec(any::<u16>(), count),
-                weather_code in proptest::option::of(proptest::collection::vec(any::<u8>(), count)),
+                weather_code in proptest::collection::vec(proptest::option::of(any::<u8>()), count),
             ) -> Hourly {
                 Hourly {
                     time,
@@ -1149,10 +1149,10 @@ mod tests {
                 temperature_2m_max in proptest::collection::vec(any::<f32>(), count),
                 temperature_2m_min in proptest::collection::vec(any::<f32>(), count),
                 precipitation_sum in proptest::collection::vec(any::<f32>(), count),
-                precipitation_probability_max in proptest::collection::vec(any::<u16>(), count),
+                precipitation_probability_max in proptest::collection::vec(proptest::option::of(any::<u16>()), count),
                 snowfall_sum in proptest::collection::vec(any::<f32>(), count),
                 cloud_cover_mean in proptest::collection::vec(proptest::option::of(any::<u16>()), count),
-                weather_code in proptest::option::of(proptest::collection::vec(any::<u8>(), count)),
+                weather_code in proptest::collection::vec(proptest::option::of(any::<u8>()), count),
             ) -> Daily {
                 Daily {
                     time,

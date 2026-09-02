@@ -81,6 +81,19 @@ pub struct HourlyUnits {
     pub relative_humidity_2m: String,
 }
 
+/// Per-hour weather data from Open-Meteo's `/v1/forecast` hourly endpoint.
+///
+/// Open-Meteo doesn't document field-level nullability, and "Best Match"
+/// blends regional models with shorter forecast horizons into a global
+/// fallback — so several of these fields are confirmed to null out
+/// individual elements (not the whole array) once `forecast_days` reaches
+/// far enough into the horizon. `precipitation_probability` and
+/// `weather_code` are already typed `Option` for this reason;
+/// `relative_humidity_2m` is known to do the same past ~day 15 but is left
+/// non-optional for now (see the comment on `open_meteo_hourly_endpoint`).
+/// Re-check with `scripts/open-meteo-nullability-smoke-test.sh` before
+/// changing `forecast_days`, and revisit any other field here that starts
+/// failing deserialization.
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Hourly {
@@ -91,7 +104,7 @@ pub struct Hourly {
     #[serde(rename = "apparent_temperature")]
     pub apparent_temperature: Vec<f32>,
     #[serde(rename = "precipitation_probability")]
-    pub precipitation_probability: Vec<u16>,
+    pub precipitation_probability: Vec<Option<u16>>,
     pub precipitation: Vec<f32>,
     pub snowfall: Vec<f32>,
     #[serde(rename = "uv_index")]
@@ -104,8 +117,8 @@ pub struct Hourly {
     pub relative_humidity_2m: Vec<u16>,
     #[serde(rename = "cloud_cover")]
     pub cloud_cover: Vec<Option<u16>>,
-    #[serde(rename = "weather_code")]
-    pub weather_code: Option<Vec<u8>>,
+    #[serde(rename = "weather_code", default)]
+    pub weather_code: Vec<Option<u8>>,
     /// 1 if this hour has daylight, 0 at night — computed by Open-Meteo for
     /// this exact hour and location, independent of the requested timezone.
     /// `default` so a cache written before this field existed still
@@ -133,6 +146,17 @@ pub struct DailyUnits {
     pub snowfall_sum: String,
 }
 
+/// Per-day weather data from Open-Meteo's `/v1/forecast` daily endpoint.
+///
+/// Open-Meteo doesn't document field-level nullability, and "Best Match"
+/// blends regional models with shorter forecast horizons into a global
+/// fallback — so several of these fields are confirmed to null out
+/// individual elements (not the whole array) once `forecast_days` reaches
+/// far enough into the horizon. `precipitation_probability_max` and
+/// `weather_code` are already typed `Option` for this reason. Re-check with
+/// `scripts/open-meteo-nullability-smoke-test.sh` before changing
+/// `forecast_days`, and revisit any other field here that starts failing
+/// deserialization.
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Daily {
@@ -153,13 +177,13 @@ pub struct Daily {
     #[serde(rename = "precipitation_sum")]
     pub precipitation_sum: Vec<f32>,
     #[serde(rename = "precipitation_probability_max")]
-    pub precipitation_probability_max: Vec<u16>,
+    pub precipitation_probability_max: Vec<Option<u16>>,
     #[serde(rename = "snowfall_sum")]
     pub snowfall_sum: Vec<f32>,
     #[serde(rename = "cloud_cover_mean")]
     pub cloud_cover_mean: Vec<Option<u16>>,
-    #[serde(rename = "weather_code")]
-    pub weather_code: Option<Vec<u8>>,
+    #[serde(rename = "weather_code", default)]
+    pub weather_code: Vec<Option<u8>>,
 }
 
 impl OpenMeteoHourlyResponse {
@@ -201,7 +225,7 @@ impl OpenMeteoHourlyResponse {
                 );
 
                 let precipitation = Precipitation::new_with_snowfall(
-                    Some(hourly_data.precipitation_probability[i]),
+                    hourly_data.precipitation_probability[i],
                     None,
                     Some(hourly_data.precipitation[i].round() as u16),
                     // Store as tenths of a cm (×10) to preserve one decimal place of precision.
@@ -218,13 +242,9 @@ impl OpenMeteoHourlyResponse {
                 // on the next successful fetch.
                 let is_night = hourly_data.is_day.get(i).is_some_and(|&d| d == 0);
                 let cloud_cover = hourly_data.cloud_cover[i];
-                let weather_code = hourly_data
-                    .weather_code
-                    .as_ref()
-                    .and_then(|codes| codes.get(i).copied())
-                    .map(|c| {
-                        crate::domain::weather_code::WmoWeatherCode::try_from(c).map_err(|_| c)
-                    });
+                let weather_code = hourly_data.weather_code.get(i).copied().flatten().map(|c| {
+                    crate::domain::weather_code::WmoWeatherCode::try_from(c).map_err(|_| c)
+                });
 
                 crate::domain::models::HourlyForecast {
                     time,
@@ -325,9 +345,9 @@ impl OpenMeteoDailyResponse {
                     // Store as tenths of a cm (×10) — same convention as hourly snowfall.
                     let snowfall_amount = (response.daily.snowfall_sum[i] * 10.0).round() as u16;
 
-                    if amount_max > 0 || chance > 0 || snowfall_amount > 0 {
+                    if amount_max > 0 || chance.is_some_and(|c| c > 0) || snowfall_amount > 0 {
                         Some(Precipitation::new_with_snowfall(
-                            Some(chance),
+                            chance,
                             None,
                             Some(amount_max),
                             Some(snowfall_amount),
@@ -370,8 +390,9 @@ impl OpenMeteoDailyResponse {
                 let weather_code = response
                     .daily
                     .weather_code
-                    .as_ref()
-                    .and_then(|codes| codes.get(i).copied())
+                    .get(i)
+                    .copied()
+                    .flatten()
                     .map(|c| {
                         crate::domain::weather_code::WmoWeatherCode::try_from(c).map_err(|_| c)
                     });
@@ -471,7 +492,7 @@ mod tests {
         assert_eq!(response.hourly.time.len(), 168);
         assert_eq!(response.hourly.temperature_2m[0], 15.5);
         assert_eq!(response.hourly.apparent_temperature[0], 14.3);
-        assert_eq!(response.hourly.precipitation_probability[0], 0);
+        assert_eq!(response.hourly.precipitation_probability[0], Some(0));
         assert_eq!(response.hourly.precipitation[0], 0.0);
         assert_eq!(response.hourly.uv_index[0], 4.6);
         assert_eq!(response.hourly.wind_speed_10m[0], 4.1);
@@ -479,7 +500,7 @@ mod tests {
         assert_eq!(response.hourly.relative_humidity_2m[0], 61);
         assert_eq!(response.hourly.cloud_cover[0], Some(1));
         assert_eq!(response.hourly.snowfall[0], 0.0);
-        assert_eq!(response.hourly.weather_code.as_ref().unwrap()[0], 3);
+        assert_eq!(response.hourly.weather_code[0], Some(3));
     }
 
     /// The fixture's first daily entry, pinned the same way as the hourly test above.
@@ -494,10 +515,10 @@ mod tests {
         assert_eq!(response.daily.temperature_2m_max[0], 18.5);
         assert_eq!(response.daily.temperature_2m_min[0], 13.1);
         assert_eq!(response.daily.precipitation_sum[0], 6.6);
-        assert_eq!(response.daily.precipitation_probability_max[0], 93);
+        assert_eq!(response.daily.precipitation_probability_max[0], Some(93));
         assert_eq!(response.daily.cloud_cover_mean[0], Some(88));
         assert_eq!(response.daily.snowfall_sum[0], 0.0);
-        assert_eq!(response.daily.weather_code.as_ref().unwrap()[0], 53);
+        assert_eq!(response.daily.weather_code[0], Some(53));
     }
 
     #[test]
@@ -539,7 +560,7 @@ mod tests {
         for i in 0..hourly.time.len() {
             assert!(hourly.temperature_2m[i] > -50.0 && hourly.temperature_2m[i] < 60.0);
             assert!(hourly.apparent_temperature[i].is_finite());
-            assert!(hourly.precipitation_probability[i] <= 100);
+            assert!(hourly.precipitation_probability[i].is_none_or(|p| p <= 100));
             assert!((0.0..500.0).contains(&hourly.precipitation[i]));
             assert!((0.0..20.0).contains(&hourly.uv_index[i]));
             assert!((0.0..500.0).contains(&hourly.wind_speed_10m[i]));
@@ -562,7 +583,7 @@ mod tests {
             assert!(temp_min > -50.0 && temp_min < 60.0);
             assert!(temp_max >= temp_min);
             assert!((0.0..500.0).contains(&daily.precipitation_sum[i]));
-            assert!(daily.precipitation_probability_max[i] <= 100);
+            assert!(daily.precipitation_probability_max[i].is_none_or(|p| p <= 100));
         }
     }
 
@@ -592,6 +613,132 @@ mod tests {
         for i in 1..daily.time.len() {
             assert!(daily.time[i] > daily.time[i - 1]);
         }
+    }
+
+    /// Surveys every per-timestep array field in the hourly/daily responses
+    /// for null-tolerance: for each field, nulls out one element of a real
+    /// fixture and checks whether the struct still deserializes. Open-Meteo's
+    /// docs don't document which fields can go null (see issue #82, where
+    /// `precipitation_probability_max` did), so this stands in for that
+    /// missing contract — run with `-- --nocapture` to see the report.
+    #[test]
+    fn survey_which_array_fields_tolerate_a_null_element() {
+        use serde_json::Value;
+
+        fn survey(fixture_path: &str, array_key: &str, parse: impl Fn(&str) -> bool) {
+            let json = fs::read_to_string(fixture_path).expect("failed to read fixture");
+            let mut root: Value =
+                serde_json::from_str(&json).expect("fixture should be valid JSON");
+            let field_names: Vec<String> = root[array_key]
+                .as_object()
+                .expect("expected an object of parallel arrays")
+                .keys()
+                .cloned()
+                .collect();
+
+            println!("\n--- {fixture_path} ({array_key}) ---");
+            for field in field_names {
+                let original = root[array_key][&field].clone();
+                let Some(arr) = original.as_array() else {
+                    continue; // not a per-timestep array (e.g. already Option<Vec<_>>)
+                };
+                if arr.is_empty() {
+                    continue;
+                }
+
+                let mut nulled = original.clone();
+                nulled[0] = Value::Null;
+                root[array_key][&field] = nulled;
+
+                let mutated = root.to_string();
+                let tolerates_null = parse(&mutated);
+                println!(
+                    "  {field}: {}",
+                    if tolerates_null {
+                        "OK (nullable)"
+                    } else {
+                        "FAILS on null"
+                    }
+                );
+
+                root[array_key][&field] = original; // restore for the next field
+            }
+        }
+
+        survey(
+            "tests/fixtures/open_meteo_hourly_forecast.json",
+            "hourly",
+            |json| serde_json::from_str::<OpenMeteoHourlyResponse>(json).is_ok(),
+        );
+        survey(
+            "tests/fixtures/open_meteo_daily_forecast.json",
+            "daily",
+            |json| serde_json::from_str::<OpenMeteoDailyResponse>(json).is_ok(),
+        );
+    }
+
+    /// Regression test for https://github.com/mt-empty/pi-inky-weather-epd/issues/82:
+    /// Open-Meteo's probability model has a shorter forecast horizon than
+    /// temperature/wind, so far-out days/hours come back with `null` instead
+    /// of a number for `precipitation_probability(_max)`. This must
+    /// deserialize (as `None`) rather than fail the whole fetch.
+    #[test]
+    fn null_precipitation_probability_deserializes_as_none() {
+        let hourly_json = r#"{
+            "latitude":51.5,"longitude":-0.1,"timezone":"UTC",
+            "current_units":{"interval":"seconds","is_day":""},
+            "current":{"time":"2025-10-25T12:00","is_day":1},
+            "hourly_units":{"temperature_2m":"°C","apparent_temperature":"°C","precipitation_probability":"%","precipitation":"mm","snowfall":"cm","uv_index":"","wind_speed_10m":"km/h","wind_gusts_10m":"km/h","relative_humidity_2m":"%"},
+            "hourly":{"time":["2025-10-25T12:00"],"temperature_2m":[20.0],"apparent_temperature":[18.0],"precipitation_probability":[null],"precipitation":[0.0],"snowfall":[0.0],"uv_index":[5.0],"wind_speed_10m":[15.0],"wind_gusts_10m":[25.0],"relative_humidity_2m":[50],"cloud_cover":[30]}
+        }"#;
+        let response: OpenMeteoHourlyResponse =
+            serde_json::from_str(hourly_json).expect("null probability should deserialize");
+        assert_eq!(response.hourly.precipitation_probability[0], None);
+
+        let daily_json = r#"{
+            "latitude":51.5,"longitude":-0.1,"timezone":"UTC",
+            "daily_units":{"temperature_2m_max":"°C","temperature_2m_min":"°C","precipitation_sum":"mm","precipitation_probability_max":"%","snowfall_sum":"cm"},
+            "daily":{"time":["2025-10-25"],"sunrise":["2025-10-25T07:00"],"sunset":["2025-10-25T18:00"],"temperature_2m_max":[22.0],"temperature_2m_min":[12.0],"precipitation_sum":[0.0],"precipitation_probability_max":[null],"snowfall_sum":[0.0],"cloud_cover_mean":[20]}
+        }"#;
+        let response: OpenMeteoDailyResponse =
+            serde_json::from_str(daily_json).expect("null probability should deserialize");
+        assert_eq!(response.daily.precipitation_probability_max[0], None);
+
+        // Also verify into_domain doesn't panic and doesn't crash on missing chance.
+        let settings = crate::configs::settings::DashboardSettings::load_test_config().unwrap();
+        let _ = response.into_domain(&settings);
+    }
+
+    /// Regression test for a confirmed-live case: `weather_code` was typed as
+    /// `Option<Vec<u8>>` (whole array optional) but the API can null out a
+    /// single *element* instead of omitting the array entirely — observed at
+    /// the far edge of the forecast horizon for several European "Seamless
+    /// (with ECMWF)" locations. Must deserialize as `None` at that index, not
+    /// fail the whole fetch.
+    #[test]
+    fn null_weather_code_element_deserializes_as_none() {
+        let hourly_json = r#"{
+            "latitude":51.5,"longitude":-0.1,"timezone":"UTC",
+            "current_units":{"interval":"seconds","is_day":""},
+            "current":{"time":"2025-10-25T12:00","is_day":1},
+            "hourly_units":{"temperature_2m":"°C","apparent_temperature":"°C","precipitation_probability":"%","precipitation":"mm","snowfall":"cm","uv_index":"","wind_speed_10m":"km/h","wind_gusts_10m":"km/h","relative_humidity_2m":"%"},
+            "hourly":{"time":["2025-10-25T12:00"],"temperature_2m":[20.0],"apparent_temperature":[18.0],"precipitation_probability":[10],"precipitation":[0.0],"snowfall":[0.0],"uv_index":[5.0],"wind_speed_10m":[15.0],"wind_gusts_10m":[25.0],"relative_humidity_2m":[50],"cloud_cover":[30],"weather_code":[null]}
+        }"#;
+        let response: OpenMeteoHourlyResponse = serde_json::from_str(hourly_json)
+            .expect("null weather_code element should deserialize");
+        assert_eq!(response.hourly.weather_code[0], None);
+
+        let daily_json = r#"{
+            "latitude":51.5,"longitude":-0.1,"timezone":"UTC",
+            "daily_units":{"temperature_2m_max":"°C","temperature_2m_min":"°C","precipitation_sum":"mm","precipitation_probability_max":"%","snowfall_sum":"cm"},
+            "daily":{"time":["2025-10-25"],"sunrise":["2025-10-25T07:00"],"sunset":["2025-10-25T18:00"],"temperature_2m_max":[22.0],"temperature_2m_min":[12.0],"precipitation_sum":[0.0],"precipitation_probability_max":[10],"snowfall_sum":[0.0],"cloud_cover_mean":[20],"weather_code":[null]}
+        }"#;
+        let response: OpenMeteoDailyResponse =
+            serde_json::from_str(daily_json).expect("null weather_code element should deserialize");
+        assert_eq!(response.daily.weather_code[0], None);
+
+        let settings = crate::configs::settings::DashboardSettings::load_test_config().unwrap();
+        let _ = response.into_domain(&settings);
     }
 
     #[test]
