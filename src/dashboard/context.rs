@@ -864,20 +864,15 @@ impl<'a> ContextBuilder<'a> {
         self.context.current_hour_uv_index = current_hour.uv_index.to_string();
         self.context.current_hour_uv_index_icon =
             UVIndexIcon::from(current_hour.uv_index).icon_path(&self.icon_ctx);
-        match current_hour.relative_humidity {
-            Some(value) => {
-                self.context.current_hour_relative_humidity = value.to_string();
-                self.context.current_hour_relative_humidity_icon =
-                    HumidityIconName::from(value).icon_path(&self.icon_ctx);
-            }
-            None => {
-                self.context.current_hour_relative_humidity = NOT_AVAILABLE.to_string();
-                self.context.current_hour_relative_humidity_icon =
-                    not_available_icon_path(self.settings)
-                        .to_string_lossy()
-                        .to_string();
-            }
-        }
+        self.context.current_hour_relative_humidity = current_hour
+            .relative_humidity
+            .map_or_else(|| NOT_AVAILABLE.to_string(), |v| v.to_string());
+        // Icon always renders a best-effort value, even when the reading itself
+        // is unavailable — matches weather_code's None fallback, and keeps this
+        // consistent with uv_index/wind, whose icons are never Option-gated.
+        self.context.current_hour_relative_humidity_icon =
+            HumidityIconName::from(current_hour.relative_humidity.unwrap_or_default())
+                .icon_path(&self.icon_ctx);
     }
 
     fn set_max_values_for_table(
@@ -1067,7 +1062,9 @@ mod tests {
     }
 
     /// Open-Meteo nulls out `relative_humidity` past its model horizon; the
-    /// current-hour table and icon must fall back to the not-available display.
+    /// value must fall back to the not-available display, but the icon still
+    /// renders (matching weather_code's None handling and uv_index/wind,
+    /// whose icons are never Option-gated).
     mod missing_relative_humidity {
         use super::*;
         use crate::domain::models::{HourlyForecast, Precipitation, Wind};
@@ -1113,7 +1110,7 @@ mod tests {
             assert_eq!(context.current_hour_relative_humidity, NOT_AVAILABLE);
             assert_eq!(
                 context.current_hour_relative_humidity_icon,
-                not_available_icon_path(&settings).to_string_lossy()
+                HumidityIconName::from(0).icon_path(&builder.icon_ctx)
             );
             assert_eq!(context.max_relative_humidity, NOT_AVAILABLE);
         }
