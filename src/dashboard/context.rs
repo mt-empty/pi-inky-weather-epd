@@ -959,10 +959,6 @@ impl<'a> ContextBuilder<'a> {
         let (max_relative_humidity_today, max_relative_humidity_tomorrow) =
             max_in_today_and_tomorrow!(|item| item.relative_humidity);
 
-        // `pick_today_or_tomorrow_max` picks per-window presence, not per-value —
-        // a window with only `None` readings still "has" a value (`Some(None)`),
-        // so flatten it here to fall through to the other window instead of
-        // reporting not-available whenever today's readings happen to be null.
         let picked =
             pick_today_or_tomorrow_max(max_relative_humidity_today, max_relative_humidity_tomorrow)
                 .and_then(|(value, is_tomorrow)| value.map(|v| (v, is_tomorrow)));
