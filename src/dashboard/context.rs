@@ -959,19 +959,22 @@ impl<'a> ContextBuilder<'a> {
         let (max_relative_humidity_today, max_relative_humidity_tomorrow) =
             max_in_today_and_tomorrow!(|item| item.relative_humidity);
 
-        match pick_today_or_tomorrow_max(
-            max_relative_humidity_today,
-            max_relative_humidity_tomorrow,
-        ) {
-            Some((Some(value), is_tomorrow)) => {
+        // `pick_today_or_tomorrow_max` picks per-window presence, not per-value —
+        // a window with only `None` readings still "has" a value (`Some(None)`),
+        // so flatten it here to fall through to the other window instead of
+        // reporting not-available whenever today's readings happen to be null.
+        let picked =
+            pick_today_or_tomorrow_max(max_relative_humidity_today, max_relative_humidity_tomorrow)
+                .and_then(|(value, is_tomorrow)| value.map(|v| (v, is_tomorrow)));
+
+        match picked {
+            Some((value, is_tomorrow)) => {
                 self.context.max_relative_humidity = value.to_string();
                 if is_tomorrow {
                     self.context.max_relative_humidity_font_style = FontStyle::Italic.to_string();
                 }
             }
-            Some((None, _)) | None => {
-                self.context.max_relative_humidity = NOT_AVAILABLE.to_string()
-            }
+            None => self.context.max_relative_humidity = NOT_AVAILABLE.to_string(),
         }
     }
 
@@ -1061,10 +1064,9 @@ mod tests {
         }
     }
 
-    /// Open-Meteo nulls out `relative_humidity` past its model horizon; the
-    /// value must fall back to the not-available display, but the icon still
-    /// renders (matching weather_code's None handling and uv_index/wind,
-    /// whose icons are never Option-gated).
+    /// Covers `relative_humidity: None` (Open-Meteo nulls it out past its
+    /// model horizon): the current-hour/max value falls back to not-available,
+    /// and the max stays correct when only one of today/tomorrow has data.
     mod missing_relative_humidity {
         use super::*;
         use crate::domain::models::{HourlyForecast, Precipitation, Wind};

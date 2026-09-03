@@ -221,7 +221,7 @@ impl OpenMeteoHourlyResponse {
                 );
 
                 let uv_index = hourly_data.uv_index[i].round() as u16;
-                let relative_humidity = hourly_data.relative_humidity_2m.get(i).copied().flatten();
+                let relative_humidity = hourly_data.relative_humidity_2m[i];
                 let time = hourly_data.time[i];
                 // Defaults to day (not night) if absent (see `Hourly::is_day`'s
                 // doc comment) — a stale pre-upgrade cache read on a network
