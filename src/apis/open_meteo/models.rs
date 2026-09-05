@@ -83,17 +83,9 @@ pub struct HourlyUnits {
 
 /// Per-hour weather data from Open-Meteo's `/v1/forecast` hourly endpoint.
 ///
-/// Open-Meteo doesn't document field-level nullability, and "Best Match"
-/// blends regional models with shorter forecast horizons into a global
-/// fallback — so several of these fields are confirmed to null out
-/// individual elements (not the whole array) once `forecast_days` reaches
-/// far enough into the horizon. `precipitation_probability` and
-/// `weather_code` are already typed `Option` for this reason;
-/// `relative_humidity_2m` is known to do the same past ~day 15 but is left
-/// non-optional for now (see the comment on `open_meteo_hourly_endpoint`).
-/// Re-check with `scripts/open-meteo-nullability-smoke-test.sh` before
-/// changing `forecast_days`, and revisit any other field here that starts
-/// failing deserialization.
+/// Open-Meteo can null out individual array elements (not just omit the field)
+/// once `forecast_days` reaches far enough into the forecast horizon —
+/// `precipitation_probability` and `weather_code` are typed `Option` for this reason.
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Hourly {
@@ -148,15 +140,9 @@ pub struct DailyUnits {
 
 /// Per-day weather data from Open-Meteo's `/v1/forecast` daily endpoint.
 ///
-/// Open-Meteo doesn't document field-level nullability, and "Best Match"
-/// blends regional models with shorter forecast horizons into a global
-/// fallback — so several of these fields are confirmed to null out
-/// individual elements (not the whole array) once `forecast_days` reaches
-/// far enough into the horizon. `precipitation_probability_max` and
-/// `weather_code` are already typed `Option` for this reason. Re-check with
-/// `scripts/open-meteo-nullability-smoke-test.sh` before changing
-/// `forecast_days`, and revisit any other field here that starts failing
-/// deserialization.
+/// Open-Meteo can null out individual array elements (not just omit the field)
+/// once `forecast_days` reaches far enough into the forecast horizon —
+/// `precipitation_probability_max` and `weather_code` are typed `Option` for this reason.
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Daily {
@@ -615,12 +601,9 @@ mod tests {
         }
     }
 
-    /// Surveys every per-timestep array field in the hourly/daily responses
-    /// for null-tolerance: for each field, nulls out one element of a real
-    /// fixture and checks whether the struct still deserializes. Open-Meteo's
-    /// docs don't document which fields can go null (see issue #82, where
-    /// `precipitation_probability_max` did), so this stands in for that
-    /// missing contract — run with `-- --nocapture` to see the report.
+    /// Surveys every per-timestep array field in the hourly/daily responses for
+    /// null-tolerance, since Open-Meteo doesn't document which fields can go null.
+    /// Run with `-- --nocapture` to see the report.
     #[test]
     fn survey_which_array_fields_tolerate_a_null_element() {
         use serde_json::Value;
@@ -677,11 +660,9 @@ mod tests {
         );
     }
 
-    /// Regression test for https://github.com/mt-empty/pi-inky-weather-epd/issues/82:
     /// Open-Meteo's probability model has a shorter forecast horizon than
-    /// temperature/wind, so far-out days/hours come back with `null` instead
-    /// of a number for `precipitation_probability(_max)`. This must
-    /// deserialize (as `None`) rather than fail the whole fetch.
+    /// temperature/wind, so far-out days/hours can come back with `null` for
+    /// `precipitation_probability(_max)`; this must deserialize as `None`.
     #[test]
     fn null_precipitation_probability_deserializes_as_none() {
         let hourly_json = r#"{
@@ -709,12 +690,8 @@ mod tests {
         let _ = response.into_domain(&settings);
     }
 
-    /// Regression test for a confirmed-live case: `weather_code` was typed as
-    /// `Option<Vec<u8>>` (whole array optional) but the API can null out a
-    /// single *element* instead of omitting the array entirely — observed at
-    /// the far edge of the forecast horizon for several European "Seamless
-    /// (with ECMWF)" locations. Must deserialize as `None` at that index, not
-    /// fail the whole fetch.
+    /// Open-Meteo can null out a single `weather_code` element instead of
+    /// omitting the whole array; this must deserialize as `None` at that index.
     #[test]
     fn null_weather_code_element_deserializes_as_none() {
         let hourly_json = r#"{

@@ -7,14 +7,11 @@ set -uo pipefail
 # from, and reports which response fields come back containing a `null`
 # somewhere in their array.
 #
-# Why: Open-Meteo doesn't document field-level nullability (see issue #82 -
-# precipitation_probability_max came back null for a UK location and crashed
-# deserialization because the field was typed as non-optional). Model
-# selection/coverage/horizon can change over time, so this isn't a one-off
-# fixture capture - it's meant to be re-run whenever you suspect the API's
-# shape has drifted, or periodically as a manual check. It is NOT wired into
-# CI: it hits the network and its result depends on live, time-varying
-# forecast data.
+# Why: Open-Meteo doesn't document field-level nullability, and model
+# selection/coverage/horizon can change over time, so re-run this whenever
+# you suspect the API's shape has drifted, or periodically as a manual
+# check. Not wired into CI - it hits the network and depends on live,
+# time-varying forecast data.
 #
 # Usage:
 #   ./scripts/open-meteo-nullability-smoke-test.sh              # all locations
@@ -40,7 +37,7 @@ LOCATIONS=(
     "oslo|59.9139|10.7522|MET Norway"
     "amsterdam|52.3676|4.9041|KNMI"
     "copenhagen|55.6761|12.5683|DMI"
-    "london|51.5085|-0.1257|UK Met Office (issue #82's coords)"
+    "london|51.5085|-0.1257|UK Met Office"
     "zurich|47.3769|8.5417|MeteoSwiss"
     "vienna|48.2082|16.3738|GeoSphere Austria"
     "prague|50.0755|14.4378|CHMI"
