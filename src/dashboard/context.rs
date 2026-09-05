@@ -864,9 +864,15 @@ impl<'a> ContextBuilder<'a> {
         self.context.current_hour_uv_index = current_hour.uv_index.to_string();
         self.context.current_hour_uv_index_icon =
             UVIndexIcon::from(current_hour.uv_index).icon_path(&self.icon_ctx);
-        self.context.current_hour_relative_humidity = current_hour.relative_humidity.to_string();
+        self.context.current_hour_relative_humidity = current_hour
+            .relative_humidity
+            .map_or_else(|| NOT_AVAILABLE.to_string(), |v| v.to_string());
+        // Icon always renders a best-effort value, even when the reading itself
+        // is unavailable — matches weather_code's None fallback, and keeps this
+        // consistent with uv_index/wind, whose icons are never Option-gated.
         self.context.current_hour_relative_humidity_icon =
-            HumidityIconName::from(current_hour.relative_humidity).icon_path(&self.icon_ctx);
+            HumidityIconName::from(current_hour.relative_humidity.unwrap_or_default())
+                .icon_path(&self.icon_ctx);
     }
 
     fn set_max_values_for_table(
@@ -953,10 +959,11 @@ impl<'a> ContextBuilder<'a> {
         let (max_relative_humidity_today, max_relative_humidity_tomorrow) =
             max_in_today_and_tomorrow!(|item| item.relative_humidity);
 
-        match pick_today_or_tomorrow_max(
-            max_relative_humidity_today,
-            max_relative_humidity_tomorrow,
-        ) {
+        let picked =
+            pick_today_or_tomorrow_max(max_relative_humidity_today, max_relative_humidity_tomorrow)
+                .and_then(|(value, is_tomorrow)| value.map(|v| (v, is_tomorrow)));
+
+        match picked {
             Some((value, is_tomorrow)) => {
                 self.context.max_relative_humidity = value.to_string();
                 if is_tomorrow {
@@ -1050,6 +1057,84 @@ mod tests {
         #[test]
         fn neither_has_data() {
             assert_eq!(pick_today_or_tomorrow_max(None::<u16>, None::<u16>), None);
+        }
+    }
+
+    /// Covers `relative_humidity: None` (Open-Meteo nulls it out past its
+    /// model horizon): the current-hour/max value falls back to not-available,
+    /// and the max stays correct when only one of today/tomorrow has data.
+    mod missing_relative_humidity {
+        use super::*;
+        use crate::domain::models::{HourlyForecast, Precipitation, Wind};
+        use chrono::TimeZone;
+
+        fn hourly_at(
+            time: chrono::DateTime<Utc>,
+            relative_humidity: Option<u16>,
+        ) -> HourlyForecast {
+            HourlyForecast {
+                time,
+                temperature: Temperature::celsius(20.0),
+                apparent_temperature: Temperature::celsius(18.0),
+                wind: Wind::new(10, 15),
+                precipitation: Precipitation::new(Some(0), None, Some(0)),
+                uv_index: 3,
+                relative_humidity,
+                is_night: false,
+                cloud_cover: None,
+                weather_code: None,
+            }
+        }
+
+        fn utc_settings() -> DashboardSettings {
+            let mut settings = DashboardSettings::load_test_config().unwrap();
+            settings.misc.timezone = chrono_tz::UTC;
+            settings
+        }
+
+        #[test]
+        fn current_hour_and_max_fall_back_to_not_available() {
+            let settings = utc_settings();
+            let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 1, 1, 12, 0, 0).unwrap());
+            let hourly_forecast_data = vec![
+                hourly_at(Utc.with_ymd_and_hms(2025, 1, 1, 12, 0, 0).unwrap(), None),
+                hourly_at(Utc.with_ymd_and_hms(2025, 1, 1, 13, 0, 0).unwrap(), None),
+            ];
+
+            let mut builder = ContextBuilder::new(&settings, &clock);
+            builder.with_hourly_forecast_data(hourly_forecast_data, &clock);
+            let context = &builder.context;
+
+            assert_eq!(context.current_hour_relative_humidity, NOT_AVAILABLE);
+            assert_eq!(
+                context.current_hour_relative_humidity_icon,
+                HumidityIconName::from(0).icon_path(&builder.icon_ctx)
+            );
+            assert_eq!(context.max_relative_humidity, NOT_AVAILABLE);
+        }
+
+        /// Today's window (12:00-00:00 UTC) is all `None`; tomorrow's window
+        /// (00:00-12:00 UTC) has one `Some` value. The max must come from
+        /// tomorrow, not collapse to not-available because today has no data.
+        #[test]
+        fn max_ignores_null_today_and_falls_through_to_tomorrow() {
+            let settings = utc_settings();
+            let clock = FixedClock::new(Utc.with_ymd_and_hms(2025, 1, 1, 12, 0, 0).unwrap());
+            let hourly_forecast_data = vec![
+                hourly_at(Utc.with_ymd_and_hms(2025, 1, 1, 12, 0, 0).unwrap(), None),
+                hourly_at(Utc.with_ymd_and_hms(2025, 1, 1, 23, 0, 0).unwrap(), None),
+                hourly_at(Utc.with_ymd_and_hms(2025, 1, 2, 1, 0, 0).unwrap(), Some(80)),
+            ];
+
+            let mut builder = ContextBuilder::new(&settings, &clock);
+            builder.with_hourly_forecast_data(hourly_forecast_data, &clock);
+            let context = &builder.context;
+
+            assert_eq!(context.max_relative_humidity, "80");
+            assert_eq!(
+                context.max_relative_humidity_font_style,
+                FontStyle::Italic.to_string()
+            );
         }
     }
 

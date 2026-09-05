@@ -85,7 +85,8 @@ pub struct HourlyUnits {
 ///
 /// Open-Meteo can null out individual array elements (not just omit the field)
 /// once `forecast_days` reaches far enough into the forecast horizon —
-/// `precipitation_probability` and `weather_code` are typed `Option` for this reason.
+/// `precipitation_probability`, `weather_code` and `relative_humidity_2m` are
+/// typed `Option` for this reason.
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Hourly {
@@ -106,7 +107,7 @@ pub struct Hourly {
     #[serde(rename = "wind_gusts_10m")]
     pub wind_gusts_10m: Vec<f32>,
     #[serde(rename = "relative_humidity_2m")]
-    pub relative_humidity_2m: Vec<u16>,
+    pub relative_humidity_2m: Vec<Option<u16>>,
     #[serde(rename = "cloud_cover")]
     pub cloud_cover: Vec<Option<u16>>,
     #[serde(rename = "weather_code", default)]
@@ -483,7 +484,7 @@ mod tests {
         assert_eq!(response.hourly.uv_index[0], 4.6);
         assert_eq!(response.hourly.wind_speed_10m[0], 4.1);
         assert_eq!(response.hourly.wind_gusts_10m[0], 14.0);
-        assert_eq!(response.hourly.relative_humidity_2m[0], 61);
+        assert_eq!(response.hourly.relative_humidity_2m[0], Some(61));
         assert_eq!(response.hourly.cloud_cover[0], Some(1));
         assert_eq!(response.hourly.snowfall[0], 0.0);
         assert_eq!(response.hourly.weather_code[0], Some(3));
@@ -550,7 +551,7 @@ mod tests {
             assert!((0.0..500.0).contains(&hourly.precipitation[i]));
             assert!((0.0..20.0).contains(&hourly.uv_index[i]));
             assert!((0.0..500.0).contains(&hourly.wind_speed_10m[i]));
-            assert!(hourly.relative_humidity_2m[i] <= 100);
+            assert!(hourly.relative_humidity_2m[i].is_none_or(|h| h <= 100));
         }
     }
 
@@ -716,6 +717,24 @@ mod tests {
 
         let settings = crate::configs::settings::DashboardSettings::load_test_config().unwrap();
         let _ = response.into_domain(&settings);
+    }
+
+    #[test]
+    fn null_relative_humidity_element_deserializes_as_none() {
+        let hourly_json = r#"{
+            "latitude":51.5,"longitude":-0.1,"timezone":"UTC",
+            "current_units":{"interval":"seconds","is_day":""},
+            "current":{"time":"2025-10-25T12:00","is_day":1},
+            "hourly_units":{"temperature_2m":"°C","apparent_temperature":"°C","precipitation_probability":"%","precipitation":"mm","snowfall":"cm","uv_index":"","wind_speed_10m":"km/h","wind_gusts_10m":"km/h","relative_humidity_2m":"%"},
+            "hourly":{"time":["2025-10-25T12:00"],"temperature_2m":[20.0],"apparent_temperature":[18.0],"precipitation_probability":[10],"precipitation":[0.0],"snowfall":[0.0],"uv_index":[5.0],"wind_speed_10m":[15.0],"wind_gusts_10m":[25.0],"relative_humidity_2m":[null],"cloud_cover":[30]}
+        }"#;
+        let response: OpenMeteoHourlyResponse = serde_json::from_str(hourly_json)
+            .expect("null relative_humidity_2m element should deserialize");
+        assert_eq!(response.hourly.relative_humidity_2m[0], None);
+
+        let settings = crate::configs::settings::DashboardSettings::load_test_config().unwrap();
+        let domain = response.into_domain(&settings);
+        assert_eq!(domain[0].relative_humidity, None);
     }
 
     #[test]

@@ -257,7 +257,7 @@ pub struct HourlyForecast {
     pub wind: Wind,
     pub precipitation: Precipitation,
     pub uv_index: u16,
-    pub relative_humidity: u16,
+    pub relative_humidity: Option<u16>,
     pub is_night: bool,
     pub cloud_cover: Option<u16>,
     /// Parsed WMO Weather Interpretation Code — `Ok` if recognised, `Err(raw)` if not, `None` if absent
@@ -302,7 +302,7 @@ impl HourlyForecast {
                 bom.rain.amount.max,
             ),
             uv_index: bom.uv.unwrap_or_default().0,
-            relative_humidity: bom.relative_humidity.0,
+            relative_humidity: Some(bom.relative_humidity.0),
             is_night: bom.is_night,
             cloud_cover: None,  // BOM API doesn't provide cloud cover data
             weather_code: None, // BOM API doesn't provide WMO weather codes
@@ -1118,7 +1118,7 @@ mod tests {
                 uv_index in proptest::collection::vec(any::<f32>(), count),
                 wind_speed_10m in proptest::collection::vec(any::<f32>(), count),
                 wind_gusts_10m in proptest::collection::vec(any::<f32>(), count),
-                relative_humidity_2m in proptest::collection::vec(any::<u16>(), count),
+                relative_humidity_2m in proptest::collection::vec(proptest::option::of(any::<u16>()), count),
                 cloud_cover in proptest::collection::vec(proptest::option::of(any::<u16>()), count),
                 is_day in proptest::collection::vec(any::<u16>(), count),
                 weather_code in proptest::collection::vec(proptest::option::of(any::<u8>()), count),
