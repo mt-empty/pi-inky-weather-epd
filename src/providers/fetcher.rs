@@ -1,6 +1,7 @@
 use anyhow::Error;
 use serde::Deserialize;
-use std::{fmt, fs, path::PathBuf, time::Duration};
+use std::{fmt, fs, io::Write, path::PathBuf, time::Duration};
+use tempfile::NamedTempFile;
 use url::Url;
 
 use crate::configs::settings::DashboardSettings;
@@ -238,10 +239,28 @@ impl Fetcher {
             }
         }
 
-        fs::write(file_path, &body)?;
-        logger::debug(format!("Cached response to: {}", file_path.display()));
+        // Parse before caching: a response that passes `error_checker` but fails to
+        // deserialize must not overwrite the last-known-good cache, since a broken
+        // response tends to repeat identically across every retry.
         let data = serde_json::from_str(&body).map_err(Error::msg)?;
+        Self::write_cache_atomically(file_path, &body)?;
+        logger::debug(format!("Cached response to: {}", file_path.display()));
         Ok(FetchOutcome::Fresh(data))
+    }
+
+    /// Writes via a uniquely-named temp file in the same directory (so concurrent
+    /// writers to the same `file_path` never share one), synced to disk before an
+    /// atomic rename replaces `file_path` - a crash or power loss can't leave a
+    /// half-written or torn file in its place.
+    fn write_cache_atomically(file_path: &PathBuf, contents: &str) -> Result<(), Error> {
+        let dir = file_path
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."));
+        let mut tmp = NamedTempFile::new_in(dir)?;
+        tmp.write_all(contents.as_bytes())?;
+        tmp.as_file().sync_all()?;
+        tmp.persist(file_path)?;
+        Ok(())
     }
 
     /// Handle fetch errors with logging (classify_error logs raw details internally)
@@ -574,6 +593,72 @@ mod tests {
             .mount(&mock_server)
             .await;
         mock_server
+    }
+
+    mod write_cache_atomically {
+        use super::*;
+
+        #[test]
+        fn writes_contents_and_leaves_no_temp_file_behind() {
+            let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
+            let file_path = temp_dir.path().join("cache.json");
+
+            Fetcher::write_cache_atomically(&file_path, "hello").expect("write should succeed");
+
+            assert_eq!(fs::read_to_string(&file_path).unwrap(), "hello");
+            assert_eq!(
+                fs::read_dir(temp_dir.path()).unwrap().count(),
+                1,
+                "only the final cache.json should remain, no leftover temp file"
+            );
+        }
+
+        #[test]
+        fn overwrites_an_existing_file_with_new_contents() {
+            let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
+            let file_path = temp_dir.path().join("cache.json");
+            fs::write(&file_path, "old").unwrap();
+
+            Fetcher::write_cache_atomically(&file_path, "new").expect("write should succeed");
+
+            assert_eq!(fs::read_to_string(&file_path).unwrap(), "new");
+        }
+
+        /// Two concurrent writers targeting the same `file_path` must never interleave
+        /// into a corrupt file - each gets its own uniquely-named temp file, so the
+        /// result is always one writer's complete content, never a mix of both.
+        #[test]
+        fn concurrent_writers_never_produce_interleaved_content() {
+            let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
+            let file_path = temp_dir.path().join("cache.json");
+
+            // Large enough that a shared/racy temp file would very likely interleave
+            // the two writers' bytes rather than happen to land in write-order.
+            let content_a = "a".repeat(200_000);
+            let content_b = "b".repeat(200_000);
+
+            let path_a = file_path.clone();
+            let path_b = file_path.clone();
+            let content_a_clone = content_a.clone();
+            let content_b_clone = content_b.clone();
+
+            let handle_a = std::thread::spawn(move || {
+                Fetcher::write_cache_atomically(&path_a, &content_a_clone)
+            });
+            let handle_b = std::thread::spawn(move || {
+                Fetcher::write_cache_atomically(&path_b, &content_b_clone)
+            });
+
+            handle_a.join().unwrap().expect("writer a should succeed");
+            handle_b.join().unwrap().expect("writer b should succeed");
+
+            let result = fs::read_to_string(&file_path).unwrap();
+            assert!(
+                result == content_a || result == content_b,
+                "expected one writer's complete content, got a file of len {} matching neither",
+                result.len()
+            );
+        }
     }
 
     mod parse_retry_after {

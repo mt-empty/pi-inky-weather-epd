@@ -304,3 +304,85 @@ async fn test_body_level_client_error_is_not_retried() {
         "Expected exactly 1 request - a 4xx body-level error must not be retried"
     );
 }
+
+#[tokio::test]
+async fn test_undeserializable_response_does_not_poison_cache() {
+    // A response that's HTTP-200 and passes the error_checker but still fails to
+    // deserialize must not overwrite a last-known-good cache, since every retry
+    // tends to hit the same broken body.
+    let mock_server = MockServer::start().await;
+
+    // Every attempt returns 200 with a body that deserializes fine as JSON but
+    // doesn't match `TestData`'s schema (missing the required `value` field).
+    Mock::given(wiremock::matchers::method("GET"))
+        .and(wiremock::matchers::path("/test"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "unexpected_field": null
+        })))
+        .named("Always-broken response")
+        .mount(&mock_server)
+        .await;
+
+    let url = format!("{}/test", mock_server.uri());
+
+    let (result, cache_file, _temp_dir) = tokio::task::spawn_blocking(move || {
+        // Kept alive (returned) past the closure so the directory isn't deleted
+        // before the post-fetch assertions below read the cache file back.
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let cache_path = temp_dir.path().to_path_buf();
+        let fetcher = Fetcher::new(cache_path.clone());
+
+        let cache_file = cache_path.join("test_data.json");
+        std::fs::write(
+            &cache_file,
+            serde_json::to_string(&TestData {
+                value: "cached".to_string(),
+            })
+            .unwrap(),
+        )
+        .expect("Failed to write cache file");
+
+        const RETRY_DELAYS: &[Duration; 2] = &[Duration::from_secs(1), Duration::from_secs(1)];
+        let config = pi_inky_weather_epd::providers::fetcher::RetryConfig::new(
+            2,
+            RETRY_DELAYS,
+            Duration::from_secs(10),
+        );
+
+        let endpoint = url::Url::parse(&url).expect("Invalid URL");
+        let result = fetcher.try_fetch_with_retry::<TestData>(
+            &endpoint,
+            &cache_file,
+            None, // no error_checker - the body itself is valid JSON, just the wrong shape
+            &config,
+        );
+        (result, cache_file, temp_dir)
+    })
+    .await
+    .expect("Task panicked");
+
+    // The pre-existing cache must survive every retry attempt untouched.
+    let cache_contents_after =
+        std::fs::read_to_string(&cache_file).expect("cache file should still exist");
+    let cached_data: TestData = serde_json::from_str(&cache_contents_after)
+        .expect("cache file should still hold the original, valid data");
+    assert_eq!(
+        cached_data.value, "cached",
+        "cache file was overwritten by the undeserializable response"
+    );
+
+    // With the cache intact, falling back to it after retries are exhausted must
+    // succeed, instead of also failing to parse the poisoned data.
+    match result {
+        Ok(pi_inky_weather_epd::providers::fetcher::FetchOutcome::Stale { data, .. }) => {
+            assert_eq!(data.value, "cached");
+        }
+        Ok(pi_inky_weather_epd::providers::fetcher::FetchOutcome::Fresh(data)) => {
+            panic!("Expected Stale fallback, got Fresh data: {:?}", data);
+        }
+        Err(e) => panic!(
+            "Expected successful fallback to the untouched cache, got error: {}",
+            e
+        ),
+    }
+}
