@@ -31,7 +31,7 @@ zip = "8.1.0"
 semver = "1.0"
 tempfile = "3.17"
 url = { version = "2.5", features = ["serde"] }
-nutype = { version = "0.7", features = ["serde"] }
+nutype = { version = "0.8", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"], optional = true }
 
 # dev dependencies
