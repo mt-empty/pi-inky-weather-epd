@@ -27,7 +27,7 @@ strum_macros = "0.28"
 config = "0.15"
 tinytemplate = "1.2"
 resvg = "0.48"
-zip = "8.1.0"
+zip = "9.0.5"
 semver = "1.0"
 tempfile = "3.17"
 url = { version = "2.5", features = ["serde"] }
