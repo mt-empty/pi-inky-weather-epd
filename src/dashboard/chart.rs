@@ -4,7 +4,7 @@ use crate::{
     constants::DEFAULT_AXIS_LABEL_FONT_SIZE,
     i18n::{weekday_long, Language},
     logger,
-    utils::{measure_ink_y_center, weekday_after_days},
+    utils::{measure_ink_y_extent, weekday_after_days},
     weather::icons::UVIndexIcon,
 };
 use anyhow::Error;
@@ -425,12 +425,42 @@ enum TomorrowLabel {
 
 /// Picks the tomorrow-label style for a language.
 fn tomorrow_label(language: Language, weekday: Weekday) -> TomorrowLabel {
+    let name = weekday_long(weekday, language);
     match language {
-        Language::Ja => TomorrowLabel::Stacked(weekday_long(weekday, language)),
-        Language::En | Language::Fr | Language::De | Language::Es => {
-            TomorrowLabel::Rotated(weekday_long(weekday, language))
-        }
+        Language::Ja => TomorrowLabel::Stacked(name),
+        Language::En
+        | Language::Fr
+        | Language::De
+        | Language::Es
+        | Language::Ru
+        | Language::Uk
+        | Language::It
+        | Language::Pt
+        | Language::Nl
+        | Language::Pl
+        | Language::Sv
+        | Language::Nb
+        | Language::Da
+        | Language::Cs => TomorrowLabel::Rotated(name),
     }
+}
+
+/// Distance from the chart top to the top of the tomorrow label's ink. Both
+/// label styles hang down from here, so a long name grows toward the chart
+/// bottom (300px of room) rather than off the top.
+const TOMORROW_LABEL_TOP_MARGIN: f32 = 8.0;
+
+/// Gap between the tomorrow line and the label's baseline column.
+const TOMORROW_LABEL_X_OFFSET: f32 = 16.0;
+
+/// The `<text>` element for [`TomorrowLabel::Rotated`]. Shared by the real
+/// render and the fit test so the two can't drift.
+fn rotated_tomorrow_label(x_coor: f32, name: &str, colour: &str) -> String {
+    format!(
+        r#"<text x="0" y="0" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" font-style="{font_style}" transform="translate({x}, {TOMORROW_LABEL_TOP_MARGIN}) rotate(-90)" text-anchor="end">{name}</text>"#,
+        x = x_coor + TOMORROW_LABEL_X_OFFSET,
+        font_style = FontStyle::Italic,
+    )
 }
 
 /// Builds the vertically-stacked `<tspan>` sequence for [`TomorrowLabel::Stacked`]
@@ -450,6 +480,29 @@ fn stacked_tspans(chars: &[char], x: f32, start_y: f32, line_height: f32) -> Str
             }
         })
         .collect()
+}
+
+/// The `y` of the stacked label's first `tspan` that puts the top of its ink
+/// at [`TOMORROW_LABEL_TOP_MARGIN`], matching where the rotated label hangs
+/// from. Measured from rendered pixels because glyph ascent above the
+/// baseline varies by font and script.
+fn stacked_tomorrow_label_start_y(chars: &[char], line_height: f32) -> f32 {
+    let font_size = DEFAULT_AXIS_LABEL_FONT_SIZE;
+    // Positive margin above the first baseline so the tallest glyph's
+    // ascent still lands inside the measurement canvas.
+    let probe_start_y = f32::from(font_size) * 2.0;
+    let tspans = stacked_tspans(chars, 100.0, probe_start_y, line_height);
+    let stacked_svg = format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="{height}" font-family="Roboto, sans-serif">
+            <text font-size="{font_size}" text-anchor="middle">{tspans}</text>
+        </svg>"#,
+        height = probe_start_y + line_height * chars.len() as f32 * 2.0,
+    );
+    let probe_top = measure_ink_y_extent(&stacked_svg)
+        .map(|(top, _)| top as f32)
+        .unwrap_or(probe_start_y - f32::from(font_size));
+
+    probe_start_y + (TOMORROW_LABEL_TOP_MARGIN - probe_top)
 }
 
 /// Renders one x-axis hour tick as text, in either 12-hour ("3pm") or
@@ -722,23 +775,17 @@ impl HourlyForecastGraph {
         match tomorrow_label(self.language, tomorrow_weekday) {
             TomorrowLabel::Rotated(tomorrow_day_name) => format!(
                 r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
-                   <text x="{x_text}" y="{y_text}" fill="{colour}" font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" font-style="{font_style}"  transform="rotate(-90, {rotate_x_text}, {rotate_y_text})" text-anchor="start">{tomorrow_day_name}</text>"#,
+                   {label}"#,
                 x = x_coor,
                 chart_height = self.height,
-                x_text = x_coor + 11.0,
-                y_text = (self.height / 2.0) + 20.0,
-                font_style = FontStyle::Italic,
-                rotate_x_text = x_coor + 11.0 - 30.0,
-                rotate_y_text = (self.height / 2.0) - 15.0,
                 colour = self.text_colour,
-                tomorrow_day_name = tomorrow_day_name,
+                label = rotated_tomorrow_label(x_coor, tomorrow_day_name, &self.text_colour),
             ),
             TomorrowLabel::Stacked(name) => {
                 let chars: Vec<char> = name.chars().collect();
                 let line_height = f32::from(DEFAULT_AXIS_LABEL_FONT_SIZE);
                 let x_text = x_coor + 11.0;
-                let start_y =
-                    self.stacked_tomorrow_label_start_y(&chars, line_height, tomorrow_weekday);
+                let start_y = stacked_tomorrow_label_start_y(&chars, line_height);
                 let tspans = stacked_tspans(&chars, x_text, start_y, line_height);
                 format!(
                     r#"<line x1="{x}" y1="0" x2="{x}" y2="{chart_height}" stroke="{colour}" stroke-width="2" stroke-dasharray="3,3" />
@@ -751,56 +798,6 @@ impl HourlyForecastGraph {
                 )
             }
         }
-    }
-
-    /// Computes the `y` of the stacked label's first `tspan` so its ink
-    /// lands at the same on-screen height as the rotated Latin label would
-    /// for this weekday.
-    ///
-    /// The rotated label's anchor/rotation-origin offsets (in the `Rotated`
-    /// arm above) are hand-tuned, not exact geometry, and its ink centre
-    /// also shifts with the rendered word's pixel width. Rather than a
-    /// second hand-tuned constant here that would need re-tuning whenever
-    /// those offsets, the font, or the font size change, this renders both
-    /// labels through the real resvg/usvg pipeline — the rotated label
-    /// using this weekday's English name as a stand-in Latin reference,
-    /// since `Stacked` and `Rotated` are never both in play for the same
-    /// render — and measures their actual ink to compute the offset.
-    fn stacked_tomorrow_label_start_y(
-        &self,
-        chars: &[char],
-        line_height: f32,
-        weekday: Weekday,
-    ) -> f32 {
-        let font_family = "Roboto, sans-serif";
-        let font_size = DEFAULT_AXIS_LABEL_FONT_SIZE;
-
-        let reference_name = weekday_long(weekday, Language::En);
-        let rotate_x_text = 11.0 - 30.0;
-        let rotate_y_text = (self.height / 2.0) - 15.0;
-        let rotated_svg = format!(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="{height}" font-family="{font_family}">
-                <text x="11" y="{y_text}" font-size="{font_size}" font-style="italic" transform="rotate(-90, {rotate_x_text}, {rotate_y_text})" text-anchor="start">{reference_name}</text>
-            </svg>"#,
-            height = self.height,
-            y_text = (self.height / 2.0) + 20.0,
-        );
-        let target_centre_y =
-            measure_ink_y_center(&rotated_svg).unwrap_or(self.height / 2.0 - 45.0);
-
-        // Positive margin above the first baseline so the tallest glyph's
-        // ascent still lands inside the measurement canvas.
-        let probe_start_y = f32::from(font_size) * 2.0;
-        let tspans = stacked_tspans(chars, 0.0, probe_start_y, line_height);
-        let stacked_svg = format!(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="{height}" font-family="{font_family}">
-                <text x="100" font-size="{font_size}" text-anchor="middle">{tspans}</text>
-            </svg>"#,
-            height = probe_start_y + line_height * chars.len() as f32 * 2.0,
-        );
-        let probe_centre_y = measure_ink_y_center(&stacked_svg).unwrap_or(probe_start_y);
-
-        probe_start_y + (target_centre_y - probe_centre_y)
     }
 
     fn initialize_x_y_bounds(&mut self) {
@@ -1057,7 +1054,8 @@ mod tests {
 
         #[test]
         fn auto_uses_twenty_four_hour_for_non_english_languages() {
-            for language in [Language::Fr, Language::De, Language::Es, Language::Ja] {
+            use strum::IntoEnumIterator;
+            for language in Language::iter().filter(|l| !l.uses_twelve_hour_clock()) {
                 assert_eq!(format_hour_label(0.0, HourFormat::Auto, language), "00:00");
                 assert_eq!(format_hour_label(9.0, HourFormat::Auto, language), "09:00");
                 assert_eq!(format_hour_label(15.0, HourFormat::Auto, language), "15:00");
@@ -1086,6 +1084,72 @@ mod tests {
                 format_hour_label(0.0, HourFormat::TwentyFour, Language::En),
                 "00:00"
             );
+        }
+    }
+
+    mod tomorrow_label_tests {
+        use super::*;
+        use strum::IntoEnumIterator;
+
+        const CHART_HEIGHT: f32 = 300.0;
+        /// Canvas padding above and below the chart, so ink that overflows
+        /// either edge is still captured and the assertion can see it.
+        const PAD: f32 = 100.0;
+
+        const WEEKDAYS: [Weekday; 7] = [
+            Weekday::Mon,
+            Weekday::Tue,
+            Weekday::Wed,
+            Weekday::Thu,
+            Weekday::Fri,
+            Weekday::Sat,
+            Weekday::Sun,
+        ];
+
+        /// Ink rows of `label` drawn inside a chart-sized frame, relative to
+        /// the chart top.
+        fn ink_rows_in_chart(label: &str) -> (f32, f32) {
+            let svg = format!(
+                r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="{height}" font-family="Roboto, sans-serif">
+                    <g transform="translate(0, {PAD})">{label}</g>
+                </svg>"#,
+                height = CHART_HEIGHT + 2.0 * PAD,
+            );
+            let (top, bottom) = measure_ink_y_extent(&svg).expect("label rendered no ink");
+            (top as f32 - PAD, bottom as f32 - PAD)
+        }
+
+        #[test]
+        fn every_label_hangs_from_the_top_and_fits_inside_the_chart() {
+            for language in Language::iter() {
+                for weekday in WEEKDAYS {
+                    let label = match tomorrow_label(language, weekday) {
+                        TomorrowLabel::Rotated(name) => rotated_tomorrow_label(50.0, name, "black"),
+                        TomorrowLabel::Stacked(name) => {
+                            let chars: Vec<char> = name.chars().collect();
+                            let line_height = f32::from(DEFAULT_AXIS_LABEL_FONT_SIZE);
+                            let start_y = stacked_tomorrow_label_start_y(&chars, line_height);
+                            let tspans = stacked_tspans(&chars, 61.0, start_y, line_height);
+                            format!(
+                                r#"<text font-size="{DEFAULT_AXIS_LABEL_FONT_SIZE}" text-anchor="middle">{tspans}</text>"#
+                            )
+                        }
+                    };
+                    let (top, bottom) = ink_rows_in_chart(&label);
+                    // The rotated label is anchored by advance width, so an
+                    // italic overhang on its last glyph can rise a little
+                    // above the margin; it must still stay on the chart.
+                    assert!(
+                        (0.0..=TOMORROW_LABEL_TOP_MARGIN + 2.0).contains(&top),
+                        "{language:?} {weekday:?}: label top at {top}, expected within 0..={}",
+                        TOMORROW_LABEL_TOP_MARGIN + 2.0
+                    );
+                    assert!(
+                        bottom < CHART_HEIGHT,
+                        "{language:?} {weekday:?}: label bottom at {bottom} overflows the {CHART_HEIGHT}px chart"
+                    );
+                }
+            }
         }
     }
 

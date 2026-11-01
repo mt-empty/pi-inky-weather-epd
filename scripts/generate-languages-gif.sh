@@ -16,7 +16,7 @@ FRAME_SECONDS="${2:-0.5}"
 
 # Fixed display order (matches the readme's Language section), not
 # alphabetical filename order.
-LANGUAGES=(en fr de es ja)
+LANGUAGES=(en fr de es ja ru uk it pt nl pl sv nb da cs)
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

@@ -4,9 +4,9 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use strum::IntoEnumIterator;
 
 use crate::i18n::{format_localized_date, Language};
+use crate::utils::measure_text_ink_width;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ValidationError {
@@ -361,27 +361,27 @@ pub fn is_valid_latitude(latitude: &f64) -> Result<(), ValidationError> {
     }
 }
 
-/// Maximum allowed length for formatted date output.
-/// This prevents overly long strings that won't fit on the e-paper display.
-/// Based on longest reasonable format: "Wednesday, 28 September 2025" = 28 chars
-/// We allow some extra room for custom text.
-const MAX_DATE_FORMAT_OUTPUT_LENGTH: usize = 30;
+/// Widest the header date may render, in pixels (centred at x=400 on the
+/// 800px canvas). Sized to keep every documented English format, the widest
+/// being "Wednesday, September 27, 2023" at 503px; near this width the text
+/// edges approach the current-weather icon and the "Incomplete Data" badge.
+pub const HEADER_DATE_MAX_WIDTH_PX: u32 = 510;
 
-/// Validates a chrono strftime date format string.
+/// Font of the header date — must match `current_day_date` in
+/// `dashboard-template-min.svg`.
+const HEADER_DATE_FONT_FAMILY: &str = "Roboto, sans-serif";
+const HEADER_DATE_FONT_SIZE: f32 = 35.0;
+
+/// Validates the syntax of a chrono strftime date format string. Whether it
+/// fits the header depends on `render_options.language`, which this
+/// field-level validator can't see; see [`widest_header_date_width`].
 ///
 /// # Validation Rules
 /// 1. Format string must not be empty or whitespace-only
-/// 2. Formatted output (using longest possible date) must not exceed MAX_DATE_FORMAT_OUTPUT_LENGTH
+/// 2. chrono must be able to render it
 ///
 /// Note: Invalid specifiers like `%Q` will be output literally by chrono's format().
 /// This is acceptable - users will see the issue immediately on their display.
-///
-/// # Arguments
-/// * `format` - A strftime format string (e.g., "%A, %d %B" or "%m/%d/%Y")
-///
-/// # Returns
-/// * `Ok(())` if the format is valid
-/// * `Err(ValidationError)` if validation fails
 ///
 /// # Examples
 /// ```
@@ -393,7 +393,6 @@ const MAX_DATE_FORMAT_OUTPUT_LENGTH: usize = 30;
 /// assert!(is_valid_date_format("").is_err());              // Empty string
 /// ```
 pub fn is_valid_date_format(format: &str) -> Result<(), ValidationError> {
-    // Check for empty or whitespace-only format
     let trimmed = format.trim();
     if trimmed.is_empty() {
         return Err(ValidationError::new(
@@ -401,57 +400,69 @@ pub fn is_valid_date_format(format: &str) -> Result<(), ValidationError> {
         ));
     }
 
-    // Test the format by formatting the longest possible date
-    // Wednesday (9 chars) + September (9 chars) = longest day + month combination
     use chrono::{TimeZone, Utc};
     use std::fmt::Write;
-    let longest_date = Utc.with_ymd_and_hms(2025, 9, 17, 12, 0, 0).unwrap(); // Wednesday, 17 September 2025
+    let date = Utc.with_ymd_and_hms(2025, 9, 17, 12, 0, 0).unwrap();
 
     // Write into a buffer instead of calling `.to_string()`: chrono's
-    // `DelayedFormat::fmt` can return `Err` for certain malformed specifiers
-    // (e.g. an unterminated "%{"), and `ToString::to_string()` assumes
-    // `Display::fmt` never fails — it panics instead of propagating the
-    // error, which would otherwise crash config loading instead of cleanly
-    // rejecting the format.
+    // `DelayedFormat::fmt` returns `Err` for some malformed specifiers (e.g.
+    // an unterminated "%{"), and `ToString::to_string()` panics on that
+    // instead of propagating it.
     let mut formatted = String::new();
-    if write!(formatted, "{}", longest_date.format(trimmed)).is_err() {
+    if write!(formatted, "{}", date.format(trimmed)).is_err() {
         return Err(ValidationError::new(
             "Date format contains an invalid or unsupported specifier",
         ));
     }
 
-    // Check output length against every supported language, not just
-    // English: `render_options.language` is a separate config field this
-    // validator can't see, and `format_localized_date` substitutes each
-    // language's own weekday/month names, which can be longer than
-    // English's — so the format has to fit the budget under whichever
-    // language ends up selected. Safe to call unguarded (no write!/panic
-    // risk): the write! probe above already proved `trimmed` is a
-    // chrono-valid format, and `format_localized_date`'s specifier
-    // substitution preserves that validity (see i18n.rs).
-    //
-    // Any 7 consecutive calendar days contain each of the 7 weekdays
-    // exactly once, so days 1..=7 of every month cover all 84
-    // (weekday, month) pairings, including whichever one is longest
-    // for a given language.
-    for language in Language::iter() {
-        for month in 1..=12u32 {
-            for day in 1..=7u32 {
-                let date = Utc.with_ymd_and_hms(2023, month, day, 12, 0, 0).unwrap();
-                let rendered = format_localized_date(date, trimmed, language);
-                if rendered.len() > MAX_DATE_FORMAT_OUTPUT_LENGTH {
-                    let message = format!(
-                        "Date format produces output that is too long for display, it must be {MAX_DATE_FORMAT_OUTPUT_LENGTH} characters or fewer"
-                    );
-                    return Err(ValidationError {
-                        message: Cow::Owned(message),
-                    });
-                }
+    Ok(())
+}
+
+/// Rendered pixel width of the widest header `format` can produce in
+/// `language`, measured through the dashboard's own font database. `None`
+/// if nothing could be measured (e.g. fonts failed to load), in which case
+/// callers should accept the format rather than reject it blind.
+///
+/// `format` must already have passed [`is_valid_date_format`]. Weekday and
+/// month names are probed independently (widest weekday first, then every
+/// month on that weekday) with two-digit days, which finds the widest
+/// combination in 19 renders instead of all 84.
+pub fn widest_header_date_width(format: &str, language: Language) -> Option<u32> {
+    use chrono::{Datelike, NaiveDate, TimeZone, Utc};
+    use std::collections::HashMap;
+
+    let mut cache: HashMap<String, Option<u32>> = HashMap::new();
+    let mut width_on = |date: NaiveDate| -> Option<u32> {
+        let datetime = Utc.from_utc_datetime(&date.and_hms_opt(12, 0, 0)?);
+        let rendered = format_localized_date(datetime, format.trim(), language);
+        *cache.entry(rendered).or_insert_with_key(|text| {
+            measure_text_ink_width(text, HEADER_DATE_FONT_FAMILY, HEADER_DATE_FONT_SIZE)
+        })
+    };
+
+    // 22..=28 holds every weekday exactly once, all with two-digit days.
+    let days =
+        |month: u32| (22..=28).filter_map(move |day| NaiveDate::from_ymd_opt(2025, month, day));
+
+    let mut widest: Option<u32> = None;
+    let mut widest_weekday = None;
+    for date in days(9) {
+        if let Some(width) = width_on(date) {
+            if widest.is_none_or(|w| width > w) {
+                widest = Some(width);
+                widest_weekday = Some(date.weekday());
             }
         }
     }
-
-    Ok(())
+    let widest_weekday = widest_weekday?;
+    for month in 1..=12 {
+        if let Some(date) = days(month).find(|d| d.weekday() == widest_weekday) {
+            if let Some(width) = width_on(date) {
+                widest = Some(widest.map_or(width, |w| w.max(width)));
+            }
+        }
+    }
+    widest
 }
 
 /// Tests for the configurable date format feature: verifies that users can
@@ -460,6 +471,7 @@ pub fn is_valid_date_format(format: &str) -> Result<(), ValidationError> {
 mod tests {
     use super::*;
     use chrono::{TimeZone, Utc};
+    use strum::IntoEnumIterator;
 
     /// Formats a fixed date (Saturday, December 6, 2025) with the given format string.
     fn format_test_date(format: &str) -> String {
@@ -625,14 +637,6 @@ mod tests {
             assert!(is_valid_date_format("   ").is_err());
         }
 
-        /// A format that produces excessively long output should be rejected
-        /// to prevent display issues on the e-paper.
-        #[test]
-        fn output_too_long_is_invalid() {
-            let long_format = "%A, %B %-d, %Y - %A, %B %-d, %Y - %A, %B %-d, %Y";
-            assert!(is_valid_date_format(long_format).is_err());
-        }
-
         #[test]
         fn longest_reasonable_date_is_valid() {
             // Sunday, 28 September 2025 — longest day + month name combination,
@@ -640,6 +644,84 @@ mod tests {
             let format = "%A, %-d %B %Y";
             assert!(is_valid_date_format(format).is_ok());
             assert_eq!(format_longest_date(format), "Sunday, 28 September 2025");
+        }
+    }
+
+    mod header_width {
+        use super::*;
+        use chrono::NaiveDate;
+
+        fn fits(format: &str, language: Language) -> bool {
+            let width = widest_header_date_width(format, language)
+                .unwrap_or_else(|| panic!("could not measure {format:?} for {language:?}"));
+            width <= HEADER_DATE_MAX_WIDTH_PX
+        }
+
+        /// Documented English formats must never fall back to the default.
+        #[test]
+        fn formats_accepted_before_still_fit_for_english() {
+            for format in [
+                "%A, %d %B",
+                "%B %-d, %Y",
+                "%d/%m/%Y",
+                "%m/%d/%Y",
+                "%Y-%m-%d",
+                "%a, %-d %b",
+                "%A, %-d %B %Y",
+                "%A, %d %B %Y",
+                "%A, %B %-d, %Y",
+            ] {
+                assert!(fits(format, Language::En), "{format:?} no longer fits");
+            }
+        }
+
+        #[test]
+        fn every_language_default_fits() {
+            for language in Language::iter() {
+                assert!(
+                    fits(language.default_date_format(), language),
+                    "{language:?} default {:?} is too wide",
+                    language.default_date_format()
+                );
+            }
+        }
+
+        #[test]
+        fn far_too_long_format_does_not_fit() {
+            let long_format = "%A, %B %-d, %Y - %A, %B %-d, %Y - %A, %B %-d, %Y";
+            assert!(!fits(long_format, Language::En));
+        }
+
+        /// The fast probe (widest weekday, then every month on it) agrees
+        /// with measuring all 84 weekday × month combinations.
+        #[test]
+        fn widest_probe_matches_exhaustive_search() {
+            for (format, language) in [
+                ("%A, %-d %B %Y", Language::Pl),
+                ("%a %d %b", Language::Ru),
+                ("%A, %B %-d, %Y", Language::En),
+            ] {
+                let exhaustive = (1..=12)
+                    .flat_map(|month| {
+                        (22..=28).filter_map(move |day| NaiveDate::from_ymd_opt(2025, month, day))
+                    })
+                    .map(|date| {
+                        let datetime = Utc.from_utc_datetime(&date.and_hms_opt(12, 0, 0).unwrap());
+                        let text = format_localized_date(datetime, format, language);
+                        measure_text_ink_width(
+                            &text,
+                            HEADER_DATE_FONT_FAMILY,
+                            HEADER_DATE_FONT_SIZE,
+                        )
+                        .unwrap()
+                    })
+                    .max();
+                assert_eq!(
+                    widest_header_date_width(format, language),
+                    exhaustive,
+                    "{format:?} {language:?}"
+                );
+            }
         }
     }
 
@@ -658,38 +740,17 @@ mod tests {
                 let _ = is_valid_date_format(&format);
             }
 
-            /// `is_valid_date_format` checks every supported language's
-            /// rendered length via `format_localized_date`, not just
-            /// English's — this is the regression test for that budget
-            /// promise, checked against the same `format.trim()` the
-            /// validator itself checks (and the same trimmed value
-            /// `DateFormat`'s `sanitize(trim)` actually stores and renders
-            /// in production — an untrimmed `format` here would check a
-            /// string that's never the one actually rendered).
+            /// `format_localized_date` swaps `%A`/`%a`/`%B`/`%b` for translated
+            /// names after chrono runs; for any syntactically valid format
+            /// that substitution must not make rendering panic in any language.
             #[test]
-            fn accepted_formats_stay_within_budget_for_every_language(
+            fn valid_formats_render_in_every_language(
                 format in date_format_strategy()
             ) {
                 if is_valid_date_format(&format).is_ok() {
-                    let trimmed = format.trim();
+                    let date = Utc.with_ymd_and_hms(2023, 9, 27, 10, 30, 0).unwrap();
                     for language in Language::iter() {
-                        // Any 7 consecutive calendar days contain each of the
-                        // 7 weekdays exactly once, so days 1..=7 of every
-                        // month cover all 84 (weekday, month) pairings —
-                        // including whichever one produces this language's
-                        // longest %A/%B rendering.
-                        for month in 1..=12u32 {
-                            for day in 1..=7u32 {
-                                let date = Utc.with_ymd_and_hms(2023, month, day, 10, 30, 0).unwrap();
-                                let rendered = format_localized_date(date, trimmed, language);
-                                prop_assert!(
-                                    rendered.len() <= MAX_DATE_FORMAT_OUTPUT_LENGTH,
-                                    "format {format:?} passed is_valid_date_format but rendered \
-                                     to {} bytes ({rendered:?}) for {language:?} on {date:?}",
-                                    rendered.len(),
-                                );
-                            }
-                        }
+                        let _ = format_localized_date(date, format.trim(), language);
                     }
                 }
             }

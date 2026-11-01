@@ -844,7 +844,7 @@ impl<'a> ContextBuilder<'a> {
         self.context.current_hour_feels_like = current_hour.apparent_temperature.to_string();
         self.context.current_day_date = format_localized_date(
             clock.now_local(self.settings.misc.timezone),
-            self.settings.render_options.date_format.as_ref(),
+            self.settings.render_options.effective_date_format(),
             self.settings.render_options.language,
         );
         self.context.current_hour_rain_amount = current_hour.precipitation.amount().to_string();

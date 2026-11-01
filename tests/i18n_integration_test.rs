@@ -54,7 +54,7 @@ async fn french_language_override_localizes_rendered_dashboard() {
 
     assert!(svg_content.contains("Mesure"));
     assert!(svg_content.contains("Maint"));
-    assert!(svg_content.contains("Samedi, 25 Octobre"));
+    assert!(svg_content.contains("Samedi 25 octobre"));
     assert!(svg_content.contains("Dimanche"));
     assert!(svg_content.contains("Dim"));
     // Chart x-axis: French defaults to 24-hour labels, not English am/pm.
@@ -75,7 +75,7 @@ async fn german_language_override_localizes_rendered_dashboard() {
     assert!(svg_content.contains("Wert"));
     assert!(svg_content.contains("Jetzt"));
     // Date header: Saturday 25 October in German (%A, %d %B)
-    assert!(svg_content.contains("Samstag, 25 Oktober"));
+    assert!(svg_content.contains("Samstag, 25. Oktober"));
     // Tomorrow chart marker: 2025-10-26 is Sunday = Sonntag
     assert!(svg_content.contains("Sonntag"));
     // Chart x-axis: German defaults to 24-hour labels, not English am/pm.
@@ -96,7 +96,7 @@ async fn spanish_language_override_localizes_rendered_dashboard() {
     assert!(svg_content.contains("Medida"));
     assert!(svg_content.contains("Ahora"));
     // Date header: Saturday 25 October in Spanish (%A, %d %B)
-    assert!(svg_content.contains("Sábado, 25 Octubre"));
+    assert!(svg_content.contains("Sábado, 25 de octubre"));
     // Tomorrow chart marker: 2025-10-26 is Sunday = Domingo
     assert!(svg_content.contains("Domingo"));
     // Chart x-axis: Spanish defaults to 24-hour labels, not English am/pm.
@@ -117,7 +117,7 @@ async fn japanese_language_override_localizes_rendered_dashboard() {
     assert!(svg_content.contains("指標"));
     assert!(svg_content.contains("今"));
     // Date header: Saturday 25 October in Japanese (%A, %d %B)
-    assert!(svg_content.contains("土曜日, 25 10月"));
+    assert!(svg_content.contains("10月25日 (土)"));
     // Tomorrow chart marker: 2025-10-26 is Sunday = 日曜日. Kanji rotated 90°
     // (the Latin-script convention other locales use here) reads as broken,
     // so Japanese renders the long-form name stacked top-to-bottom (tategaki)
@@ -127,6 +127,65 @@ async fn japanese_language_override_localizes_rendered_dashboard() {
     // Chart x-axis: Japanese defaults to 24-hour labels, not English am/pm.
     assert!(svg_content.contains("16:00</text>"));
     assert!(!svg_content.contains("pm</text>"));
+}
+
+#[tokio::test]
+async fn russian_language_override_localizes_rendered_dashboard() {
+    let svg_content = render_dashboard_svg(
+        Language::Ru,
+        None,
+        Path::new("tests/output/russian_language_dashboard.svg"),
+    )
+    .await;
+
+    // Labels
+    assert!(svg_content.contains("Знач"));
+    assert!(svg_content.contains("Сейч"));
+    // Date header: Saturday 25 October in Russian, month in the genitive case
+    assert!(svg_content.contains("Суббота, 25 октября"));
+    // Tomorrow chart marker: 2025-10-26 is Sunday = Воскресенье
+    assert!(svg_content.contains("Воскресенье"));
+    // Chart x-axis: Russian defaults to 24-hour labels, not English am/pm.
+    assert!(svg_content.contains("16:00</text>"));
+    assert!(!svg_content.contains("pm</text>"));
+}
+
+#[tokio::test]
+async fn latin_and_cyrillic_locales_localize_rendered_dashboard() {
+    // (language, "Now" label, expected date header for Saturday 25 October,
+    // expected tomorrow marker for Sunday)
+    let cases = [
+        (Language::Uk, "Нині", "Субота, 25 жовтня", "Неділя"),
+        (Language::It, "Ora", "Sabato 25 ottobre", "Domenica"),
+        (Language::Pt, "Agora", "Sábado, 25 de outubro", "Domingo"),
+        (Language::Nl, "Nu", "Zaterdag 25 oktober", "Zondag"),
+        (
+            Language::Pl,
+            "Teraz",
+            "Sobota, 25 października",
+            "Niedziela",
+        ),
+        (Language::Sv, "Nu", "Lördag 25 oktober", "Söndag"),
+        (Language::Nb, "Nå", "Lørdag 25. oktober", "Søndag"),
+        (Language::Da, "Nu", "Lørdag 25. oktober", "Søndag"),
+        (Language::Cs, "Nyní", "Sobota 25. října", "Neděle"),
+    ];
+    for (language, now, date, tomorrow) in cases {
+        let svg_content = render_dashboard_svg(
+            language,
+            None,
+            Path::new(&format!("tests/output/{language}_language_dashboard.svg")),
+        )
+        .await;
+        assert!(svg_content.contains(now), "{language}: missing {now:?}");
+        assert!(svg_content.contains(date), "{language}: missing {date:?}");
+        assert!(
+            svg_content.contains(tomorrow),
+            "{language}: missing {tomorrow:?}"
+        );
+        assert!(svg_content.contains("16:00</text>"), "{language}: 24h axis");
+        assert!(!svg_content.contains("pm</text>"), "{language}: am/pm axis");
+    }
 }
 
 #[tokio::test]

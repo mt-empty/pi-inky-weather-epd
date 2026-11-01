@@ -129,7 +129,7 @@ expression: svg
 
             <text x="107" y="43.5" fill="black" font-size="20" text-anchor="middle">Now
             </text>
-            <text x="177" y="43.5" fill="black" font-size="20" text-anchor="middle">Max
+            <text x="178" y="43.5" fill="black" font-size="20" text-anchor="middle">Max
                 <tspan baseline-shift="super" font-size="17" dx="-3">24h</tspan>
             </text>
         </svg>
