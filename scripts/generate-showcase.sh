@@ -143,7 +143,7 @@ render_example "misc/showcase_fixtures/gif" "2025-10-24T22:00:00Z" "dashboard-da
 # `render_options.language` value, so the readme's Language section links to
 # real translated output instead of just describing it.
 mkdir -p misc/languages
-for lang in en fr de es ja; do
+for lang in en fr de es ja ru uk it pt nl pl sv nb da cs; do
     render_example "misc/showcase_fixtures/gif" "2025-10-24T22:00:00Z" "languages/dashboard-${lang}.png" \
         APP_RENDER_OPTIONS__LANGUAGE="$lang"
 done

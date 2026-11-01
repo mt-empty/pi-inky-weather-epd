@@ -207,20 +207,37 @@ fn render_svg_to_pixmap(svg: &str) -> Option<tiny_skia::Pixmap> {
     Some(pixmap)
 }
 
-/// Vertical pixel centre of a rendered SVG snippet's ink (the midpoint
-/// between its topmost and bottommost non-transparent rows), or `None` if
-/// nothing rendered.
+/// Topmost and bottommost rows containing non-transparent pixels in a
+/// rendered SVG snippet, or `None` if nothing rendered.
 ///
-/// Used to align text vertically by measuring actual glyph ink rather than a
+/// Used to place text vertically by measuring actual glyph ink rather than a
 /// hand-tuned offset — see the TEMPORARY WORKAROUND block above for why.
-pub fn measure_ink_y_center(svg: &str) -> Option<f32> {
+pub fn measure_ink_y_extent(svg: &str) -> Option<(u32, u32)> {
     let pixmap = render_svg_to_pixmap(svg)?;
     let row_has_ink = |y: u32| -> bool {
         (0..pixmap.width()).any(|x| pixmap.pixel(x, y).is_some_and(|p| p.alpha() > 0))
     };
     let min_y = (0..pixmap.height()).find(|&y| row_has_ink(y))?;
     let max_y = (0..pixmap.height()).rev().find(|&y| row_has_ink(y))?;
-    Some((min_y + max_y) as f32 / 2.0)
+    Some((min_y, max_y))
+}
+
+/// Horizontal ink width, in pixels, of `text` rendered on one line at the
+/// given font settings through the same font database as the final
+/// dashboard, or `None` if it rendered nothing.
+pub fn measure_text_ink_width(text: &str, font_family: &str, font_size: f32) -> Option<u32> {
+    // 1.5em per char leaves room for full-width CJK glyphs.
+    let width = (text.chars().count() as f32 * font_size * 1.5 + 20.0).ceil();
+    let text = escape_xml_text(text);
+    let height = font_size * 2.0;
+    let svg = format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" font-family="{font_family}">
+            <text x="10" y="{font_size}" font-size="{font_size}">{text}</text>
+        </svg>"#
+    );
+    let pixmap = render_svg_to_pixmap(&svg)?;
+    let (min_x, max_x) = ink_extent_x_in_y_range(&pixmap, 0, pixmap.height())?;
+    Some(max_x - min_x + 1)
 }
 
 /// x-extent (min, max) of non-transparent pixels within rows `y_from..=y_to`
@@ -320,12 +337,16 @@ pub fn measure_label_to_number_gap_dx(
     let line2 = escape_xml_text(line2);
     let label_colour = (0, 0, 0);
     let probe_colour = (0, 255, 0);
+    // The probe is pushed clear of the label: at dx=0 it can paint over the
+    // label's trailing ink, hiding the label's true right edge. Even, so each
+    // half of the centre-anchored run shifts by whole pixels.
+    const PROBE_OFFSET: f32 = 40.0;
     let svg = format!(
         r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="{number_font_size}" font-family="{label_font_family}">
             <text x="248" y="{label_font_size}" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
                 <tspan>{line1}</tspan>
                 <tspan dx="{label_dx}" dy="{label_dy}">{line2}</tspan>
-                <tspan font-family="{number_font_family}" dominant-baseline="middle" font-size="{number_font_size}" fill="rgb(0,255,0)" dx="0">{probe_text}</tspan>
+                <tspan font-family="{number_font_family}" dominant-baseline="middle" font-size="{number_font_size}" fill="rgb(0,255,0)" dx="{PROBE_OFFSET}">{probe_text}</tspan>
             </text>
         </svg>"#
     );
@@ -345,7 +366,7 @@ pub fn measure_label_to_number_gap_dx(
         return 0.0;
     };
 
-    let natural_gap = probe_min as f32 - label_max as f32;
+    let natural_gap = probe_min as f32 - label_max as f32 - PROBE_OFFSET;
     target_gap - natural_gap
 }
 
@@ -566,16 +587,16 @@ mod tests {
         // (a missing glyph is a silent tofu box on the actual dashboard,
         // not a panic) if the shared db can't render one of its characters.
         use crate::i18n::{
-            month_long, month_short, translate, weekday_long, weekday_short, Language,
-            TranslationKey,
+            format_localized_date, month_long, month_short, translate, weekday_long, weekday_short,
+            Language, TranslationKey,
         };
-        use chrono::Weekday;
+        use chrono::{TimeZone, Utc, Weekday};
         use strum::IntoEnumIterator;
 
         let db = shared_font_db();
         // Parse each bundled face once up front rather than on every
         // character check below — this test walks every character of every
-        // translated string across all 5 languages, and Face::parse isn't
+        // translated string across every language, and Face::parse isn't
         // free.
         let face_data: Vec<(Vec<u8>, u32)> = db
             .faces()
@@ -605,6 +626,13 @@ mod tests {
             strings.extend(weekdays.iter().map(|&w| weekday_short(w, language)));
             strings.extend((1..=12u32).map(|m| month_long(m, language)));
             strings.extend((1..=12u32).map(|m| month_short(m, language)));
+            // Literal text in the default header format (e.g. ja's "日").
+            let default_date = format_localized_date(
+                Utc.with_ymd_and_hms(2025, 10, 25, 12, 0, 0).unwrap(),
+                language.default_date_format(),
+                language,
+            );
+            strings.push(&default_date);
 
             for s in strings {
                 for c in s.chars() {

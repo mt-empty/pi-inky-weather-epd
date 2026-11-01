@@ -116,7 +116,17 @@ Example renders for each supported language:
 [fr](./misc/languages/dashboard-fr.png) ·
 [de](./misc/languages/dashboard-de.png) ·
 [es](./misc/languages/dashboard-es.png) ·
-[ja](./misc/languages/dashboard-ja.png)
+[ja](./misc/languages/dashboard-ja.png) ·
+[ru](./misc/languages/dashboard-ru.png) ·
+[uk](./misc/languages/dashboard-uk.png) ·
+[it](./misc/languages/dashboard-it.png) ·
+[pt](./misc/languages/dashboard-pt.png) ·
+[nl](./misc/languages/dashboard-nl.png) ·
+[pl](./misc/languages/dashboard-pl.png) ·
+[sv](./misc/languages/dashboard-sv.png) ·
+[nb](./misc/languages/dashboard-nb.png) ·
+[da](./misc/languages/dashboard-da.png) ·
+[cs](./misc/languages/dashboard-cs.png)
 
 
 #### Use Clear night Icon instead of Moon Phase icon when Time=night and Weather=clear
@@ -192,8 +202,8 @@ key, its type, and its default value:
 | `[colours]` | `snow_colour` | string | `"blue"` | Snow forecast fill colour (snowflakes always white) |
 | `[render_options]` | `temp_unit` | string | `"C"` | `"C"` or `"F"` |
 | `[render_options]` | `wind_speed_unit` | string | `"km/h"` | `"km/h"`, `"mph"`, or `"knots"` |
-| `[render_options]` | `language` | string | `"en"` | UI language: `en`, `fr`, `de`, `es`, `ja` |
-| `[render_options]` | `date_format` | string | `"%A, %d %B"` | [chrono strftime](https://docs.rs/chrono/latest/chrono/format/strftime/) format |
+| `[render_options]` | `language` | string | `"en"` | UI language: `en`, `fr`, `de`, `es`, `ja`, `ru`, `uk`, `it`, `pt`, `nl`, `pl`, `sv`, `nb` (`no` also accepted), `da`, `cs` |
+| `[render_options]` | `date_format` | string | per language (`"%A, %d %B"` for `en`) | [chrono strftime](https://docs.rs/chrono/latest/chrono/format/strftime/) format; ignored with a warning if too wide for the header in the chosen language |
 | `[render_options]` | `use_moon_phase_instead_of_clear_night` | bool | `true` | Show moon phase icon instead of clear-night icon |
 | `[render_options]` | `x_axis_always_at_min` | bool | `true` | Keep x-axis at y=0 when temperature is below zero |
 | `[render_options]` | `use_gust_instead_of_wind` | bool | `false` | Display gust speed instead of sustained wind speed |

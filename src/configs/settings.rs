@@ -218,7 +218,9 @@ pub struct RenderOptions {
     pub language: Language,
     #[serde(default)]
     pub hour_format: HourFormat,
-    pub date_format: DateFormat,
+    /// Unset means `language`'s own default (see [`Self::effective_date_format`]).
+    #[serde(default)]
+    pub date_format: Option<DateFormat>,
     pub use_moon_phase_instead_of_clear_night: bool,
     pub x_axis_always_at_min: bool,
     pub use_gust_instead_of_wind: bool,
@@ -227,6 +229,18 @@ pub struct RenderOptions {
     pub precipitation_opacity_min: Opacity,
     /// Gradient fill opacity at 100% precipitation chance. Must be > precipitation_opacity_min.
     pub precipitation_opacity_max: Opacity,
+}
+
+impl RenderOptions {
+    /// The header date format to render: the configured one, else the
+    /// current `language`'s default. Resolved per call, not at load, because
+    /// tests (and any caller) may change `language` after loading.
+    pub fn effective_date_format(&self) -> &str {
+        match &self.date_format {
+            Some(format) => format.as_ref(),
+            None => self.language.default_date_format(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -261,6 +275,28 @@ fn validate_release_cross_fields(
         );
     }
     Ok(())
+}
+
+/// Clears a configured `date_format` whose widest rendering in the configured
+/// language would overflow the header, so the language default is used
+/// instead. A warning rather than a config error: an unattended device
+/// should keep rendering after an upgrade or language change.
+fn drop_date_format_if_too_wide(render_options: &mut RenderOptions) {
+    let Some(format) = &render_options.date_format else {
+        return;
+    };
+    let language = render_options.language;
+    if let Some(width) = widest_header_date_width(format.as_ref(), language) {
+        if width > HEADER_DATE_MAX_WIDTH_PX {
+            crate::logger::warning(format!(
+                "date_format {format:?} renders up to {width}px wide in language '{language}', \
+                 over the {HEADER_DATE_MAX_WIDTH_PX}px header; using the '{language}' default \
+                 {:?} instead",
+                language.default_date_format()
+            ));
+            render_options.date_format = None;
+        }
+    }
 }
 
 /// Which config layer to merge on top of `default.toml`, selected by `RUN_MODE`.
@@ -391,7 +427,7 @@ impl DashboardSettings {
     }
 
     fn deserialize_and_validate(settings: Config) -> Result<Self, ConfigError> {
-        let final_settings: Result<DashboardSettings, ConfigError> = settings.try_deserialize();
+        let mut final_settings: Result<DashboardSettings, ConfigError> = settings.try_deserialize();
 
         // Validate the settings after deserializing
         if let Err(error) = &final_settings {
@@ -418,6 +454,10 @@ impl DashboardSettings {
                     "precipitation_opacity_min ({omin}) must be less than precipitation_opacity_max ({omax})"
                 )));
             }
+        }
+
+        if let Ok(ref mut s) = final_settings {
+            drop_date_format_if_too_wide(&mut s.render_options);
         }
 
         final_settings
@@ -456,7 +496,16 @@ impl DashboardSettings {
             "Hour Format",
             format!("{}", self.render_options.hour_format),
         );
-        logger::kvp("Date Format", &self.render_options.date_format);
+        logger::kvp(
+            "Date Format",
+            match &self.render_options.date_format {
+                Some(format) => format.to_string(),
+                None => format!(
+                    "{} (language default)",
+                    self.render_options.effective_date_format()
+                ),
+            },
+        );
         logger::kvp(
             "Use Moon Phase",
             self.render_options.use_moon_phase_instead_of_clear_night,
@@ -551,6 +600,76 @@ mod tests {
         assert!(
             validate_release_cross_fields(UpdateIntervalDays::try_new(7).unwrap(), false).is_ok()
         );
+    }
+
+    mod date_format {
+        use super::super::DashboardSettings;
+        use config::{Config, File, FileFormat};
+
+        /// `config/default.toml` with `render_options` overrides on top, run
+        /// through the same deserialize-and-validate path as a real load.
+        fn load_with(render_options_toml: &str) -> DashboardSettings {
+            let overrides = format!("[render_options]\n{render_options_toml}");
+            let config = Config::builder()
+                .add_source(File::with_name("config/default"))
+                .add_source(File::from_str(&overrides, FileFormat::Toml))
+                .build()
+                .unwrap();
+            DashboardSettings::deserialize_and_validate(config).unwrap()
+        }
+
+        /// A config without `date_format` loads and renders the language default.
+        #[test]
+        fn missing_date_format_uses_the_language_default() {
+            let settings = load_with(r#"language = "pt""#);
+            assert!(settings.render_options.date_format.is_none());
+            assert_eq!(
+                settings.render_options.effective_date_format(),
+                "%A, %-d de %B"
+            );
+        }
+
+        #[test]
+        fn explicit_former_default_is_kept_for_english() {
+            let settings = load_with(
+                r#"language = "en"
+date_format = "%A, %d %B""#,
+            );
+            assert_eq!(settings.render_options.effective_date_format(), "%A, %d %B");
+        }
+
+        /// 522px in Polish, over the 510px header; fits in English.
+        #[test]
+        fn too_wide_format_falls_back_to_the_language_default() {
+            let toml = |language: &str| {
+                format!(
+                    r#"language = "{language}"
+date_format = "%A, %-d %B %Y""#
+                )
+            };
+            let polish = load_with(&toml("pl"));
+            assert!(polish.render_options.date_format.is_none());
+            assert_eq!(polish.render_options.effective_date_format(), "%A, %-d %B");
+
+            let english = load_with(&toml("en"));
+            assert_eq!(
+                english.render_options.effective_date_format(),
+                "%A, %-d %B %Y"
+            );
+        }
+
+        #[test]
+        fn malformed_date_format_is_still_a_config_error() {
+            let config = Config::builder()
+                .add_source(File::with_name("config/default"))
+                .add_source(File::from_str(
+                    "[render_options]\ndate_format = \"   \"",
+                    FileFormat::Toml,
+                ))
+                .build()
+                .unwrap();
+            assert!(DashboardSettings::deserialize_and_validate(config).is_err());
+        }
     }
 
     #[test]
