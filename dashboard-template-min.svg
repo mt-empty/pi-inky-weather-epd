@@ -1,8 +1,6 @@
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
 
     <!-- tspan doesn't work well with the degree symbol ° for some fonts!-->
-    <!-- Avoid using tspan with text-anchor, `dx` or `dy`, resvg doesn't handle it properly -->
-    <!-- see https://github.com/linebender/resvg/issues/583 -->
 
     <defs>
         <linearGradient id="fillGradient" x1="0%" y1="100%" x2="0%" y2="0%">
@@ -51,19 +49,17 @@
     <rect width="100%" height="100%" fill="{background_colour}" />
 
     <!-- Current Day Information -->
-    <!-- Due to resvg bug, the position is intentionally off to compensate for the bug -->
-    <!-- Do not modify the x position of current_hour_temp and current_hour_feels_like, see above issue at the start of the file -->
     <text x="400" y="50" font-size="35" fill="{text_colour}" text-anchor="middle">{current_day_date}</text>
     <image x="0" y="-5" width="200" height="180" href="{current_hour_weather_icon}" />
 
 
     <!-- Current temperature and Feels Like temperature -->
-    <text x="266" y="128" font-size="70" fill="{actual_temp_colour}" text-anchor="middle">
+    <text x="256" y="128" font-size="70" fill="{actual_temp_colour}" text-anchor="middle">
         {current_hour_actual_temp}
         <tspan baseline-shift="27" dx="-20" font-size="33">°{temp_unit}</tspan>
     </text>
 
-    <text x="248" y="158" text-anchor="middle" font-size="18" fill="{text_colour}">
+    <text x="{feels_like_x}" y="158" text-anchor="middle" font-size="18" fill="{text_colour}">
         <tspan>{label_feels}</tspan>
         {label_like_tspan}
         <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="{feels_like_colour}"

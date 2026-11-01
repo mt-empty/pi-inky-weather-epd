@@ -9,7 +9,7 @@ use crate::{
     logger,
     utils::{
         find_max_item_between_dates, measure_label_to_number_gap_dx, measure_stacked_label_dx,
-        total_between_dates, weekday_after_days,
+        total_between_dates, weekday_after_days, FEELS_LIKE_ANCHOR_X,
     },
     weather::icons::{HumidityIconName, Icon, IconContext, SunPositionIconName, UVIndexIcon},
 };
@@ -21,13 +21,10 @@ use std::collections::HashMap;
 use super::chart::{generate_unified_precipitation_svg, CurveType, ElementVisibility, FontStyle};
 
 // =============================================================================
-// TEMPORARY WORKAROUND — remove once resvg/usvg supports tspan `text-anchor`
-// with `dx`/`dy` centering correctly: https://github.com/linebender/resvg/issues/583
-//
-// Until then, the "Feels"/"Like" label's line-2 offset and the following
-// number's gap are computed via `utils::measure_stacked_label_dx` /
-// `measure_label_to_number_gap_dx` (render + measure pixels) instead of
-// native SVG anchoring.
+// Stacked "Feels"/"Like" label: the line-2 offset and the following number's
+// gap are computed via `utils::measure_stacked_label_dx` /
+// `measure_label_to_number_gap_dx` (render + measure pixels), since SVG can't
+// centre one line under another inside a single anchored `<text>`.
 // =============================================================================
 
 /// Font used for the "Feels"/"Like"-style two-line label, matching
@@ -84,7 +81,7 @@ fn feels_like_tspan_and_number_dx(language: Language) -> (String, String) {
     (label_like_tspan, feels_like_number_dx)
 }
 
-// ============================= END WORKAROUND ==============================
+// ========================== END STACKED-LABEL LAYOUT ==========================
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Context {
@@ -121,6 +118,7 @@ pub struct Context {
     pub label_feels: String,
     pub label_like_tspan: String,
     pub feels_like_number_dx: String,
+    pub feels_like_x: f32,
     pub label_metric: String,
     pub label_now: String,
     pub label_max: String,
@@ -227,6 +225,7 @@ impl Context {
             label_feels: translate(TranslationKey::Feels, language).to_string(),
             label_like_tspan,
             feels_like_number_dx,
+            feels_like_x: FEELS_LIKE_ANCHOR_X,
             label_metric: translate(TranslationKey::Metric, language).to_string(),
             label_now: translate(TranslationKey::Now, language).to_string(),
             label_max: translate(TranslationKey::Max, language).to_string(),
@@ -1010,6 +1009,58 @@ mod tests {
     use super::*;
     use crate::clock::FixedClock;
     use crate::domain::models::{Astronomical, Temperature};
+
+    mod feels_like_layout_tests {
+        use super::*;
+        use crate::utils::measure_ink_x_extent;
+        use strum::IntoEnumIterator;
+        use tinytemplate::{format_unescaped, TinyTemplate};
+
+        /// Left edge of the day-2 forecast icon (`<svg x="292">` plus the
+        /// icon's `x="12"` in the template), which the feels-like block must
+        /// not reach.
+        const DAY2_ICON_LEFT_X: u32 = 304;
+
+        /// Renders only the template's own Feels/Like `<text>` element, so the
+        /// test tracks any change to its markup.
+        fn render_feels_like_block(context: &Context) -> String {
+            let template = include_str!("../../dashboard-template-min.svg");
+            let start = template
+                .find(r#"<text x="{feels_like_x}""#)
+                .expect("feels-like <text> not found in template");
+            let end = start + template[start..].find("</text>").unwrap() + "</text>".len();
+            let fragment = format!(
+                r#"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" font-family="Roboto, sans-serif">{}</svg>"#,
+                &template[start..end]
+            );
+            let mut tt = TinyTemplate::new();
+            tt.set_default_formatter(&format_unescaped);
+            tt.add_template("feels", &fragment).unwrap();
+            tt.render("feels", context).unwrap()
+        }
+
+        #[test]
+        fn feels_like_block_stays_left_of_day2_icon_in_every_language() {
+            let today = NaiveDate::from_ymd_opt(2025, 10, 25).unwrap();
+            for language in Language::iter() {
+                let mut settings = DashboardSettings::load_test_config().unwrap();
+                settings.render_options.language = language;
+                let mut context = Context::new(&settings, today);
+                // The dashed font's digits share one advance width, so these
+                // cover every 2- and 3-character reading (e.g. 104°F).
+                for value in ["16", "-12", "104"] {
+                    context.current_hour_feels_like = value.to_string();
+                    let (_, right) = measure_ink_x_extent(&render_feels_like_block(&context))
+                        .expect("feels-like block rendered no ink");
+                    assert!(
+                        right < DAY2_ICON_LEFT_X,
+                        "{language:?} {value}: feels-like ink reaches x={right}, \
+                         overlapping the day-2 icon at x={DAY2_ICON_LEFT_X}"
+                    );
+                }
+            }
+        }
+    }
 
     mod pick_today_or_tomorrow_max_tests {
         use super::*;
