@@ -5,8 +5,6 @@ expression: svg
 <svg width="800" height="480" font-family="Roboto, sans-serif" xmlns="http://www.w3.org/2000/svg">
 
     <!-- tspan doesn't work well with the degree symbol ° for some fonts!-->
-    <!-- Avoid using tspan with text-anchor, `dx` or `dy`, resvg doesn't handle it properly -->
-    <!-- see https://github.com/linebender/resvg/issues/583 -->
 
     <defs>
         <linearGradient id="fillGradient" x1="0%" y1="100%" x2="0%" y2="0%">
@@ -55,19 +53,21 @@ expression: svg
     <rect width="100%" height="100%" fill="white" />
 
     <!-- Current Day Information -->
-    <!-- Due to resvg bug, the position is intentionally off to compensate for the bug -->
-    <!-- Do not modify the x position of current_hour_temp and current_hour_feels_like, see above issue at the start of the file -->
     <text x="400" y="50" font-size="35" fill="black" text-anchor="middle">Saturday, 25 October</text>
     <image x="0" y="-5" width="200" height="180" href="static/fill-svg-static/partly-cloudy-day-drizzle.svg" />
 
 
     <!-- Current temperature and Feels Like temperature -->
-    <text x="266" y="128" font-size="70" fill="red" text-anchor="middle">
-        16
-        <tspan baseline-shift="27" dx="-20" font-size="33">°C</tspan>
-    </text>
+    <!-- x assumes resvg counts tspan dx when centring (0.49+); a resvg bump can shift these.
+         actual_temp_scale shrinks readings wider than "48" to fit; context.rs layout_tests guard both. -->
+    <g transform="translate(256,128) scale(1.0)">
+        <text x="0" y="0" font-size="70" fill="red" text-anchor="middle">
+            16
+            <tspan baseline-shift="27" dx="-20" font-size="33">°C</tspan>
+        </text>
+    </g>
 
-    <text x="248" y="158" text-anchor="middle" font-size="18" fill="black">
+    <text x="220" y="158" text-anchor="middle" font-size="18" fill="black">
         <tspan>Feels</tspan>
         <tspan dx="-42" dy="15.5">Like</tspan>
         <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="green"
