@@ -217,7 +217,6 @@ pub fn measure_ink_y_extent(svg: &str) -> Option<(u32, u32)> {
 
 /// Leftmost and rightmost columns containing non-transparent pixels in a
 /// rendered SVG snippet, or `None` if nothing rendered.
-#[cfg(test)]
 pub fn measure_ink_x_extent(svg: &str) -> Option<(u32, u32)> {
     let pixmap = render_svg_to_pixmap(svg)?;
     ink_extent_x_in_y_range(&pixmap, 0, pixmap.height())

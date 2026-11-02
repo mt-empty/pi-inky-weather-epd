@@ -59,11 +59,13 @@ expression: svg_content
 
     <!-- Current temperature and Feels Like temperature -->
     <!-- x assumes resvg counts tspan dx when centring (0.49+); a resvg bump can shift these.
-         context.rs feels_like_layout_tests guards the feels-like block's fit. -->
-    <text x="256" y="128" font-size="70" fill="red" text-anchor="middle">
-        -7
-        <tspan baseline-shift="27" dx="-20" font-size="33">°C</tspan>
-    </text>
+         actual_temp_scale shrinks readings wider than "48" to fit; context.rs layout_tests guard both. -->
+    <g transform="translate(256,128) scale(1.0)">
+        <text x="0" y="0" font-size="70" fill="red" text-anchor="middle">
+            -7
+            <tspan baseline-shift="27" dx="-20" font-size="33">°C</tspan>
+        </text>
+    </g>
 
     <text x="220" y="158" text-anchor="middle" font-size="18" fill="black">
         <tspan>Feels</tspan>

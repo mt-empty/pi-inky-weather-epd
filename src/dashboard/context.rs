@@ -8,8 +8,8 @@ use crate::{
     i18n::{format_localized_date, translate, weekday_short, Language, TranslationKey},
     logger,
     utils::{
-        find_max_item_between_dates, measure_label_to_number_gap_dx, measure_stacked_label_dx,
-        total_between_dates, weekday_after_days,
+        find_max_item_between_dates, measure_ink_x_extent, measure_label_to_number_gap_dx,
+        measure_stacked_label_dx, total_between_dates, weekday_after_days,
     },
     weather::icons::{HumidityIconName, Icon, IconContext, SunPositionIconName, UVIndexIcon},
 };
@@ -83,6 +83,45 @@ fn feels_like_tspan_and_number_dx(language: Language) -> (String, String) {
 
 // ========================== END STACKED-LABEL LAYOUT ==========================
 
+/// Big current-temperature `<text>` settings, matching
+/// `dashboard-template-min.svg` — must stay in sync with the template.
+const ACTUAL_TEMP_FONT_SIZE: f32 = 70.0;
+const ACTUAL_TEMP_UNIT_FONT_SIZE: f32 = 33.0;
+const ACTUAL_TEMP_UNIT_BASELINE_SHIFT: f32 = 27.0;
+const ACTUAL_TEMP_UNIT_DX: f32 = -20.0;
+
+/// Widest two-character reading (the 4's diagonal overhangs further than
+/// any other leading digit); anything up to its width renders unscaled.
+const ACTUAL_TEMP_REFERENCE: &str = "48";
+
+/// Ink width of the current-temperature element for `value` and `unit`.
+fn actual_temp_ink_width(value: &str, unit: &str) -> Option<u32> {
+    let svg = format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="400" height="120" font-family="Roboto, sans-serif">
+            <text x="200" y="100" font-size="{ACTUAL_TEMP_FONT_SIZE}" text-anchor="middle">{value}<tspan baseline-shift="{ACTUAL_TEMP_UNIT_BASELINE_SHIFT}" dx="{ACTUAL_TEMP_UNIT_DX}" font-size="{ACTUAL_TEMP_UNIT_FONT_SIZE}">°{unit}</tspan></text>
+        </svg>"#
+    );
+    let (min_x, max_x) = measure_ink_x_extent(&svg)?;
+    Some(max_x - min_x + 1)
+}
+
+/// Scale for the current-temperature group that shrinks readings wider than
+/// [`ACTUAL_TEMP_REFERENCE`] (e.g. "-12", "104") back to its width, so they
+/// stay between the current-weather and day-2 icons. `1.0` otherwise.
+fn actual_temp_scale(value: &str, unit: &str) -> f32 {
+    let (Some(reference), Some(width)) = (
+        actual_temp_ink_width(ACTUAL_TEMP_REFERENCE, unit),
+        actual_temp_ink_width(value, unit),
+    ) else {
+        logger::warning(format!(
+            "Failed to measure current temperature {value:?}°{unit}: render failed"
+        ));
+        return 1.0;
+    };
+    let scale = (reference as f32 / width as f32).min(1.0);
+    (scale * 1000.0).floor() / 1000.0
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Context {
     // colours
@@ -106,6 +145,7 @@ pub struct Context {
     pub temp_unit: String,
     pub current_wind_speed_unit: String,
     pub current_hour_actual_temp: String,
+    pub actual_temp_scale: f32,
     pub current_hour_weather_icon: String,
     pub current_hour_feels_like: String,
     pub current_hour_wind_speed: String,
@@ -212,6 +252,10 @@ impl Context {
             temp_unit: render_options.temp_unit.to_string(),
             current_wind_speed_unit: render_options.wind_speed_unit.to_string(),
             current_hour_actual_temp: NOT_AVAILABLE.to_string(),
+            actual_temp_scale: actual_temp_scale(
+                NOT_AVAILABLE,
+                &render_options.temp_unit.to_string(),
+            ),
             current_hour_weather_icon: not_available_icon_path.clone(),
             current_hour_feels_like: NOT_AVAILABLE.to_string(),
             current_hour_wind_speed: NOT_AVAILABLE.to_string(),
@@ -837,6 +881,10 @@ impl<'a> ContextBuilder<'a> {
         clock: &dyn Clock,
     ) -> &mut Self {
         self.context.current_hour_actual_temp = current_hour.temperature.to_string();
+        self.context.actual_temp_scale = actual_temp_scale(
+            &self.context.current_hour_actual_temp,
+            &self.context.temp_unit,
+        );
         self.context.current_hour_weather_icon = current_hour.icon_path(&self.icon_ctx);
         self.context.current_hour_feels_like = current_hour.apparent_temperature.to_string();
         self.context.current_day_date = format_localized_date(
@@ -1008,9 +1056,9 @@ mod tests {
     use crate::clock::FixedClock;
     use crate::domain::models::{Astronomical, Temperature};
 
-    mod feels_like_layout_tests {
+    mod layout_tests {
         use super::*;
-        use crate::utils::measure_ink_x_extent;
+        use crate::configs::settings::TemperatureUnit;
         use strum::IntoEnumIterator;
         use tinytemplate::{format_unescaped, TinyTemplate};
 
@@ -1042,22 +1090,80 @@ mod tests {
                 as u32
         }
 
-        /// Renders only the template's own Feels/Like `<text>` element, so the
-        /// test tracks any change to its markup.
-        fn render_feels_like_block(context: &Context) -> String {
-            let marker = TEMPLATE
-                .find("{label_like_tspan}")
-                .expect("feels-like <text> not found in template");
-            let start = TEMPLATE[..marker].rfind("<text").unwrap();
-            let end = start + TEMPLATE[start..].find("</text>").unwrap() + "</text>".len();
+        /// Renders only the template element that contains `marker`, from its
+        /// opening `open_tag` to the matching close, so tests track any change
+        /// to the template's markup.
+        fn render_template_element(context: &Context, marker: &str, open_tag: &str) -> String {
+            let marker_at = TEMPLATE
+                .find(marker)
+                .unwrap_or_else(|| panic!("{marker} not found in template"));
+            let start = TEMPLATE[..marker_at].rfind(open_tag).unwrap();
+            let close = format!("</{}>", &open_tag[1..]);
+            let end = start + TEMPLATE[start..].find(&close).unwrap() + close.len();
             let fragment = format!(
                 r#"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" font-family="Roboto, sans-serif">{}</svg>"#,
                 &TEMPLATE[start..end]
             );
             let mut tt = TinyTemplate::new();
             tt.set_default_formatter(&format_unescaped);
-            tt.add_template("feels", &fragment).unwrap();
-            tt.render("feels", context).unwrap()
+            tt.add_template("element", &fragment).unwrap();
+            tt.render("element", context).unwrap()
+        }
+
+        fn render_feels_like_block(context: &Context) -> String {
+            render_template_element(context, "{label_like_tspan}", "<text")
+        }
+
+        fn render_actual_temp(context: &Context) -> String {
+            render_template_element(context, "{current_hour_actual_temp}", "<g")
+        }
+
+        fn context_with_unit(unit: TemperatureUnit) -> Context {
+            let mut settings = DashboardSettings::load_test_config().unwrap();
+            settings.render_options.temp_unit = unit;
+            Context::new(&settings, NaiveDate::from_ymd_opt(2025, 10, 25).unwrap())
+        }
+
+        #[test]
+        fn actual_temp_scale_is_one_for_two_character_readings() {
+            for unit in ["C", "F"] {
+                for value in (-9..=99).map(|t: i32| t.to_string()) {
+                    assert_eq!(actual_temp_scale(&value, unit), 1.0, "{value}°{unit}");
+                }
+            }
+        }
+
+        #[test]
+        fn actual_temp_scale_shrinks_wider_readings() {
+            for unit in ["C", "F"] {
+                for value in ["-12", "104", "-40"] {
+                    let scale = actual_temp_scale(value, unit);
+                    assert!(scale < 1.0, "{value}°{unit}: expected < 1.0, got {scale}");
+                }
+            }
+        }
+
+        #[test]
+        fn actual_temp_stays_within_reference_extent() {
+            for unit in [TemperatureUnit::C, TemperatureUnit::F] {
+                let mut context = context_with_unit(unit);
+                context.current_hour_actual_temp = ACTUAL_TEMP_REFERENCE.to_string();
+                context.actual_temp_scale = 1.0;
+                let (ref_left, ref_right) =
+                    measure_ink_x_extent(&render_actual_temp(&context)).unwrap();
+                for value in ["16", "-12", "104", "-40", NOT_AVAILABLE] {
+                    context.current_hour_actual_temp = value.to_string();
+                    context.actual_temp_scale = actual_temp_scale(value, &context.temp_unit);
+                    let (left, right) = measure_ink_x_extent(&render_actual_temp(&context))
+                        .expect("current temperature rendered no ink");
+                    assert!(
+                        left + 1 >= ref_left && right <= ref_right + 1,
+                        "{value}°{unit}: ink spans {left}..={right} at scale {}, \
+                         outside the {ACTUAL_TEMP_REFERENCE} extent {ref_left}..={ref_right}",
+                        context.actual_temp_scale
+                    );
+                }
+            }
         }
 
         #[test]
