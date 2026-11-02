@@ -9,7 +9,7 @@ use crate::{
     logger,
     utils::{
         find_max_item_between_dates, measure_label_to_number_gap_dx, measure_stacked_label_dx,
-        total_between_dates, weekday_after_days, FEELS_LIKE_ANCHOR_X,
+        total_between_dates, weekday_after_days,
     },
     weather::icons::{HumidityIconName, Icon, IconContext, SunPositionIconName, UVIndexIcon},
 };
@@ -118,7 +118,6 @@ pub struct Context {
     pub label_feels: String,
     pub label_like_tspan: String,
     pub feels_like_number_dx: String,
-    pub feels_like_x: f32,
     pub label_metric: String,
     pub label_now: String,
     pub label_max: String,
@@ -225,7 +224,6 @@ impl Context {
             label_feels: translate(TranslationKey::Feels, language).to_string(),
             label_like_tspan,
             feels_like_number_dx,
-            feels_like_x: FEELS_LIKE_ANCHOR_X,
             label_metric: translate(TranslationKey::Metric, language).to_string(),
             label_now: translate(TranslationKey::Now, language).to_string(),
             label_max: translate(TranslationKey::Max, language).to_string(),
@@ -1016,22 +1014,45 @@ mod tests {
         use strum::IntoEnumIterator;
         use tinytemplate::{format_unescaped, TinyTemplate};
 
-        /// Left edge of the day-2 forecast icon (`<svg x="292">` plus the
-        /// icon's `x="12"` in the template), which the feels-like block must
-        /// not reach.
-        const DAY2_ICON_LEFT_X: u32 = 304;
+        const TEMPLATE: &str = include_str!("../../dashboard-template-min.svg");
+
+        /// Leftmost ink x the block may reach: 5px past the widest current
+        /// case (French "104", x=135), fencing it off from the current-weather
+        /// icon's artwork above-left of the label.
+        const FEELS_LIKE_MIN_LEFT_X: u32 = 130;
+
+        /// Numeric value of attribute `name` in the tag starting at `tag_start`.
+        fn attr_value(tag_start: &str, name: &str) -> f32 {
+            let tag = &tag_start[..tag_start.find('>').unwrap()];
+            let key = format!(r#" {name}=""#);
+            let value_start = tag.find(&key).unwrap() + key.len();
+            let value_len = tag[value_start..].find('"').unwrap();
+            tag[value_start..value_start + value_len].parse().unwrap()
+        }
+
+        /// Left edge of the day-2 forecast icon: its column `<svg x>` plus
+        /// the icon `<image x>`, read from the template.
+        fn day2_icon_left_x() -> u32 {
+            let icon = TEMPLATE
+                .find(r#"href="{day2_icon}""#)
+                .expect("day-2 icon not found in template");
+            let image_start = TEMPLATE[..icon].rfind("<image").unwrap();
+            let column_start = TEMPLATE[..image_start].rfind("<svg").unwrap();
+            (attr_value(&TEMPLATE[column_start..], "x") + attr_value(&TEMPLATE[image_start..], "x"))
+                as u32
+        }
 
         /// Renders only the template's own Feels/Like `<text>` element, so the
         /// test tracks any change to its markup.
         fn render_feels_like_block(context: &Context) -> String {
-            let template = include_str!("../../dashboard-template-min.svg");
-            let start = template
-                .find(r#"<text x="{feels_like_x}""#)
+            let marker = TEMPLATE
+                .find("{label_like_tspan}")
                 .expect("feels-like <text> not found in template");
-            let end = start + template[start..].find("</text>").unwrap() + "</text>".len();
+            let start = TEMPLATE[..marker].rfind("<text").unwrap();
+            let end = start + TEMPLATE[start..].find("</text>").unwrap() + "</text>".len();
             let fragment = format!(
                 r#"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" font-family="Roboto, sans-serif">{}</svg>"#,
-                &template[start..end]
+                &TEMPLATE[start..end]
             );
             let mut tt = TinyTemplate::new();
             tt.set_default_formatter(&format_unescaped);
@@ -1040,7 +1061,8 @@ mod tests {
         }
 
         #[test]
-        fn feels_like_block_stays_left_of_day2_icon_in_every_language() {
+        fn feels_like_block_fits_between_icons_in_every_language() {
+            let day2_icon_x = day2_icon_left_x();
             let today = NaiveDate::from_ymd_opt(2025, 10, 25).unwrap();
             for language in Language::iter() {
                 let mut settings = DashboardSettings::load_test_config().unwrap();
@@ -1050,12 +1072,17 @@ mod tests {
                 // cover every 2- and 3-character reading (e.g. 104°F).
                 for value in ["16", "-12", "104"] {
                     context.current_hour_feels_like = value.to_string();
-                    let (_, right) = measure_ink_x_extent(&render_feels_like_block(&context))
+                    let (left, right) = measure_ink_x_extent(&render_feels_like_block(&context))
                         .expect("feels-like block rendered no ink");
                     assert!(
-                        right < DAY2_ICON_LEFT_X,
+                        right < day2_icon_x,
                         "{language:?} {value}: feels-like ink reaches x={right}, \
-                         overlapping the day-2 icon at x={DAY2_ICON_LEFT_X}"
+                         overlapping the day-2 icon at x={day2_icon_x}"
+                    );
+                    assert!(
+                        left >= FEELS_LIKE_MIN_LEFT_X,
+                        "{language:?} {value}: feels-like ink starts at x={left}, \
+                         left of the x={FEELS_LIKE_MIN_LEFT_X} budget"
                     );
                 }
             }

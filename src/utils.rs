@@ -110,12 +110,6 @@ fn shared_font_db() -> Arc<fontdb::Database> {
 // rendering and measuring pixels.
 // =============================================================================
 
-/// `x` of the dashboard's centre-anchored "Feels"/"Like" `<text>`, shared
-/// with the template (via `Context::feels_like_x`) so measurements render at
-/// the same subpixel position as production — hinting shifts ink by a pixel
-/// depending on where glyphs land on the pixel grid.
-pub const FEELS_LIKE_ANCHOR_X: f32 = 220.0;
-
 fn escape_xml_text(text: &str) -> String {
     text.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -154,8 +148,8 @@ pub fn measure_stacked_label_dx(
 
     let line1 = escape_xml_text(line1);
     let line2 = escape_xml_text(line2);
-    let cx = FEELS_LIKE_ANCHOR_X;
     let width = 500.0_f32;
+    let cx = width / 2.0;
     let separation = font_size * 10.0;
     let height = separation + font_size * 4.0;
     let svg = format!(
@@ -223,6 +217,7 @@ pub fn measure_ink_y_extent(svg: &str) -> Option<(u32, u32)> {
 
 /// Leftmost and rightmost columns containing non-transparent pixels in a
 /// rendered SVG snippet, or `None` if nothing rendered.
+#[cfg(test)]
 pub fn measure_ink_x_extent(svg: &str) -> Option<(u32, u32)> {
     let pixmap = render_svg_to_pixmap(svg)?;
     ink_extent_x_in_y_range(&pixmap, 0, pixmap.height())
@@ -349,7 +344,7 @@ pub fn measure_label_to_number_gap_dx(
     const PROBE_OFFSET: f32 = 40.0;
     let svg = format!(
         r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="{number_font_size}" font-family="{label_font_family}">
-            <text x="{FEELS_LIKE_ANCHOR_X}" y="{label_font_size}" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
+            <text x="250" y="{label_font_size}" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
                 <tspan>{line1}</tspan>
                 <tspan dx="{label_dx}" dy="{label_dy}">{line2}</tspan>
                 <tspan font-family="{number_font_family}" dominant-baseline="middle" font-size="{number_font_size}" fill="rgb(0,255,0)" dx="{PROBE_OFFSET}">{probe_text}</tspan>
@@ -564,7 +559,7 @@ mod tests {
         );
         let svg = format!(
             r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="250" font-family="Roboto, sans-serif">
-                <text x="{FEELS_LIKE_ANCHOR_X}" y="158" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
+                <text x="250" y="158" text-anchor="middle" font-size="{label_font_size}" fill="rgb(0,0,0)">
                     <tspan>{line1}</tspan>
                     <tspan dx="{label_dx}" dy="{label_dy}">{line2}</tspan>
                     <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="{number_font_size}" fill="rgb(0,255,0)" dx="{gap_dx}">16</tspan>
@@ -689,7 +684,7 @@ mod tests {
         let dy: f32 = 15.5;
         let svg = format!(
             r#"<svg xmlns="http://www.w3.org/2000/svg" width="500" height="250" font-family="Roboto, sans-serif">
-                <text x="{FEELS_LIKE_ANCHOR_X}" y="158" text-anchor="middle" font-size="{font_size}">
+                <text x="250" y="158" text-anchor="middle" font-size="{font_size}">
                     <tspan>{line1}</tspan>
                     <tspan dx="{dx}" dy="{dy}">{line2}</tspan>
                 </text>

@@ -58,12 +58,14 @@ expression: svg_content
 
 
     <!-- Current temperature and Feels Like temperature -->
+    <!-- x assumes resvg counts tspan dx when centring (0.49+); a resvg bump can shift these.
+         context.rs feels_like_layout_tests guards the feels-like block's fit. -->
     <text x="256" y="128" font-size="70" fill="red" text-anchor="middle">
         17
         <tspan baseline-shift="27" dx="-20" font-size="33">°C</tspan>
     </text>
 
-    <text x="220.0" y="158" text-anchor="middle" font-size="18" fill="black">
+    <text x="220" y="158" text-anchor="middle" font-size="18" fill="black">
         <tspan>Feels</tspan>
         <tspan dx="-42" dy="15.5">Like</tspan>
         <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="green"

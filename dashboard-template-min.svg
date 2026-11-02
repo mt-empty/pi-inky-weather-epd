@@ -54,12 +54,14 @@
 
 
     <!-- Current temperature and Feels Like temperature -->
+    <!-- x assumes resvg counts tspan dx when centring (0.49+); a resvg bump can shift these.
+         context.rs feels_like_layout_tests guards the feels-like block's fit. -->
     <text x="256" y="128" font-size="70" fill="{actual_temp_colour}" text-anchor="middle">
         {current_hour_actual_temp}
         <tspan baseline-shift="27" dx="-20" font-size="33">°{temp_unit}</tspan>
     </text>
 
-    <text x="{feels_like_x}" y="158" text-anchor="middle" font-size="18" fill="{text_colour}">
+    <text x="220" y="158" text-anchor="middle" font-size="18" fill="{text_colour}">
         <tspan>{label_feels}</tspan>
         {label_like_tspan}
         <tspan font-family="Roboto-Regular-Dashed" dominant-baseline="middle" font-size="55" fill="{feels_like_colour}"
