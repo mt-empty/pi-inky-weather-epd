@@ -7,6 +7,8 @@ updates:
       day: "saturday"
       time: "06:00"
       timezone: "Australia/Sydney"
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns:
@@ -19,6 +21,8 @@ updates:
       day: "saturday"
       time: "06:00"
       timezone: "Australia/Sydney"
+    cooldown:
+      default-days: 7
     groups:
       prod-dependencies:
         patterns:
