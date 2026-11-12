@@ -51,27 +51,26 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+          persist-credentials: false
 
-      - name: Cache cargo build, registry, index, and binaries
-        uses: actions/cache@v6
-        with:
+      # Tag pushes reach this job via deploy.yml, but it only tests: release.yml rebuilds
+      # the shipped binaries without any cache.
+      - name: Cache cargo build, registry, and index
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with: # zizmor: ignore[cache-poisoning]
           path: |
             ~/.cargo/registry
             ~/.cargo/index
             target
-            ~/.cargo/bin
           key: ${{ runner.os }}-cargo-${{ env.TARGET }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-${{ env.TARGET }}-
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
+      - name: Install Rust toolchain (from rust-toolchain.toml)
+        run: rustup toolchain install
 
       - name: Run cargo fmt
         run: cargo fmt -- --check
@@ -82,25 +81,29 @@ jobs:
       - name: Run cargo clippy
         run: cargo clippy -- -D warnings
 
+      # Prebuilt static binary, checksum-pinned (the hash matches taiki-e/install-action's manifest).
       - name: Install cross
+        env:
+          CROSS_URL: https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-musl.tar.gz
+          CROSS_SHA256: a486cefa6cb486971b97be321ea9dfc2e90c1979550295314a368f53fab6d588
         run: |
-          if ! command -v cross &> /dev/null; then
-            cargo install cross
-          else
-            echo "cross is already installed"
-          fi
+          curl -fsSL -o "$RUNNER_TEMP/cross.tar.gz" "$CROSS_URL"
+          echo "$CROSS_SHA256  $RUNNER_TEMP/cross.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/cross"
+          tar xzf "$RUNNER_TEMP/cross.tar.gz" -C "$RUNNER_TEMP/cross"
+          echo "$RUNNER_TEMP/cross" >> "$GITHUB_PATH"
 
       - name: Build binary with cross
-        run: cross build --release --target=${{ env.TARGET }}
+        run: cross build --release --target="$TARGET"
 
       # A single run covers all providers and render options: each test
       # installs its own configuration in-process (see tests/helpers).
       # No TZ needed: the display timezone comes from config/test.toml.
       - name: Run tests
-        run: cross test --target=${{ env.TARGET }}
+        run: cross test --target="$TARGET"
 
       # Default features exclude the CLI (see Cargo.toml: `default = []`), so
       # the simulate/render-svg subcommands and their tests only compile and
       # run under this separate `cli`-featured invocation.
       - name: Run tests (cli feature)
-        run: cross test --target=${{ env.TARGET }} --features cli
+        run: cross test --target="$TARGET" --features cli

@@ -4,7 +4,7 @@ on:
   workflow_call:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-build-${{ github.ref }}
@@ -25,48 +25,45 @@ jobs:
           - x86_64-unknown-linux-gnu      # x86
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
+          persist-credentials: false
 
-      - name: Cache cargo build, registry, index, and binaries
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/index
-            target
-            ~/.cargo/bin
-          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ matrix.target }}-
+      # No cargo cache here: these binaries ship, and a cache written by a master run
+      # (target/, ~/.cargo/bin/cross) must not flow into a release.
+      - name: Install Rust toolchain (from rust-toolchain.toml)
+        run: rustup toolchain install
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: stable
-
+      # Prebuilt static binary, checksum-pinned (the hash matches taiki-e/install-action's manifest).
       - name: Install cross
+        env:
+          CROSS_URL: https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-musl.tar.gz
+          CROSS_SHA256: a486cefa6cb486971b97be321ea9dfc2e90c1979550295314a368f53fab6d588
         run: |
-          if ! command -v cross &> /dev/null; then
-            cargo install cross
-          else
-            echo "cross is already installed"
-          fi
+          curl -fsSL -o "$RUNNER_TEMP/cross.tar.gz" "$CROSS_URL"
+          echo "$CROSS_SHA256  $RUNNER_TEMP/cross.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/cross"
+          tar xzf "$RUNNER_TEMP/cross.tar.gz" -C "$RUNNER_TEMP/cross"
+          echo "$RUNNER_TEMP/cross" >> "$GITHUB_PATH"
 
       - name: Build binary with cross
-        run: cross build --release --target=${{ matrix.target }}
+        env:
+          TARGET: ${{ matrix.target }}
+        run: cross build --release --target="$TARGET"
 
       - name: Prepare artifact
+        env:
+          TARGET: ${{ matrix.target }}
         run: |
           mkdir -p artifact/config/
-          cp ${{ github.workspace }}/target/${{ matrix.target }}/release/pi-inky-weather-epd artifact/
-          cp ${{ github.workspace }}/dashboard-template-min.svg artifact/
-          cp ${{ github.workspace }}/config/default.toml artifact/config/
-          cp -r ${{ github.workspace }}/static artifact/
+          cp "$GITHUB_WORKSPACE/target/$TARGET/release/pi-inky-weather-epd" artifact/
+          cp "$GITHUB_WORKSPACE/dashboard-template-min.svg" artifact/
+          cp "$GITHUB_WORKSPACE/config/default.toml" artifact/config/
+          cp -r "$GITHUB_WORKSPACE/static" artifact/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ matrix.target }}
           path: artifact
@@ -78,9 +75,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write # create the GitHub Release
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: ./artifacts
 
@@ -91,14 +90,27 @@ jobs:
           cd artifacts/aarch64-unknown-linux-gnu && zip -r ../aarch64-unknown-linux-gnu.zip . && cd -
           cd artifacts/x86_64-unknown-linux-gnu && zip -r ../x86_64-unknown-linux-gnu.zip . && cd -
 
+      # Devices update from /releases/latest and download <target>.zip, so every release,
+      # betas included, is marked Latest and the asset names must not change.
+      # A re-run of an existing release replaces its assets.
       - name: Create and Upload Release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
-          generate_release_notes: true
-          files: |
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          assets=(
             artifacts/arm-unknown-linux-gnueabihf.zip
             artifacts/armv7-unknown-linux-gnueabihf.zip
             artifacts/aarch64-unknown-linux-gnu.zip
             artifacts/x86_64-unknown-linux-gnu.zip
+          )
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber "${assets[@]}"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes \
+              --verify-tag \
+              --latest \
+              "${assets[@]}"
+          fi
