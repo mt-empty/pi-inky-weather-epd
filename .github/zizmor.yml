@@ -1,0 +1,8 @@
+rules:
+  # `./.github/workflows/...` resolves to the caller's own commit, so the `$/` form adds nothing here.
+  self-repository:
+    disable: true
+  unpinned-uses:
+    config:
+      policies:
+        "*": hash-pin

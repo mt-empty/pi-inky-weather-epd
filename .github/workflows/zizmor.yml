@@ -1,0 +1,41 @@
+name: zizmor
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '.github/**'
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/**'
+  # Re-check existing pins against new advisories even when no workflow changes.
+  schedule:
+    - cron: '0 20 * * 5' # Saturday 06:00 Australia/Sydney (AEST)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zizmor:
+    name: zizmor audit of .github/
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+        with:
+          advanced-security: false
+          version: 1.32.0
